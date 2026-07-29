@@ -4,14 +4,24 @@ import { ZoomIn, ZoomOut, Maximize } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
+/** Multiplicative step for the zoom-in / zoom-out buttons. */
 const ZOOM_STEP = 1.3
 
 interface ZoomControlsProps {
+  /** Current zoom factor (screen pixels per world unit). */
   zoom: number
+  /**
+   * Set or adjust the zoom level.
+   * Accepts an absolute value or an updater function `(prev: number) => number`.
+   */
   onSetZoom: (z: number | ((prev: number) => number)) => void
+  /** Reset zoom to default and centre the view. */
   onFit: () => void
 }
 
+/**
+ * Zoom-in / zoom-out / fit buttons with a percentage readout.
+ */
 export function ZoomControls({ zoom, onSetZoom, onFit }: ZoomControlsProps) {
   return (
     <div className="flex items-center gap-0.5">

@@ -4,6 +4,7 @@ import { Pencil, Eraser, PaintBucket, Pipette } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
+/** Identifies one of the four drawing / editing tools. */
 export type ToolKind = "pen" | "eraser" | "fill" | "eyedropper"
 
 const TOOLS: { value: ToolKind; label: string; icon: typeof Pencil; shortcut: string }[] = [
@@ -14,10 +15,17 @@ const TOOLS: { value: ToolKind; label: string; icon: typeof Pencil; shortcut: st
 ]
 
 interface ToolBarProps {
+  /** Currently active tool. */
   activeTool: ToolKind
+  /** Called when the user switches tools. */
   onSelectTool: (tool: ToolKind) => void
 }
 
+/**
+ * Horizontal toolbar for selecting the active editing tool.
+ *
+ * Each button shows a tooltip with the tool name and keyboard shortcut.
+ */
 export function ToolBar({ activeTool, onSelectTool }: ToolBarProps) {
   return (
     <div className="flex items-center gap-0.5">
