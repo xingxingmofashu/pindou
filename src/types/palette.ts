@@ -7,7 +7,7 @@ export interface BeadColor {
   /** Display hex color, e.g. "#E63946" */
   hex: string
   /** Series letter, e.g. "A" */
-  series: string
+  series?: string
 }
 
 export interface BeadPalette {
