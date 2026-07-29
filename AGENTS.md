@@ -130,7 +130,7 @@ src/lib/palette/brand/*.ts   Individual brand data (MARD 291, Perler, Hama, Artk
 
 ## Git workflow
 
-- Linear history on `main`, English conventional commits (`feat:`, `fix:`, `chore:`)
+- Linear history on `main`, Conventional commits (`feat:`, `fix:`, `chore:`)
 - One commit per feature
 - Commit message format: `feat: <imperative description>`
 
