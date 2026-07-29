@@ -1,4 +1,4 @@
-import type { BeadColor, BeadPalette } from "@/types/palette"
+import type { BeadPalette } from "@/types/palette"
 
 import { MARD_PALETTE } from "./brand/mard"
 import { PERLER_PALETTE } from "./brand/perler"
