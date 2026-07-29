@@ -5,7 +5,6 @@ import { usePixiCanvas } from "@/hooks/use-pixi-canvas"
 import { ToolBar, type ToolKind } from "@/components/tool-bar"
 import { ZoomControls } from "@/components/zoom-controls"
 import { ColorPalette } from "@/components/color-palette"
-import { TooltipProvider } from "@/components/ui/tooltip"
 
 /**
  * The fuse-bead pattern editor page.
@@ -35,24 +34,22 @@ export default function EditorPage() {
   })
 
   return (
-    <TooltipProvider delay={300}>
-      <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between px-3 py-2">
+    <div className="flex h-full flex-col p-2 gap-2">
+        <div className="flex items-center justify-between px-3 py-2 border">
           <ToolBar activeTool={activeTool} onSelectTool={setActiveTool} />
           <ZoomControls zoom={zoom} onSetZoom={setZoom} onFit={fitToCanvas} />
         </div>
-        <div className="flex-1 min-h-0 flex">
-          <div className="w-56 border-r shrink-0 overflow-hidden">
+        <div className="flex-1 min-h-0 flex gap-2">
+          <div className="w-56 shrink-0 overflow-hidden">
             <ColorPalette
               activeColorIndex={activeColorIndex}
               onSelectColor={setActiveColorIndex}
             />
           </div>
-          <div className="flex-1 min-w-0">
-            <canvas ref={canvasRef} className="w-full h-full" />
+          <div className="flex-1 min-w-0 border">
+            <canvas ref={canvasRef} className="w-full h-full p-2" />
           </div>
         </div>
-      </div>
-    </TooltipProvider>
+    </div>
   )
 }

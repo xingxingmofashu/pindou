@@ -48,7 +48,7 @@ export function ColorPalette({ activeColorIndex, onSelectColor }: ColorPalettePr
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full border">
       <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-b">
         {palette.brand} ({palette.colors.length} colors)
       </div>
@@ -61,7 +61,7 @@ export function ColorPalette({ activeColorIndex, onSelectColor }: ColorPalettePr
           <button
             type="button"
             className={cn(
-              "w-7 h-7 rounded-sm border border-border",
+              "w-7 h-7 rounded-sm border",
               activeColorIndex === 0
                 ? "ring-2 ring-ring ring-offset-1 ring-offset-background"
                 : "hover:scale-110 transition-transform"
@@ -81,16 +81,16 @@ export function ColorPalette({ activeColorIndex, onSelectColor }: ColorPalettePr
             <div className="text-[10px] uppercase text-muted-foreground mb-1 px-1">
               Series {group.series}
             </div>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(1.5rem,1fr))] gap-0.5">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(1.5rem,1fr))] gap-2">
               {group.colors.map(({ index, hex, code }) => (
                 <button
                   key={index}
                   type="button"
                   className={cn(
-                    "w-7 h-7 rounded-sm border border-border/50",
+                    "w-7 h-7 rounded-sm",
                     activeColorIndex === index
-                      ? "ring-2 ring-ring ring-offset-1 ring-offset-background"
-                      : "hover:scale-110 transition-transform"
+                      ? "ring-2 ring-ring ring-offset-1"
+                      : "hover:scale-105 transition-transform"
                   )}
                   style={{ backgroundColor: hex }}
                   onClick={() => onSelectColor(index)}
