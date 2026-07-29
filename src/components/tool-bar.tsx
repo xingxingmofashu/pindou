@@ -1,17 +1,15 @@
 "use client"
 
-import { Pencil, Eraser, PaintBucket, Pipette } from "lucide-react"
+import { Pencil, Eraser } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
-/** Identifies one of the four drawing / editing tools. */
-export type ToolKind = "pen" | "eraser" | "fill" | "eyedropper"
+/** Identifies one of the drawing tools. */
+export type ToolKind = "pen" | "eraser"
 
 const TOOLS: { value: ToolKind; label: string; icon: typeof Pencil; shortcut: string }[] = [
   { value: "pen", label: "Pen", icon: Pencil, shortcut: "B" },
   { value: "eraser", label: "Eraser", icon: Eraser, shortcut: "E" },
-  { value: "fill", label: "Fill", icon: PaintBucket, shortcut: "G" },
-  { value: "eyedropper", label: "Eyedropper", icon: Pipette, shortcut: "I" },
 ]
 
 interface ToolBarProps {

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback, type RefObject } from "react"
 import { Application, Container, Graphics } from "pixi.js"
 import { PALETTES, DEFAULT_PALETTE_ID } from "@/lib/palette/registry"
-import { EMPTY, cellKey, paintBlock, floodFill } from "@/lib/editor/data"
+import { EMPTY, cellKey, paintBlock } from "@/lib/editor/data"
 import { walkLine } from "@/lib/editor/geometry"
 import { CELL, lodParams, drawGrid, buildBeadEntries, type ViewRect } from "@/lib/editor/render"
 import type { ToolKind } from "@/components/tool-bar"
@@ -59,8 +59,6 @@ export function usePixiCanvas(
   toolRef.current = activeTool
   const colorRef = useRef(activeColorIndex)
   colorRef.current = activeColorIndex
-  const pickRef = useRef(onColorPick)
-  pickRef.current = onColorPick
 
   const paletteRef = useRef(PALETTES.get(DEFAULT_PALETTE_ID) ?? null)
 
@@ -243,7 +241,7 @@ export function usePixiCanvas(
     return () => canvas.removeEventListener("wheel", onWheel)
   }, [canvasRef, syncZoom])
 
-  /** Pointer: pan + pen / eraser / fill / eyedropper. */
+  /** Pointer: pan + pen / eraser. */
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -265,32 +263,6 @@ export function usePixiCanvas(
       if (e.button !== 0) return
 
       const tool = toolRef.current
-
-      if (tool === "fill") {
-        const t = toPaintTarget(e.clientX, e.clientY)
-        if (!t) return
-        floodFill(cellsRef.current, Math.floor((t.c0 + t.c1 - 1) / 2), Math.floor((t.r0 + t.r1 - 1) / 2), colorRef.current)
-        rebuildRef.current()
-        return
-      }
-
-      if (tool === "eyedropper") {
-        const t = toPaintTarget(e.clientX, e.clientY)
-        if (!t) return
-        const counts = new Map<number, number>()
-        for (let r = t.r0; r < t.r1; r++) {
-          for (let c = t.c0; c < t.c1; c++) {
-            const v = cellsRef.current.get(cellKey(c, r)) ?? EMPTY
-            if (v === EMPTY) continue
-            counts.set(v, (counts.get(v) ?? 0) + 1)
-          }
-        }
-        // Find dominant colour inline (small lookup, avoids extra import)
-        let best = 0; let bestN = 0
-        for (const [color, n] of counts) { if (n > bestN) { bestN = n; best = color } }
-        pickRef.current?.(best)
-        return
-      }
 
       if (isDraw(tool)) {
         e.preventDefault()
