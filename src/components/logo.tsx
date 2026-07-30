@@ -1,0 +1,118 @@
+/**
+ * Pixel font for A–Z (5×7 grid). `true` = filled cell.
+ */
+const GLYPHS: Record<string, boolean[][]> = {
+  P: [
+    [true, true, true, false],
+    [true, false, true, false],
+    [true, false, true, false],
+    [true, true, true, false],
+    [true, false, false, false],
+    [true, false, false, false],
+    [true, false, false, false],
+  ],
+  I: [
+    [true, true, true],
+    [false, true, false],
+    [false, true, false],
+    [false, true, false],
+    [false, true, false],
+    [false, true, false],
+    [true, true, true],
+  ],
+  N: [
+    [true, false, false, true],
+    [true, true, false, true],
+    [true, false, true, true],
+    [true, false, true, true],
+    [true, false, false, true],
+    [true, false, false, true],
+    [true, false, false, true],
+  ],
+  D: [
+    [true, true, true, false],
+    [true, false, false, true],
+    [true, false, false, true],
+    [true, false, false, true],
+    [true, false, false, true],
+    [true, false, false, true],
+    [true, true, true, false],
+  ],
+  O: [
+    [false, true, true, true, false],
+    [true, false, false, false, true],
+    [true, false, false, false, true],
+    [true, false, false, false, true],
+    [true, false, false, false, true],
+    [true, false, false, false, true],
+    [false, true, true, true, false],
+  ],
+  W: [
+    [true, false, false, false, true],
+    [true, false, false, false, true],
+    [true, false, false, false, true],
+    [true, false, false, false, true],
+    [true, false, true, false, true],
+    [true, true, false, true, true],
+    [true, false, false, false, true],
+  ],
+}
+
+const CHAR_W = { P: 4, I: 3, N: 4, D: 4, O: 5, W: 5 } as Record<string, number>
+const CELL = 10
+const GAP = 1
+
+/** Interpolate between two hex colors. */
+function lerpColor(a: string, b: string, t: number): string {
+  const ah = parseInt(a.replace("#", ""), 16)
+  const bh = parseInt(b.replace("#", ""), 16)
+  const ar = (ah >> 16) & 0xff, ag = (ah >> 8) & 0xff, ab = ah & 0xff
+  const br = (bh >> 16) & 0xff, bg = (bh >> 8) & 0xff, bb = bh & 0xff
+  const r = Math.round(ar + (br - ar) * t)
+  const g = Math.round(ag + (bg - ag) * t)
+  const bv = Math.round(ab + (bb - ab) * t)
+  return `#${((r << 16) | (g << 8) | bv).toString(16).padStart(6, "0")}`
+}
+
+export function Logo({ className }: { className?: string }) {
+  const word = ["P", "I", "N", "D", "O", "W"]
+
+  // build a flat list of all columns across all letters to compute the gradient
+  let totalCols = 0
+  const offsets: number[] = []
+  for (const ch of word) {
+    offsets.push(totalCols)
+    totalCols += CHAR_W[ch] + GAP
+  }
+  totalCols -= GAP // no trailing gap
+
+  return (
+    <svg
+      viewBox={`0 0 ${totalCols * CELL} ${7 * CELL}`}
+      className={className}
+      aria-label="PINDOW"
+      role="img"
+    >
+      {word.map((ch, li) => {
+        const glyph = GLYPHS[ch]
+        const ox = offsets[li] * CELL
+        return glyph.map((row, r) =>
+          row.map(
+            (filled, c) =>
+              filled && (
+                <rect
+                  key={`${li}-${r}-${c}`}
+                  x={(ox + c * CELL)}
+                  y={r * CELL}
+                  width={CELL}
+                  height={CELL}
+                  rx={0.5}
+                  fill={lerpColor("#1a1a1a", "#b0b0b0", (offsets[li] + c) / (totalCols - 1))}
+                />
+              )
+          )
+        )
+      })}
+    </svg>
+  )
+}

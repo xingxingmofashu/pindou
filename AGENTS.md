@@ -46,10 +46,8 @@ EditorPage (src/app/editor/page.tsx — user-controlled, DO NOT MODIFY)
 **`usePixiCanvas` hook** (`src/hooks/use-pixi-canvas.ts`) is a thin coordinator for the PixiJS lifecycle; the logic lives in pure, React-free library modules:
 
 ```
-src/lib/editor/data.ts       EMPTY sentinel, paintBlock(), serializeGrid() — sparse-grid writes
-src/lib/editor/geometry.ts   walkLine() — Bresenham cell-to-cell interpolation
-src/lib/editor/render.ts     CELL / MIN_PX constants, lodParams(), drawGrid(), buildBeadEntries()
-src/lib/editor/pixi-app.ts   createPixiApp() — PixiJS Application init (pure, React-free)
+src/lib/editor/index.ts      EMPTY/serializeGrid/paintBlock, walkLine, lodParams/drawGrid/buildBeadEntries
+src/hooks/use-pixi-app.ts   usePixiApp() — PixiJS Application lifecycle hook
 src/hooks/use-pixi-canvas.ts PixiJS lifecycle coordinator, wheel + pointer events, zoom/pan state
 ```
 

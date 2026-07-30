@@ -23,6 +23,7 @@ export function PatternCard({ id, title, authorName, beadStats, createdAt, thumb
     <Link href={`/pattern/${id}`} className="block">
       <Card>
         {thumbPng ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={`data:image/png;base64,${thumbPng}`}
             alt={title}

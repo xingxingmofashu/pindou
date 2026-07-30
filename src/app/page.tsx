@@ -1,7 +1,8 @@
 import { desc } from "drizzle-orm"
 import { db } from "@/db"
 import { patterns } from "@/db/schema"
-import { PatternCard } from "@/components/pattern-card"
+import { PatternCard } from "@/components/pattern/card"
+import { Logo } from "@/components/logo"
 import { parseBeadStats } from "@/lib/utils"
 
 export const revalidate = 60
@@ -30,10 +31,8 @@ export default function HomePage() {
     <div className="flex flex-col flex-1 overflow-y-auto">
       {/* Hero */}
       <section className="flex flex-col items-center justify-center px-4 py-16 text-center">
-        <h1 className="max-w-2xl text-4xl font-semibold leading-tight tracking-tight">
-          拼豆 Pindou
-        </h1>
-        <p className="mt-3 max-w-md text-base text-muted-foreground">
+        <Logo className="h-20 w-auto" />
+        <p className="mt-4 max-w-md text-base text-muted-foreground">
           Fuse bead pattern editor and community. Create, share, and discover
           Perler bead patterns — no account needed.
         </p>

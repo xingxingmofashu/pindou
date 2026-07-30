@@ -1,6 +1,5 @@
 import sharp from "sharp"
-import { EMPTY } from "@/lib/editor/data"
-import { MIN_PX } from "@/lib/editor/render"
+import { EMPTY, MIN_PX } from "@/lib/editor"
 import { hexToRgb } from "@/lib/utils"
 import type { BeadPalette } from "@/types/palette"
 
