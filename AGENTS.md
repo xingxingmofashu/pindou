@@ -38,8 +38,8 @@ Base UI is used instead of Radix. Key API differences:
 ```
 EditorPage (src/app/editor/page.tsx — user-controlled, DO NOT MODIFY)
 ├── ToolBar (pen / eraser)
-├── ZoomControls (button zoom ±1.3× + fit button)
-├── ColorPalette (left sidebar, MARD 291-colour swatches grouped by series + eraser)
+├── ZoomControls (button zoom ±1.3×, editable percentage input, fit button)
+├── ColorPalette (left sidebar, brand switcher + swatches grouped by series + eraser)
 └── <canvas> → usePixiCanvas hook
 ```
 
@@ -120,7 +120,8 @@ src/lib/palette/brand/*.ts   Individual brand data (MARD 291, Perler, Hama, Artk
 
 - `BeadColor.id` is lowercase (e.g. `"a1"`), `code`/`name` are uppercase (`"A1"`)
 - `BeadColor.series` is optional (`?`) — use `c.series ?? "?"` as fallback
-- `PALETTES.get(DEFAULT_PALETTE_ID)` to get the active palette; no helper functions exported from registry
+- `PALETTES.get(DEFAULT_PALETTE_ID)` to get the default palette; no helper functions exported from registry
+- The active brand lives in `src/lib/palette/active.ts` (module-level external store) behind the `useActivePalette()` hook — ColorPalette (switcher) and usePixiCanvas (rendering) share it because the user-controlled EditorPage cannot wire it as a prop. Only brands registered in `PALETTES` appear in the switcher.
 
 ### shadcn/ui components
 
