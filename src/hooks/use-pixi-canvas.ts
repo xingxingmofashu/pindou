@@ -6,7 +6,7 @@ import { EMPTY, paintBlock, serializeGrid } from "@/lib/editor/data"
 import { walkLine } from "@/lib/editor/geometry"
 import { lodParams, drawGrid, buildBeadEntries, type ViewRect, type BeadEntry } from "@/lib/editor/render"
 import { useActivePalette } from "@/hooks/use-active-palette"
-import type { ToolKind } from "@/components/tool-bar"
+import type { ToolKind } from "@/components/editor/tool-bar"
 
 const MIN_ZOOM = 0.5
 const MAX_ZOOM = 20
@@ -418,23 +418,13 @@ export function usePixiCanvas(
     rebuildRef.current()
   }, [])
 
-  /** Export the sparse grid for publishing: grid, palette ID, and per-code bead counts. */
+  /** Export the sparse grid for publishing. */
   const getCellsData = useCallback((): {
-    grid: number[][]; brandId: string; beadStats: Record<string, number>
+    grid: number[][]; brandId: string
   } | null => {
     const grid = serializeGrid(cellsRef.current)
     if (!grid) return null
-    const palette = paletteRef.current
-    const beadStats: Record<string, number> = {}
-    for (const row of grid) {
-      for (const cell of row) {
-        if (cell === 0) continue
-        const color = palette?.colors[cell - 1]
-        const code = color?.code ?? String(cell)
-        beadStats[code] = (beadStats[code] ?? 0) + 1
-      }
-    }
-    return { grid, brandId: palette?.id ?? "mard", beadStats }
+    return { grid, brandId: paletteRef.current?.id ?? "mard" }
   }, [])
 
   return { zoom, setZoom, fitToCanvas, clearCanvas, getCellsData }

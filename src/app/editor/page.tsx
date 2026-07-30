@@ -2,10 +2,10 @@
 
 import { useRef, useState, useCallback } from "react"
 import { usePixiCanvas } from "@/hooks/use-pixi-canvas"
-import { ToolBar, type ToolKind } from "@/components/tool-bar"
-import { ZoomControls } from "@/components/zoom-controls"
-import { ColorPalette } from "@/components/color-palette"
-import { PublishDialog } from "@/components/publish-dialog"
+import { ToolBar, type ToolKind } from "@/components/editor/tool-bar"
+import { ZoomControls } from "@/components/editor/zoom-controls"
+import { ColorPalette } from "@/components/editor/color-palette"
+import { PublishDialog } from "@/components/editor/publish-dialog"
 import { Button } from "@/components/ui/button"
 
 /**

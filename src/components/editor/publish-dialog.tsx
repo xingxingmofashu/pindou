@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 interface PublishDialogProps {
   open: boolean
   onClose: () => void
-  getCellsData: () => { grid: number[][]; brandId: string; beadStats: Record<string, number> } | null
+  getCellsData: () => { grid: number[][]; brandId: string } | null
 }
 
 export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProps) {
@@ -37,7 +37,6 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
           author_name: authorName || undefined,
           grid: data.grid,
           brand_id: data.brandId,
-          bead_stats: data.beadStats,
         }),
       })
 
@@ -80,16 +79,8 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
                 <code className="rounded bg-muted px-1 text-xs">/pattern/{patternId}</code>
               </p>
             </div>
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end">
               <Button variant="outline" onClick={handleClose}>Close</Button>
-              <a
-                href={`/pattern/${patternId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-              >
-                View
-              </a>
             </div>
           </div>
         ) : (

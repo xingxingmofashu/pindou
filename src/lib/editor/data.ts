@@ -68,18 +68,3 @@ export function serializeGrid(
 
   return grid
 }
-
-/**
- * Compute per-color bead counts from the serialized grid.
- */
-export function computeBeadStats(grid: number[][]): Record<string, number> {
-  const stats: Record<string, number> = {}
-  for (const row of grid) {
-    for (const cell of row) {
-      if (cell === EMPTY) continue
-      const k = String(cell)
-      stats[k] = (stats[k] ?? 0) + 1
-    }
-  }
-  return stats
-}
