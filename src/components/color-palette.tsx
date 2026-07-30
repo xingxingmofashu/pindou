@@ -24,7 +24,7 @@ interface ColorPaletteProps {
  * eraser / empty-cell swatch at the top.
  */
 export function ColorPalette({ activeColorIndex, onSelectColor }: ColorPaletteProps) {
-  const { paletteId, palette, setPaletteId } = useActivePalette()
+  const { brandId, palette, setBrandId } = useActivePalette()
 
   const brandOptions = useMemo(() => [...PALETTES.values()], [])
 
@@ -57,7 +57,7 @@ export function ColorPalette({ activeColorIndex, onSelectColor }: ColorPalettePr
    * The canvas is cleared on brand switch by usePixiCanvas.
    */
   const handleBrandChange = (id: string) => {
-    setPaletteId(id)
+    setBrandId(id)
     onSelectColor(1)
   }
 
@@ -68,7 +68,7 @@ export function ColorPalette({ activeColorIndex, onSelectColor }: ColorPalettePr
           <select
             aria-label="Bead brand"
             className="min-w-0 flex-1 cursor-pointer bg-transparent text-xs font-medium text-muted-foreground outline-none"
-            value={paletteId}
+            value={brandId}
             onChange={(e) => handleBrandChange(e.target.value)}
           >
             {brandOptions.map((p) => (

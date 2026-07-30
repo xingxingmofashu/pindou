@@ -6,12 +6,12 @@ import { getActivePaletteId, setActivePaletteId, subscribePalette } from "@/lib/
 import type { BeadPalette } from "@/types/palette"
 
 interface ActivePalette {
-  /** Id of the active palette, e.g. `"mard"`. */
-  paletteId: string
+  /** Id of the active brand, e.g. `"mard"`. */
+  brandId: string
   /** The active palette, or `undefined` if the registry is empty. */
   palette: BeadPalette | undefined
-  /** Switch the active palette by id; unknown ids are ignored. */
-  setPaletteId: (id: string) => void
+  /** Switch the active brand by id; unknown ids are ignored. */
+  setBrandId: (id: string) => void
 }
 
 /**
@@ -24,11 +24,11 @@ interface ActivePalette {
  * @returns The current palette, its id, and a setter.
  */
 export function useActivePalette(): ActivePalette {
-  const paletteId = useSyncExternalStore(
+  const brandId = useSyncExternalStore(
     subscribePalette,
     getActivePaletteId,
     () => DEFAULT_PALETTE_ID
   )
-  const palette = PALETTES.get(paletteId) ?? PALETTES.get(DEFAULT_PALETTE_ID)
-  return { paletteId, palette, setPaletteId: setActivePaletteId }
+  const palette = PALETTES.get(brandId) ?? PALETTES.get(DEFAULT_PALETTE_ID)
+  return { brandId, palette, setBrandId: setActivePaletteId }
 }

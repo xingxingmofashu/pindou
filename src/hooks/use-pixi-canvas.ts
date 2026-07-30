@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback, type RefObject } from "react"
 import { Application, Container, Graphics, Text } from "pixi.js"
-import { EMPTY, paintBlock } from "@/lib/editor/data"
+import { EMPTY, paintBlock, serializeGrid } from "@/lib/editor/data"
 import { walkLine } from "@/lib/editor/geometry"
 import { lodParams, drawGrid, buildBeadEntries, type ViewRect, type BeadEntry } from "@/lib/editor/render"
 import { useActivePalette } from "@/hooks/use-active-palette"
@@ -418,5 +418,24 @@ export function usePixiCanvas(
     rebuildRef.current()
   }, [])
 
-  return { zoom, setZoom, fitToCanvas, clearCanvas }
+  /** Export the sparse grid for publishing: grid, palette ID, and per-code bead counts. */
+  const getCellsData = useCallback((): {
+    grid: number[][]; brandId: string; beadStats: Record<string, number>
+  } | null => {
+    const grid = serializeGrid(cellsRef.current)
+    if (!grid) return null
+    const palette = paletteRef.current
+    const beadStats: Record<string, number> = {}
+    for (const row of grid) {
+      for (const cell of row) {
+        if (cell === 0) continue
+        const color = palette?.colors[cell - 1]
+        const code = color?.code ?? String(cell)
+        beadStats[code] = (beadStats[code] ?? 0) + 1
+      }
+    }
+    return { grid, brandId: palette?.id ?? "mard", beadStats }
+  }, [])
+
+  return { zoom, setZoom, fitToCanvas, clearCanvas, getCellsData }
 }

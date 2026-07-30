@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "4ecded4b-9acc-4434-9f34-31543c06c825",
+  "id": "108c6924-0a02-40c5-b4e1-19089db0a38c",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "patterns": {
@@ -11,13 +11,6 @@
           "name": "id",
           "type": "text",
           "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "slug": {
-          "name": "slug",
-          "type": "text",
-          "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
@@ -50,8 +43,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "palette_id": {
-          "name": "palette_id",
+        "brand_id": {
+          "name": "brand_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -83,15 +76,7 @@
           "default": "'(datetime(''now''))'"
         }
       },
-      "indexes": {
-        "patterns_slug_unique": {
-          "name": "patterns_slug_unique",
-          "columns": [
-            "slug"
-          ],
-          "isUnique": true
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
