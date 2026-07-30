@@ -1,8 +1,21 @@
 "use client"
 
-import { Pencil, Eraser } from "lucide-react"
+import { useState } from "react"
+import { Pencil, Eraser, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 /** Identifies one of the drawing tools. */
 export type ToolKind = "pen" | "eraser"
@@ -17,6 +30,8 @@ interface ToolBarProps {
   activeTool: ToolKind
   /** Called when the user switches tools. */
   onSelectTool: (tool: ToolKind) => void
+  /** Called when the user clicks the clear-canvas button. */
+  onClearCanvas?: () => void
 }
 
 /**
@@ -24,7 +39,9 @@ interface ToolBarProps {
  *
  * Each button shows a tooltip with the tool name and keyboard shortcut.
  */
-export function ToolBar({ activeTool, onSelectTool }: ToolBarProps) {
+export function ToolBar({ activeTool, onSelectTool, onClearCanvas }: ToolBarProps) {
+  const [clearOpen, setClearOpen] = useState(false)
+
   return (
     <div className="flex items-center gap-0.5">
       {TOOLS.map(({ value, label, icon: Icon, shortcut }) => (
@@ -46,6 +63,46 @@ export function ToolBar({ activeTool, onSelectTool }: ToolBarProps) {
           </TooltipContent>
         </Tooltip>
       ))}
+      {onClearCanvas && (
+        <>
+          <Separator orientation="vertical" className="mx-1 h-5" />
+          <AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <AlertDialogTrigger
+                    render={
+                      <Button variant="outline" size="icon-xs" aria-label="Clear canvas">
+                        <Trash2 data-icon="inline-start" />
+                      </Button>
+                    }
+                  />
+                }
+              />
+              <TooltipContent side="bottom">Clear Canvas</TooltipContent>
+            </Tooltip>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Clear Canvas</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will remove all beads. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    onClearCanvas()
+                    setClearOpen(false)
+                  }}
+                >
+                  Clear
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
+      )}
     </div>
   )
 }

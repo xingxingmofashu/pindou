@@ -27,7 +27,7 @@ export default function EditorPage() {
     setActiveTool("pen")
   }, [])
 
-  const { zoom, setZoom, fitToCanvas } = usePixiCanvas(canvasRef, {
+  const { zoom, setZoom, fitToCanvas, clearCanvas } = usePixiCanvas(canvasRef, {
     activeTool,
     activeColorIndex,
     onColorPick: handleColorPick,
@@ -36,7 +36,7 @@ export default function EditorPage() {
   return (
     <div className="flex h-full flex-col p-2 gap-2">
         <div className="flex items-center justify-between px-3 py-2 border">
-          <ToolBar activeTool={activeTool} onSelectTool={setActiveTool} />
+          <ToolBar activeTool={activeTool} onSelectTool={setActiveTool} onClearCanvas={clearCanvas} />
           <ZoomControls zoom={zoom} onSetZoom={setZoom} onFit={fitToCanvas} />
         </div>
         <div className="flex-1 min-h-0 flex gap-2">

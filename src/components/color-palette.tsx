@@ -4,6 +4,7 @@ import { useMemo } from "react"
 import { PALETTES } from "@/lib/palette/registry"
 import { useActivePalette } from "@/hooks/use-active-palette"
 import { cn } from "@/lib/utils"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface ColorPaletteProps {
   /**
@@ -52,14 +53,12 @@ export function ColorPalette({ activeColorIndex, onSelectColor }: ColorPalettePr
   }
 
   /**
-   * Switch the active brand, keeping the selected colour valid: the eraser
-   * (0) always survives; an index beyond the new palette resets to its
-   * first colour.
+   * Switch the active brand and reset to the first colour.
+   * The canvas is cleared on brand switch by usePixiCanvas.
    */
   const handleBrandChange = (id: string) => {
     setPaletteId(id)
-    const next = PALETTES.get(id)
-    if (next && activeColorIndex > next.colors.length) onSelectColor(1)
+    onSelectColor(1)
   }
 
   return (
@@ -85,7 +84,8 @@ export function ColorPalette({ activeColorIndex, onSelectColor }: ColorPalettePr
           {palette.colors.length} colors
         </span>
       </div>
-      <div className="flex-1 overflow-y-auto px-2 py-2 space-y-3">
+      <ScrollArea className="flex-1 overflow-hidden">
+        <div className="px-2 py-2 space-y-3">
         {/* Eraser / empty-cell swatch */}
         <div>
           <div className="text-[10px] uppercase text-muted-foreground mb-1 px-1">
@@ -134,7 +134,8 @@ export function ColorPalette({ activeColorIndex, onSelectColor }: ColorPalettePr
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      </ScrollArea>
     </div>
   )
 }

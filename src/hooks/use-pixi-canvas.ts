@@ -335,9 +335,10 @@ export function usePixiCanvas(
     }
   }, [canvasRef, toWorld, toPaintTarget])
 
-  /** Re-render beads with the new brand's colours after a palette switch. */
+  /** Clear canvas and re-render with the new brand's colours after a palette switch. */
   useEffect(() => {
     paletteRef.current = palette ?? null
+    cellsRef.current = new Map()
     rebuildRef.current()
   }, [palette])
 
@@ -350,5 +351,10 @@ export function usePixiCanvas(
     setZoom(initialZoom)
   }, [setZoom, initialZoom])
 
-  return { zoom, setZoom, fitToCanvas }
+  const clearCanvas = useCallback(() => {
+    cellsRef.current = new Map()
+    rebuildRef.current()
+  }, [])
+
+  return { zoom, setZoom, fitToCanvas, clearCanvas }
 }
