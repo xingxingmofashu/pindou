@@ -1,9 +1,52 @@
 import { NextRequest, NextResponse } from "next/server"
 import { randomUUID } from "crypto"
+import { desc, sql } from "drizzle-orm"
 import { db } from "@/db"
 import { patterns } from "@/db/schema"
 import { MAX_GRID_DIMENSION } from "@/lib/editor/data"
 import { PALETTES, DEFAULT_PALETTE_ID } from "@/lib/palette/registry"
+import { generateThumbnail } from "@/lib/thumbnail"
+
+const PAGE_SIZE = 24
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const sort = searchParams.get("sort") ?? "newest"
+  const page = Math.max(1, Number(searchParams.get("page")) || 1)
+
+  const order = sort === "popular" ? desc(patterns.createdAt) : desc(patterns.createdAt)
+
+  const rows = db
+    .select({
+      id: patterns.id,
+      title: patterns.title,
+      brandId: patterns.brandId,
+      authorName: patterns.authorName,
+      beadStats: patterns.beadStats,
+      createdAt: patterns.createdAt,
+    })
+    .from(patterns)
+    .orderBy(order)
+    .limit(PAGE_SIZE)
+    .offset((page - 1) * PAGE_SIZE)
+    .all()
+
+  const [{ count }] = db
+    .select({ count: sql<number>`count(*)` })
+    .from(patterns)
+    .all()
+
+  return NextResponse.json({
+    patterns: rows.map((r) => ({
+      ...r,
+      beadStats: JSON.parse(r.beadStats) as Record<string, number>,
+    })),
+    total: count,
+    page,
+    pageSize: PAGE_SIZE,
+    totalPages: Math.ceil(count / PAGE_SIZE),
+  })
+}
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null)
@@ -61,6 +104,8 @@ export async function POST(request: NextRequest) {
   }
 
   const id = randomUUID()
+  const thumbPng = palette ? await generateThumbnail(grid, palette) : ""
+  const now = new Date().toISOString()
 
   db.insert(patterns).values({
     id,
@@ -69,7 +114,10 @@ export async function POST(request: NextRequest) {
     authorName: typeof author_name === "string" ? author_name.slice(0, 50) || null : null,
     gridData: JSON.stringify(grid),
     beadStats: JSON.stringify(beadStats),
+    thumbPng,
     brandId: brand,
+    createdAt: now,
+    updatedAt: now,
   }).run()
 
   return NextResponse.json({ id }, { status: 201 })

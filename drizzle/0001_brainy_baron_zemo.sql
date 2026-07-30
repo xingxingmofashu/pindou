@@ -1,0 +1,1 @@
+ALTER TABLE `patterns` ADD `thumb_png` text DEFAULT '' NOT NULL;

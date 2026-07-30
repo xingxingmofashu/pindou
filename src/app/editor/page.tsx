@@ -39,7 +39,7 @@ export default function EditorPage() {
   })
 
   return (
-    <div className="flex h-full flex-col p-2 gap-2">
+    <div className="flex h-full flex-col p-2 gap-2 overflow-hidden">
         <div className="flex items-center justify-between px-3 py-2 border">
           <div className="flex items-center gap-2">
             <ToolBar

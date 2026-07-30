@@ -9,6 +9,8 @@ export const patterns = sqliteTable("patterns", {
   gridData: text("grid_data").notNull(),
   brandId: text("brand_id").notNull().default("mard"),
   beadStats: text("bead_stats").notNull().default("{}"),
-  createdAt: text("created_at").notNull().default("(datetime('now'))"),
-  updatedAt: text("updated_at").notNull().default("(datetime('now'))"),
+  /** PNG thumbnail (base64) generated server-side on publish. */
+  thumbPng: text("thumb_png").notNull().default(""),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
 })

@@ -1,65 +1,86 @@
-import Image from "next/image";
+import { desc } from "drizzle-orm"
+import { db } from "@/db"
+import { patterns } from "@/db/schema"
+import { PatternCard } from "@/components/pattern-card"
 
-export default function Home() {
+export const revalidate = 60
+
+interface PatternRow {
+  id: string
+  title: string
+  authorName: string | null
+  beadStats: string
+  thumbPng: string
+  createdAt: string
+}
+
+export default function HomePage() {
+  const rows = db
+    .select({
+      id: patterns.id,
+      title: patterns.title,
+      authorName: patterns.authorName,
+      beadStats: patterns.beadStats,
+      thumbPng: patterns.thumbPng,
+      createdAt: patterns.createdAt,
+    })
+    .from(patterns)
+    .orderBy(desc(patterns.createdAt))
+    .limit(12)
+    .all() as PatternRow[]
+
+  const list = rows.map((r) => ({
+    ...r,
+    beadStats: JSON.parse(r.beadStats) as Record<string, number>,
+  }))
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
+    <div className="flex flex-col flex-1 overflow-y-auto">
+      {/* Hero */}
+      <section className="flex flex-col items-center justify-center px-4 py-16 text-center">
+        <h1 className="max-w-2xl text-4xl font-semibold leading-tight tracking-tight">
+          拼豆 Pindou
+        </h1>
+        <p className="mt-3 max-w-md text-base text-muted-foreground">
+          Fuse bead pattern editor and community. Create, share, and discover
+          Perler bead patterns — no account needed.
+        </p>
+        <a
+          href="/editor"
+          className="mt-6 inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          Open Editor
+        </a>
+      </section>
+
+      {/* Patterns grid */}
+      {list.length > 0 && (
+        <section className="px-4 pb-16">
+          <div className="mx-auto max-w-5xl">
+            <h2 className="mb-4 text-lg font-semibold">Recent Patterns</h2>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+              {list.map((p) => (
+                <PatternCard key={p.id} {...p} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Empty state */}
+      {list.length === 0 && (
+        <section className="flex flex-1 items-center justify-center px-4 pb-16">
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">No patterns published yet.</p>
             <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              href="/editor"
+              className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+              Create the first one
+            </a>
+          </div>
+        </section>
+      )}
     </div>
-  );
+  )
 }
