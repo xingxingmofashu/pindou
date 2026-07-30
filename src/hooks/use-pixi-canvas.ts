@@ -60,18 +60,14 @@ export function usePixiCanvas(
   const rectRef = useRef<DOMRect | null>(null)
 
   const pixiRef = useRef(pixiCtx)
-  pixiRef.current = pixiCtx
+  useEffect(() => { pixiRef.current = pixiCtx })
 
   const panRef = useRef({ on: false, startX: 0, startY: 0, startWX: 0, startWY: 0 })
   const drawRef = useRef({ on: false, worldX: 0, worldY: 0 })
 
-  /** Helpers that read mutable refs (stable, never re-created). */
-
-  const getPixi = () => pixiCtx
-
   const viewport = useCallback((): ViewRect | null => {
-    const ctx = getPixi()
-    if (!ctx) return null
+    const ctx = pixiRef.current
+    if (!ctx?.app.screen) return null
     const z = zoomRef.current
     const w = ctx.app.screen.width
     const h = ctx.app.screen.height
@@ -81,10 +77,10 @@ export function usePixiCanvas(
       right: (-ctx.world.x + w) / z,
       bottom: (-ctx.world.y + h) / z,
     }
-  }, [pixiCtx])
+  }, [])
 
   const redrawLabels = useCallback(() => {
-    const ctx = getPixi()
+    const ctx = pixiRef.current
     if (!ctx) return
     const z = zoomRef.current
     const entries = lastEntriesRef.current
@@ -95,18 +91,18 @@ export function usePixiCanvas(
       t.x = ctx.world.x + (e.worldX + e.size / 2) * z
       t.y = ctx.world.y + (e.worldY + e.size / 2) * z
     }
-  }, [pixiCtx])
+  }, [])
 
   const redrawGrid = useCallback(() => {
     const v = viewport()
     if (!v) return
     const { size } = lodParams(zoomRef.current)
-    drawGrid(getPixi()!.gridGfx, v, size, zoomRef.current, gridColor, gridAlpha)
+    drawGrid(pixiRef.current!.gridGfx, v, size, zoomRef.current, gridColor, gridAlpha)
     redrawLabels()
   }, [gridColor, gridAlpha, viewport, redrawLabels])
 
   const rebuild = useCallback(() => {
-    const ctx = getPixi()
+    const ctx = pixiRef.current
     const v = viewport()
     if (!ctx || !v) return
 
@@ -144,32 +140,50 @@ export function usePixiCanvas(
     }
   }, [gridColor, gridAlpha, viewport, palette, showLabels])
 
-  /** Keep refs current during render. */
+  /** Keep refs current via effect so callbacks see the latest. */
   const rebuildRef = useRef(rebuild)
   const redrawGridRef = useRef(redrawGrid)
-  rebuildRef.current = rebuild
-  redrawGridRef.current = redrawGrid
+  useEffect(() => { rebuildRef.current = rebuild })
+  useEffect(() => { redrawGridRef.current = redrawGrid })
 
   const toolRef = useRef(activeTool)
   const colorRef = useRef(activeColorIndex)
   const readonlyRef = useRef(readonly)
-  toolRef.current = activeTool
-  colorRef.current = activeColorIndex
-  readonlyRef.current = readonly
+  useEffect(() => { toolRef.current = activeTool })
+  useEffect(() => { colorRef.current = activeColorIndex })
+  useEffect(() => { readonlyRef.current = readonly })
 
-  /** Sync pixiCtx to rebuild when it becomes ready. */
+  /** Sync pixiCtx to rebuild + centre when canvas becomes ready. */
   useEffect(() => {
-    if (pixiCtx) {
-      pixiCtx.world.scale.set(zoomRef.current)
-      rebuildRef.current()
+    const ctx = pixiRef.current
+    if (!ctx?.app.screen) return
+    ctx.world.scale.set(zoomRef.current)
+
+    const map = cellsRef.current
+    if (map.size > 0) {
+      let minC = Infinity, maxC = -Infinity, minR = Infinity, maxR = -Infinity
+      for (const key of map.keys()) {
+        const [c, r] = key.split(",").map(Number)
+        if (c < minC) minC = c
+        if (c > maxC) maxC = c
+        if (r < minR) minR = r
+        if (r > maxR) maxR = r
+      }
+      const ww = (maxC + 1) * CELL
+      const wh = (maxR + 1) * CELL
+      ctx.world.x = (ctx.app.screen.width - ww * zoomRef.current) / 2
+      ctx.world.y = (ctx.app.screen.height - wh * zoomRef.current) / 2
     }
+
+    rebuildRef.current()
   }, [pixiCtx])
 
   /** Resize listener. */
   useEffect(() => {
-    if (!pixiCtx) return
+    const ctx = pixiRef.current
+    if (!ctx?.app.renderer) return
     const onResize = () => rebuildRef.current()
-    const renderer = pixiCtx.app.renderer
+    const renderer = ctx.app.renderer
     renderer.on("resize", onResize)
     return () => { renderer.off("resize", onResize) }
   }, [pixiCtx])
@@ -196,7 +210,7 @@ export function usePixiCanvas(
       const clamped = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, resolved))
       if (clamped === zoomRef.current) return
       zoomRef.current = clamped
-      const ctx = getPixi()
+      const ctx = pixiRef.current
       if (ctx) ctx.world.scale.set(clamped)
       rebuildRef.current()
       syncZoom()
@@ -209,13 +223,13 @@ export function usePixiCanvas(
   const toWorld = useCallback(
     (clientX: number, clientY: number, rect?: DOMRect | null) => {
       const canvas = canvasRef.current
-      const ctx = getPixi()
+      const ctx = pixiRef.current
       if (!canvas || !ctx) return null
       const r = rect ?? canvas.getBoundingClientRect()
       const z = zoomRef.current
       return { wx: (clientX - r.left - ctx.world.x) / z, wy: (clientY - r.top - ctx.world.y) / z }
     },
-    [canvasRef, pixiCtx]
+    [canvasRef]
   )
 
   const toPaintTarget = useCallback(
@@ -238,7 +252,7 @@ export function usePixiCanvas(
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
-      const ctx = getPixi()
+      const ctx = pixiRef.current
       if (!ctx) return
 
       const r = canvas.getBoundingClientRect()
@@ -259,7 +273,7 @@ export function usePixiCanvas(
 
     canvas.addEventListener("wheel", onWheel, { passive: false })
     return () => canvas.removeEventListener("wheel", onWheel)
-  }, [canvasRef, syncZoom, pixiCtx])
+  }, [canvasRef, syncZoom])
 
   /** Pointer event handling: pan + pen / eraser. */
 
@@ -276,7 +290,7 @@ export function usePixiCanvas(
 
       if (isPanButton(e.button)) {
         e.preventDefault()
-        const ctx = getPixi()
+        const ctx = pixiRef.current
         if (!ctx) return
         const p = panRef.current
         p.on = true; p.startX = e.clientX; p.startY = e.clientY
@@ -304,7 +318,7 @@ export function usePixiCanvas(
     const onMove = (e: PointerEvent) => {
       const p = panRef.current
       if (p.on) {
-        const ctx = getPixi()
+        const ctx = pixiRef.current
         if (!ctx) return
         ctx.world.x = p.startWX + e.clientX - p.startX
         ctx.world.y = p.startWY + e.clientY - p.startY
@@ -354,7 +368,7 @@ export function usePixiCanvas(
       canvas.removeEventListener("pointerleave", onUp)
       canvas.removeEventListener("contextmenu", onContextMenu)
     }
-  }, [canvasRef, toWorld, toPaintTarget, pixiCtx])
+  }, [canvasRef, toWorld, toPaintTarget])
 
   /** Clear canvas and re-render after a brand switch. */
 
@@ -366,12 +380,12 @@ export function usePixiCanvas(
   /** Public API returned by the hook. */
 
   const fitToCanvas = useCallback(() => {
-    const ctx = getPixi()
-    if (!ctx) return
+    const ctx = pixiRef.current
+    if (!ctx?.app.screen) return
     ctx.world.x = ctx.app.screen.width / 2
     ctx.world.y = ctx.app.screen.height / 2
     setZoom(initialZoom)
-  }, [setZoom, initialZoom, pixiCtx])
+  }, [setZoom, initialZoom])
 
   const clearCanvas = useCallback(() => {
     cellsRef.current = new Map()
@@ -405,7 +419,7 @@ export function usePixiCanvas(
 
     if (map.size > 0) {
       const ctx = pixiRef.current
-      if (ctx) {
+      if (ctx?.app.screen) {
         const ww = (maxC + 1) * CELL
         const wh = (maxR + 1) * CELL
         ctx.world.x = (ctx.app.screen.width - ww * zoomRef.current) / 2
