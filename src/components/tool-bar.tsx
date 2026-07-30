@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Pencil, Eraser, Trash2 } from "lucide-react"
+import { Pencil, Eraser, Trash2, CaseSensitive } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -32,6 +32,10 @@ interface ToolBarProps {
   onSelectTool: (tool: ToolKind) => void
   /** Called when the user clicks the clear-canvas button. */
   onClearCanvas?: () => void
+  /** Whether colour codes are shown on the canvas. */
+  showLabels?: boolean
+  /** Called when the user toggles colour-code labels. */
+  onToggleLabels?: () => void
 }
 
 /**
@@ -39,7 +43,7 @@ interface ToolBarProps {
  *
  * Each button shows a tooltip with the tool name and keyboard shortcut.
  */
-export function ToolBar({ activeTool, onSelectTool, onClearCanvas }: ToolBarProps) {
+export function ToolBar({ activeTool, onSelectTool, onClearCanvas, showLabels, onToggleLabels }: ToolBarProps) {
   const [clearOpen, setClearOpen] = useState(false)
 
   return (
@@ -63,6 +67,23 @@ export function ToolBar({ activeTool, onSelectTool, onClearCanvas }: ToolBarProp
           </TooltipContent>
         </Tooltip>
       ))}
+      {onToggleLabels && (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant={showLabels ? "secondary" : "outline"}
+                size="icon-xs"
+                aria-label="Show labels"
+              >
+                <CaseSensitive data-icon="inline-start" />
+              </Button>
+            }
+            onClick={onToggleLabels}
+          />
+          <TooltipContent side="bottom">Labels</TooltipContent>
+        </Tooltip>
+      )}
       {onClearCanvas && (
         <>
           <Separator orientation="vertical" className="mx-1 h-5" />

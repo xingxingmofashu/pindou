@@ -17,6 +17,7 @@ export default function EditorPage() {
   const [activeTool, setActiveTool] = useState<ToolKind>("pen")
   /** 1‑based palette index (0 = eraser / empty cell). */
   const [activeColorIndex, setActiveColorIndex] = useState(1)
+  const [showLabels, setShowLabels] = useState(false)
 
   /**
    * Called by the eyedropper tool after picking a colour from the canvas.
@@ -31,12 +32,19 @@ export default function EditorPage() {
     activeTool,
     activeColorIndex,
     onColorPick: handleColorPick,
+    showLabels,
   })
 
   return (
     <div className="flex h-full flex-col p-2 gap-2">
         <div className="flex items-center justify-between px-3 py-2 border">
-          <ToolBar activeTool={activeTool} onSelectTool={setActiveTool} onClearCanvas={clearCanvas} />
+          <ToolBar
+            activeTool={activeTool}
+            onSelectTool={setActiveTool}
+            onClearCanvas={clearCanvas}
+            showLabels={showLabels}
+            onToggleLabels={() => setShowLabels((v) => !v)}
+          />
           <ZoomControls zoom={zoom} onSetZoom={setZoom} onFit={fitToCanvas} />
         </div>
         <div className="flex-1 min-h-0 flex gap-2">

@@ -46,6 +46,7 @@ export interface BeadEntry {
   worldY: number
   size: number
   hex: string
+  code: string
 }
 
 /**
@@ -128,6 +129,7 @@ export function buildBeadEntries(
       worldY: slot.vr * cellSize,
       size: cellSize,
       hex: c.hex,
+      code: c.code,
     })
   }
 

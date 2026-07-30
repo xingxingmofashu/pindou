@@ -1,10 +1,10 @@
 "use client"
 
 import { useEffect, useRef, useState, useCallback, type RefObject } from "react"
-import { Application, Container, Graphics } from "pixi.js"
+import { Application, Container, Graphics, Text } from "pixi.js"
 import { EMPTY, paintBlock } from "@/lib/editor/data"
 import { walkLine } from "@/lib/editor/geometry"
-import { lodParams, drawGrid, buildBeadEntries, type ViewRect } from "@/lib/editor/render"
+import { lodParams, drawGrid, buildBeadEntries, type ViewRect, type BeadEntry } from "@/lib/editor/render"
 import { useActivePalette } from "@/hooks/use-active-palette"
 import type { ToolKind } from "@/components/tool-bar"
 
@@ -22,6 +22,8 @@ interface UsePixiCanvasOptions {
   /** 0 = empty, 1..N = 1‑based index into `palette.colors` */
   activeColorIndex?: number
   onColorPick?: (colorIndex: number) => void
+  /** When true, colour codes are overlaid on each bead. */
+  showLabels?: boolean
 }
 
 export function usePixiCanvas(
@@ -35,12 +37,14 @@ export function usePixiCanvas(
     initialZoom = DEFAULT_ZOOM,
     activeTool = "pen",
     activeColorIndex = 1,
+    showLabels = false,
   } = options
 
   const appRef = useRef<Application | null>(null)
   const worldRef = useRef<Container | null>(null)
   const beadsGfxRef = useRef<Graphics | null>(null)
   const gridGfxRef = useRef<Graphics | null>(null)
+  const labelsRef = useRef<Container | null>(null)
 
   const [zoom, setZoomState] = useState(initialZoom)
   const zoomRef = useRef(initialZoom)
@@ -48,6 +52,8 @@ export function usePixiCanvas(
 
   /** Sparse infinite bead grid. */
   const cellsRef = useRef<Map<string, number>>(new Map())
+  /** Last built bead entries, kept for label repositioning during pan. */
+  const lastEntriesRef = useRef<BeadEntry[]>([])
   /** Cached bounding rect reused across a pointer stroke. */
   const rectRef = useRef<DOMRect | null>(null)
 
@@ -56,6 +62,7 @@ export function usePixiCanvas(
 
   const toolRef = useRef(activeTool)
   const colorRef = useRef(activeColorIndex)
+  const showLabelsRef = useRef(showLabels)
 
   /** Active bead brand, shared with ColorPalette via the palette store. */
   const { palette } = useActivePalette()
@@ -77,15 +84,34 @@ export function usePixiCanvas(
     }
   }, [])
 
+  /** Reposition label texts during pan to track world-space bead centers in screen space. */
+  const redrawLabels = useCallback(() => {
+    const labels = labelsRef.current
+    const world = worldRef.current
+    if (!labels || !world) return
+    const z = zoomRef.current
+    const entries = lastEntriesRef.current
+    const children = labels.children
+    for (let i = 0; i < Math.min(entries.length, children.length); i++) {
+      const e = entries[i]
+      const t = children[i] as Text
+      t.x = world.x + (e.worldX + e.size / 2) * z
+      t.y = world.y + (e.worldY + e.size / 2) * z
+    }
+  }, [])
+
   const redrawGrid = useCallback(() => {
     const v = viewport()
     if (!v) return
     const { size } = lodParams(zoomRef.current)
     drawGrid(gridGfxRef.current!, v, size, zoomRef.current, gridColor, gridAlpha)
-  }, [gridColor, gridAlpha, viewport])
+    redrawLabels()
+  }, [gridColor, gridAlpha, viewport, redrawLabels])
 
   const rebuild = useCallback(() => {
     const beadsGfx = beadsGfxRef.current
+    const labels = labelsRef.current
+    const world = worldRef.current
     const v = viewport()
     if (!v || !beadsGfx) return
 
@@ -98,12 +124,34 @@ export function usePixiCanvas(
     if (!palette) return
 
     const entries = buildBeadEntries(cellsRef.current, v, scale, size, palette)
+    lastEntriesRef.current = entries
     const hexToNum = (h: string) => parseInt(h.replace("#", ""), 16)
 
     beadsGfx.clear()
     for (const e of entries) {
       beadsGfx.rect(e.worldX, e.worldY, e.size, e.size)
       beadsGfx.fill({ color: hexToNum(e.hex) })
+    }
+
+    if (labels) {
+      labels.removeChildren()
+      if (showLabelsRef.current && world) {
+        for (const e of entries) {
+          const text = new Text({
+            text: e.code,
+            style: {
+              fontSize: Math.max(7, Math.round(e.size * z * 0.35)),
+              fill: "#111",
+              fontFamily: "monospace",
+              fontWeight: "bold",
+            },
+          })
+          text.anchor.set(0.5)
+          text.x = world.x + (e.worldX + e.size / 2) * z
+          text.y = world.y + (e.worldY + e.size / 2) * z
+          labels.addChild(text)
+        }
+      }
     }
   }, [gridColor, gridAlpha, viewport])
 
@@ -114,9 +162,15 @@ export function usePixiCanvas(
   useEffect(() => {
     toolRef.current = activeTool
     colorRef.current = activeColorIndex
+    showLabelsRef.current = showLabels
     rebuildRef.current = rebuild
     redrawGridRef.current = redrawGrid
   })
+
+  /** Rebuild when showLabels toggles. */
+  useEffect(() => {
+    rebuildRef.current()
+  }, [showLabels])
 
   /** Sync zoom state via rAF. */
   const syncZoom = useCallback(() => {
@@ -189,13 +243,16 @@ export function usePixiCanvas(
 
         const beadsGfx = new Graphics(); beadsGfx.label = "beads"
         const gridGfx = new Graphics(); gridGfx.label = "grid"
+        const labels = new Container(); labels.label = "labels"
         world.addChild(beadsGfx)
         world.addChild(gridGfx)
 
         app.stage.addChild(world)
+        app.stage.addChild(labels)
         appRef.current = app
         worldRef.current = world
         beadsGfxRef.current = beadsGfx
+        labelsRef.current = labels
         gridGfxRef.current = gridGfx
 
         rebuildRef.current()
@@ -212,6 +269,7 @@ export function usePixiCanvas(
       appRef.current = null
       worldRef.current = null
       beadsGfxRef.current = null
+      labelsRef.current = null
       gridGfxRef.current = null
     }
   }, [canvasRef, backgroundColor])
@@ -257,7 +315,7 @@ export function usePixiCanvas(
     const onDown = (e: PointerEvent) => {
       rectRef.current = canvas.getBoundingClientRect()
 
-      if (e.button === 1) {
+      if (e.button === 1 || e.button === 2) {
         e.preventDefault()
         const w = worldRef.current
         if (!w) return
@@ -316,22 +374,26 @@ export function usePixiCanvas(
     }
 
     const onUp = (e: PointerEvent) => {
-      if (e.button === 1) panRef.current.on = false
+      if (e.button === 1 || e.button === 2) panRef.current.on = false
       if (e.button === 0) drawRef.current = { on: false, worldX: 0, worldY: 0 }
       rectRef.current = null
     }
+
+    const onContextMenu = (e: Event) => e.preventDefault()
 
     canvas.addEventListener("pointerdown", onDown)
     canvas.addEventListener("pointermove", onMove)
     canvas.addEventListener("pointerup", onUp)
     canvas.addEventListener("pointercancel", onUp)
     canvas.addEventListener("pointerleave", onUp)
+    canvas.addEventListener("contextmenu", onContextMenu)
     return () => {
       canvas.removeEventListener("pointerdown", onDown)
       canvas.removeEventListener("pointermove", onMove)
       canvas.removeEventListener("pointerup", onUp)
       canvas.removeEventListener("pointercancel", onUp)
       canvas.removeEventListener("pointerleave", onUp)
+      canvas.removeEventListener("contextmenu", onContextMenu)
     }
   }, [canvasRef, toWorld, toPaintTarget])
 
