@@ -2,17 +2,9 @@ import { desc } from "drizzle-orm"
 import { db } from "@/db"
 import { patterns } from "@/db/schema"
 import { PatternCard } from "@/components/pattern-card"
+import { parseBeadStats } from "@/lib/utils"
 
 export const revalidate = 60
-
-interface PatternRow {
-  id: string
-  title: string
-  authorName: string | null
-  beadStats: string
-  thumbPng: string
-  createdAt: string
-}
 
 export default function HomePage() {
   const rows = db
@@ -27,11 +19,11 @@ export default function HomePage() {
     .from(patterns)
     .orderBy(desc(patterns.createdAt))
     .limit(12)
-    .all() as PatternRow[]
+    .all()
 
   const list = rows.map((r) => ({
     ...r,
-    beadStats: JSON.parse(r.beadStats) as Record<string, number>,
+    beadStats: parseBeadStats(r.beadStats),
   }))
 
   return (

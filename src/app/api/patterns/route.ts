@@ -6,15 +6,13 @@ import { patterns } from "@/db/schema"
 import { MAX_GRID_DIMENSION } from "@/lib/editor/data"
 import { PALETTES, DEFAULT_PALETTE_ID } from "@/lib/palette/registry"
 import { generateThumbnail } from "@/lib/thumbnail"
+import { parseBeadStats } from "@/lib/utils"
 
 const PAGE_SIZE = 24
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
-  const sort = searchParams.get("sort") ?? "newest"
   const page = Math.max(1, Number(searchParams.get("page")) || 1)
-
-  const order = sort === "popular" ? desc(patterns.createdAt) : desc(patterns.createdAt)
 
   const rows = db
     .select({
@@ -24,27 +22,25 @@ export async function GET(request: NextRequest) {
       authorName: patterns.authorName,
       beadStats: patterns.beadStats,
       createdAt: patterns.createdAt,
+      total: sql<number>`count(*) over()`.as("total"),
     })
     .from(patterns)
-    .orderBy(order)
+    .orderBy(desc(patterns.createdAt))
     .limit(PAGE_SIZE)
     .offset((page - 1) * PAGE_SIZE)
     .all()
 
-  const [{ count }] = db
-    .select({ count: sql<number>`count(*)` })
-    .from(patterns)
-    .all()
+  const total = rows[0]?.total ?? 0
 
   return NextResponse.json({
-    patterns: rows.map((r) => ({
-      ...r,
-      beadStats: JSON.parse(r.beadStats) as Record<string, number>,
-    })),
-    total: count,
+    patterns: rows.map((r) => {
+      const { total: _, ...rest } = r
+      return { ...rest, beadStats: parseBeadStats(r.beadStats) }
+    }),
+    total,
     page,
     pageSize: PAGE_SIZE,
-    totalPages: Math.ceil(count / PAGE_SIZE),
+    totalPages: Math.ceil(total / PAGE_SIZE),
   })
 }
 

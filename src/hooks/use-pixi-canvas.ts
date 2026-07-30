@@ -7,6 +7,7 @@ import { walkLine } from "@/lib/editor/geometry"
 import { lodParams, drawGrid, buildBeadEntries, type ViewRect, type BeadEntry } from "@/lib/editor/render"
 import { createPixiApp, type PixiContext } from "@/lib/editor/pixi-app"
 import { useActivePalette } from "@/hooks/use-active-palette"
+import { hexToRgb } from "@/lib/utils"
 import type { ToolKind } from "@/components/editor/tool-bar"
 
 const MIN_ZOOM = 0.5
@@ -110,7 +111,7 @@ export function usePixiCanvas(
     ctx.beadsGfx.clear()
     for (const e of entries) {
       ctx.beadsGfx.rect(e.worldX, e.worldY, e.size, e.size)
-      ctx.beadsGfx.fill({ color: parseInt(e.hex.replace("#", ""), 16) })
+      ctx.beadsGfx.fill({ color: hexToRgb(e.hex) })
     }
 
     ctx.labels.removeChildren()

@@ -1,6 +1,7 @@
 import sharp from "sharp"
 import { EMPTY } from "@/lib/editor/data"
 import { MIN_PX } from "@/lib/editor/render"
+import { hexToRgb } from "@/lib/utils"
 import type { BeadPalette } from "@/types/palette"
 
 /** Maximum cells per axis before downsampling kicks in. */
@@ -48,7 +49,7 @@ export async function generateThumbnail(grid: number[][], palette: BeadPalette):
       if (colorIdx === EMPTY) continue
       const hex = palette.colors[colorIdx - 1]?.hex
       if (!hex) continue
-      const rgb = parseInt(hex.replace("#", ""), 16)
+      const rgb = hexToRgb(hex)
       const y0 = offsetY + r * cellPx
       const x0 = offsetX + c * cellPx
       for (let dr = 0; dr < cellPx; dr++) {
