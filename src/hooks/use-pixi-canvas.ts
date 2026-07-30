@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState, useCallback, type RefObject } from "react"
 import { Application, Container, Graphics } from "pixi.js"
-import { PALETTES, DEFAULT_PALETTE_ID } from "@/lib/palette/registry"
-import { EMPTY, cellKey, paintBlock } from "@/lib/editor/data"
+import { EMPTY, paintBlock } from "@/lib/editor/data"
 import { walkLine } from "@/lib/editor/geometry"
-import { CELL, lodParams, drawGrid, buildBeadEntries, type ViewRect } from "@/lib/editor/render"
+import { lodParams, drawGrid, buildBeadEntries, type ViewRect } from "@/lib/editor/render"
+import { useActivePalette } from "@/hooks/use-active-palette"
 import type { ToolKind } from "@/components/tool-bar"
 
 const MIN_ZOOM = 0.5
@@ -35,7 +35,6 @@ export function usePixiCanvas(
     initialZoom = DEFAULT_ZOOM,
     activeTool = "pen",
     activeColorIndex = 1,
-    onColorPick,
   } = options
 
   const appRef = useRef<Application | null>(null)
@@ -56,11 +55,11 @@ export function usePixiCanvas(
   const drawRef = useRef({ on: false, worldX: 0, worldY: 0 })
 
   const toolRef = useRef(activeTool)
-  toolRef.current = activeTool
   const colorRef = useRef(activeColorIndex)
-  colorRef.current = activeColorIndex
 
-  const paletteRef = useRef(PALETTES.get(DEFAULT_PALETTE_ID) ?? null)
+  /** Active bead brand, shared with ColorPalette via the palette store. */
+  const { palette } = useActivePalette()
+  const paletteRef = useRef(palette ?? null)
 
   /** Compute the visible world rectangle from the current pan and zoom. */
   const viewport = useCallback((): ViewRect | null => {
@@ -87,11 +86,11 @@ export function usePixiCanvas(
 
   const rebuild = useCallback(() => {
     const beadsGfx = beadsGfxRef.current
-    if (!viewport() || !beadsGfx) return
+    const v = viewport()
+    if (!v || !beadsGfx) return
 
     const z = zoomRef.current
     const { scale, size } = lodParams(z)
-    const v = viewport()!
 
     drawGrid(gridGfxRef.current!, v, size, z, gridColor, gridAlpha)
 
@@ -109,9 +108,15 @@ export function usePixiCanvas(
   }, [gridColor, gridAlpha, viewport])
 
   const rebuildRef = useRef(rebuild)
-  rebuildRef.current = rebuild
   const redrawGridRef = useRef(redrawGrid)
-  redrawGridRef.current = redrawGrid
+
+  /** Keep mutable refs in sync with the latest render values. */
+  useEffect(() => {
+    toolRef.current = activeTool
+    colorRef.current = activeColorIndex
+    rebuildRef.current = rebuild
+    redrawGridRef.current = redrawGrid
+  })
 
   /** Sync zoom state via rAF. */
   const syncZoom = useCallback(() => {
@@ -127,6 +132,7 @@ export function usePixiCanvas(
     (z: number | ((prev: number) => number)) => {
       const resolved = typeof z === "function" ? z(zoomRef.current) : z
       const clamped = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, resolved))
+      if (clamped === zoomRef.current) return
       zoomRef.current = clamped
       if (worldRef.current) worldRef.current.scale.set(clamped)
       rebuildRef.current()
@@ -328,6 +334,12 @@ export function usePixiCanvas(
       canvas.removeEventListener("pointerleave", onUp)
     }
   }, [canvasRef, toWorld, toPaintTarget])
+
+  /** Re-render beads with the new brand's colours after a palette switch. */
+  useEffect(() => {
+    paletteRef.current = palette ?? null
+    rebuildRef.current()
+  }, [palette])
 
   const fitToCanvas = useCallback(() => {
     const app = appRef.current

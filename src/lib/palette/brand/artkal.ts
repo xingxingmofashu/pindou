@@ -667,7 +667,7 @@ export const ARTKAL_PALETTE: BeadPalette = {
     {
         id: "s111",
         code: "#S111",
-        name: "Caffe Latt�",
+        name: "Caffè Latte",
         hex: "#766C2B"
     },
     {

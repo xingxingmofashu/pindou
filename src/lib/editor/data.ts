@@ -24,7 +24,8 @@ export function paintBlock(
   for (let r = r0; r < r1; r++) {
     for (let c = c0; c < c1; c++) {
       const k = cellKey(c, r)
-      colorIdx === EMPTY ? map.delete(k) : map.set(k, colorIdx)
+      if (colorIdx === EMPTY) map.delete(k)
+      else map.set(k, colorIdx)
     }
   }
 }
