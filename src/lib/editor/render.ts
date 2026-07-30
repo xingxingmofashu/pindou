@@ -118,7 +118,7 @@ export function buildBeadEntries(
   }
 
   const entries: BeadEntry[] = []
-  for (const [, slot] of buckets) {
+  for (const slot of buckets.values()) {
     const best = dominant(slot.counts)
     if (best === EMPTY) continue
     const c = palette.colors[best - 1]

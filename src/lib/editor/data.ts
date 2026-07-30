@@ -5,13 +5,6 @@ export const EMPTY = 0
 export const MAX_GRID_DIMENSION = 256
 
 /**
- * Encode a data-cell coordinate pair as a string key.
- */
-export function cellKey(col: number, row: number): string {
-  return `${col},${row}`
-}
-
-/**
  * Write a rectangular block of data cells to the sparse grid.
  *
  * Passing {@link EMPTY} as `colorIdx` removes the cells from the map.
@@ -26,7 +19,7 @@ export function paintBlock(
 ): void {
   for (let r = r0; r < r1; r++) {
     for (let c = c0; c < c1; c++) {
-      const k = cellKey(c, r)
+      const k = `${c},${r}`
       if (colorIdx === EMPTY) map.delete(k)
       else map.set(k, colorIdx)
     }

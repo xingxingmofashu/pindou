@@ -30,7 +30,6 @@ export function ColorPalette({ activeColorIndex, onSelectColor }: ColorPalettePr
 
   /** Colours grouped by series letter, with 1‑based palette indices. */
   const seriesGroups = useMemo(() => {
-    if (!palette) return []
     const map = new Map<string, { series: string; colors: { index: number; hex: string; code: string }[] }>()
     palette.colors.forEach((color, i) => {
       const series = color.series ?? "?"
@@ -43,14 +42,6 @@ export function ColorPalette({ activeColorIndex, onSelectColor }: ColorPalettePr
     })
     return Array.from(map.values())
   }, [palette])
-
-  if (!palette) {
-    return (
-      <div className="p-3 text-sm text-muted-foreground">
-        No palette loaded
-      </div>
-    )
-  }
 
   /**
    * Switch the active brand and reset to the first colour.

@@ -1,10 +1,11 @@
 "use client"
 
 import { useEffect, useRef, useState, useCallback, type RefObject } from "react"
-import { Application, Container, Graphics, Text } from "pixi.js"
+import { Text } from "pixi.js"
 import { EMPTY, paintBlock, serializeGrid } from "@/lib/editor/data"
 import { walkLine } from "@/lib/editor/geometry"
 import { lodParams, drawGrid, buildBeadEntries, type ViewRect, type BeadEntry } from "@/lib/editor/render"
+import { createPixiApp, type PixiContext } from "@/lib/editor/pixi-app"
 import { useActivePalette } from "@/hooks/use-active-palette"
 import type { ToolKind } from "@/components/editor/tool-bar"
 
@@ -22,7 +23,6 @@ interface UsePixiCanvasOptions {
   /** 0 = empty, 1..N = 1‑based index into `palette.colors` */
   activeColorIndex?: number
   onColorPick?: (colorIndex: number) => void
-  /** When true, colour codes are overlaid on each bead. */
   showLabels?: boolean
 }
 
@@ -40,63 +40,49 @@ export function usePixiCanvas(
     showLabels = false,
   } = options
 
-  const appRef = useRef<Application | null>(null)
-  const worldRef = useRef<Container | null>(null)
-  const beadsGfxRef = useRef<Graphics | null>(null)
-  const gridGfxRef = useRef<Graphics | null>(null)
-  const labelsRef = useRef<Container | null>(null)
-
+  const pixiRef = useRef<PixiContext | null>(null)
   const [zoom, setZoomState] = useState(initialZoom)
   const zoomRef = useRef(initialZoom)
   const rafRef = useRef(0)
 
-  /** Sparse infinite bead grid. */
   const cellsRef = useRef<Map<string, number>>(new Map())
-  /** Last built bead entries, kept for label repositioning during pan. */
   const lastEntriesRef = useRef<BeadEntry[]>([])
-  /** Cached bounding rect reused across a pointer stroke. */
   const rectRef = useRef<DOMRect | null>(null)
 
   const panRef = useRef({ on: false, startX: 0, startY: 0, startWX: 0, startWY: 0 })
   const drawRef = useRef({ on: false, worldX: 0, worldY: 0 })
 
-  const toolRef = useRef(activeTool)
-  const colorRef = useRef(activeColorIndex)
-  const showLabelsRef = useRef(showLabels)
-
-  /** Active bead brand, shared with ColorPalette via the palette store. */
   const { palette } = useActivePalette()
-  const paletteRef = useRef(palette ?? null)
 
-  /** Compute the visible world rectangle from the current pan and zoom. */
+  /** Helpers that read mutable refs (stable, never re-created). */
+
+  const getPixi = () => pixiRef.current
+
   const viewport = useCallback((): ViewRect | null => {
-    const app = appRef.current
-    const world = worldRef.current
-    if (!app || !world) return null
+    const ctx = getPixi()
+    if (!ctx) return null
     const z = zoomRef.current
-    const w = app.screen.width
-    const h = app.screen.height
+    const w = ctx.app.screen.width
+    const h = ctx.app.screen.height
     return {
-      left: -world.x / z,
-      top: -world.y / z,
-      right: (-world.x + w) / z,
-      bottom: (-world.y + h) / z,
+      left: -ctx.world.x / z,
+      top: -ctx.world.y / z,
+      right: (-ctx.world.x + w) / z,
+      bottom: (-ctx.world.y + h) / z,
     }
   }, [])
 
-  /** Reposition label texts during pan to track world-space bead centers in screen space. */
   const redrawLabels = useCallback(() => {
-    const labels = labelsRef.current
-    const world = worldRef.current
-    if (!labels || !world) return
+    const ctx = getPixi()
+    if (!ctx) return
     const z = zoomRef.current
     const entries = lastEntriesRef.current
-    const children = labels.children
+    const children = ctx.labels.children
     for (let i = 0; i < Math.min(entries.length, children.length); i++) {
       const e = entries[i]
       const t = children[i] as Text
-      t.x = world.x + (e.worldX + e.size / 2) * z
-      t.y = world.y + (e.worldY + e.size / 2) * z
+      t.x = ctx.world.x + (e.worldX + e.size / 2) * z
+      t.y = ctx.world.y + (e.worldY + e.size / 2) * z
     }
   }, [])
 
@@ -104,75 +90,63 @@ export function usePixiCanvas(
     const v = viewport()
     if (!v) return
     const { size } = lodParams(zoomRef.current)
-    drawGrid(gridGfxRef.current!, v, size, zoomRef.current, gridColor, gridAlpha)
+    drawGrid(getPixi()!.gridGfx, v, size, zoomRef.current, gridColor, gridAlpha)
     redrawLabels()
   }, [gridColor, gridAlpha, viewport, redrawLabels])
 
   const rebuild = useCallback(() => {
-    const beadsGfx = beadsGfxRef.current
-    const labels = labelsRef.current
-    const world = worldRef.current
+    const ctx = getPixi()
     const v = viewport()
-    if (!v || !beadsGfx) return
+    if (!ctx || !v) return
 
     const z = zoomRef.current
     const { scale, size } = lodParams(z)
 
-    drawGrid(gridGfxRef.current!, v, size, z, gridColor, gridAlpha)
-
-    const palette = paletteRef.current
-    if (!palette) return
+    drawGrid(ctx.gridGfx, v, size, z, gridColor, gridAlpha)
 
     const entries = buildBeadEntries(cellsRef.current, v, scale, size, palette)
     lastEntriesRef.current = entries
-    const hexToNum = (h: string) => parseInt(h.replace("#", ""), 16)
 
-    beadsGfx.clear()
+    ctx.beadsGfx.clear()
     for (const e of entries) {
-      beadsGfx.rect(e.worldX, e.worldY, e.size, e.size)
-      beadsGfx.fill({ color: hexToNum(e.hex) })
+      ctx.beadsGfx.rect(e.worldX, e.worldY, e.size, e.size)
+      ctx.beadsGfx.fill({ color: parseInt(e.hex.replace("#", ""), 16) })
     }
 
-    if (labels) {
-      labels.removeChildren()
-      if (showLabelsRef.current && world) {
-        for (const e of entries) {
-          const text = new Text({
-            text: e.code,
-            style: {
-              fontSize: Math.max(7, Math.round(e.size * z * 0.35)),
-              fill: "#111",
-              fontFamily: "monospace",
-              fontWeight: "bold",
-            },
-          })
-          text.anchor.set(0.5)
-          text.x = world.x + (e.worldX + e.size / 2) * z
-          text.y = world.y + (e.worldY + e.size / 2) * z
-          labels.addChild(text)
-        }
+    ctx.labels.removeChildren()
+    if (showLabels) {
+      for (const e of entries) {
+        const text = new Text({
+          text: e.code,
+          style: {
+            fontSize: Math.max(7, Math.round(e.size * z * 0.35)),
+            fill: "#111",
+            fontFamily: "monospace",
+            fontWeight: "bold",
+          },
+        })
+        text.anchor.set(0.5)
+        text.x = ctx.world.x + (e.worldX + e.size / 2) * z
+        text.y = ctx.world.y + (e.worldY + e.size / 2) * z
+        ctx.labels.addChild(text)
       }
     }
-  }, [gridColor, gridAlpha, viewport])
+  }, [gridColor, gridAlpha, viewport, palette, showLabels])
+
+  /** Keep refs current during render (React 18+ stable pattern). */
 
   const rebuildRef = useRef(rebuild)
   const redrawGridRef = useRef(redrawGrid)
+  rebuildRef.current = rebuild
+  redrawGridRef.current = redrawGrid
 
-  /** Keep mutable refs in sync with the latest render values. */
-  useEffect(() => {
-    toolRef.current = activeTool
-    colorRef.current = activeColorIndex
-    showLabelsRef.current = showLabels
-    rebuildRef.current = rebuild
-    redrawGridRef.current = redrawGrid
-  })
+  const toolRef = useRef(activeTool)
+  const colorRef = useRef(activeColorIndex)
+  toolRef.current = activeTool
+  colorRef.current = activeColorIndex
 
-  /** Rebuild when showLabels toggles. */
-  useEffect(() => {
-    rebuildRef.current()
-  }, [showLabels])
+  /** Zoom state management. */
 
-  /** Sync zoom state via rAF. */
   const syncZoom = useCallback(() => {
     if (!rafRef.current) {
       rafRef.current = requestAnimationFrame(() => {
@@ -188,21 +162,24 @@ export function usePixiCanvas(
       const clamped = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, resolved))
       if (clamped === zoomRef.current) return
       zoomRef.current = clamped
-      if (worldRef.current) worldRef.current.scale.set(clamped)
+      const ctx = getPixi()
+      if (ctx) ctx.world.scale.set(clamped)
       rebuildRef.current()
       syncZoom()
     },
     [syncZoom]
   )
 
+  /** Coordinate transforms between screen and world space. */
+
   const toWorld = useCallback(
     (clientX: number, clientY: number, rect?: DOMRect | null) => {
       const canvas = canvasRef.current
-      const world = worldRef.current
-      if (!canvas || !world) return null
+      const ctx = getPixi()
+      if (!canvas || !ctx) return null
       const r = rect ?? canvas.getBoundingClientRect()
       const z = zoomRef.current
-      return { wx: (clientX - r.left - world.x) / z, wy: (clientY - r.top - world.y) / z }
+      return { wx: (clientX - r.left - ctx.world.x) / z, wy: (clientY - r.top - ctx.world.y) / z }
     },
     [canvasRef]
   )
@@ -219,71 +196,47 @@ export function usePixiCanvas(
     [toWorld]
   )
 
-  /** PixiJS init / destroy. */
+  /** PixiJS Application lifecycle. */
+
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const parent = canvas.parentElement
-    if (!parent) return
 
     let dead = false
 
-    ;(async () => {
-      try {
-        const app = new Application()
-        await app.init({
-          canvas, resizeTo: parent, background: backgroundColor,
-          antialias: true, resolution: window.devicePixelRatio || 1, autoDensity: true,
-        })
-        if (dead) { app.destroy(true); return }
-
-        const world = new Container()
-        world.label = "world"
-        world.scale.set(zoomRef.current)
-
-        const beadsGfx = new Graphics(); beadsGfx.label = "beads"
-        const gridGfx = new Graphics(); gridGfx.label = "grid"
-        const labels = new Container(); labels.label = "labels"
-        world.addChild(beadsGfx)
-        world.addChild(gridGfx)
-
-        app.stage.addChild(world)
-        app.stage.addChild(labels)
-        appRef.current = app
-        worldRef.current = world
-        beadsGfxRef.current = beadsGfx
-        labelsRef.current = labels
-        gridGfxRef.current = gridGfx
-
-        rebuildRef.current()
-        app.renderer.on("resize", () => rebuildRef.current())
-      } catch (err) {
-        console.error("PixiJS init failed:", err)
-      }
-    })()
+    createPixiApp(canvas, backgroundColor).then((ctx) => {
+      if (dead) { ctx.app.destroy(true); return }
+      ctx.world.scale.set(zoomRef.current)
+      pixiRef.current = ctx
+      rebuildRef.current()
+      ctx.app.renderer.on("resize", () => rebuildRef.current())
+    }).catch((err) => {
+      console.error("PixiJS init failed:", err)
+    })
 
     return () => {
       dead = true
       if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = 0 }
-      appRef.current?.destroy(true)
-      appRef.current = null
-      worldRef.current = null
-      beadsGfxRef.current = null
-      labelsRef.current = null
-      gridGfxRef.current = null
+      pixiRef.current?.app.destroy(true)
+      pixiRef.current = null
     }
   }, [canvasRef, backgroundColor])
 
-  /** Wheel zoom. */
+  /** Rebuild after showLabels toggles. */
+  useEffect(() => {
+    rebuildRef.current()
+  }, [showLabels])
+
+  /** Cursor-centred wheel zoom. */
+
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
-      const app = appRef.current
-      const world = worldRef.current
-      if (!app || !world) return
+      const ctx = getPixi()
+      if (!ctx) return
 
       const r = canvas.getBoundingClientRect()
       const cx = e.clientX - r.left
@@ -293,10 +246,10 @@ export function usePixiCanvas(
       const clamped = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, raw))
       const ratio = clamped / old
 
-      world.x = cx - ratio * (cx - world.x)
-      world.y = cy - ratio * (cy - world.y)
+      ctx.world.x = cx - ratio * (cx - ctx.world.x)
+      ctx.world.y = cy - ratio * (cy - ctx.world.y)
       zoomRef.current = clamped
-      world.scale.set(clamped)
+      ctx.world.scale.set(clamped)
       rebuildRef.current()
       syncZoom()
     }
@@ -305,48 +258,51 @@ export function usePixiCanvas(
     return () => canvas.removeEventListener("wheel", onWheel)
   }, [canvasRef, syncZoom])
 
-  /** Pointer: pan + pen / eraser. */
+  /** Pointer event handling: pan + pen / eraser. */
+
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
 
     const isDraw = (t: ToolKind) => t === "pen" || t === "eraser"
 
+    const isPanButton = (b: number) => b === 1 || b === 2
+
     const onDown = (e: PointerEvent) => {
       rectRef.current = canvas.getBoundingClientRect()
 
-      if (e.button === 1 || e.button === 2) {
+      if (isPanButton(e.button)) {
         e.preventDefault()
-        const w = worldRef.current
-        if (!w) return
+        const ctx = getPixi()
+        if (!ctx) return
         const p = panRef.current
-        p.on = true; p.startX = e.clientX; p.startY = e.clientY; p.startWX = w.x; p.startWY = w.y
+        p.on = true; p.startX = e.clientX; p.startY = e.clientY
+        p.startWX = ctx.world.x; p.startWY = ctx.world.y
         canvas.setPointerCapture(e.pointerId)
         return
       }
       if (e.button !== 0) return
 
       const tool = toolRef.current
+      if (!isDraw(tool)) return
 
-      if (isDraw(tool)) {
-        e.preventDefault()
-        const t = toPaintTarget(e.clientX, e.clientY)
-        if (!t) return
-        paintBlock(cellsRef.current, t.c0, t.r0, t.c1, t.r1, tool === "eraser" ? EMPTY : colorRef.current)
-        const w = toWorld(e.clientX, e.clientY, rectRef.current)
-        if (w) drawRef.current = { on: true, worldX: w.wx, worldY: w.wy }
-        rebuildRef.current()
-        canvas.setPointerCapture(e.pointerId)
-      }
+      e.preventDefault()
+      const t = toPaintTarget(e.clientX, e.clientY)
+      if (!t) return
+      paintBlock(cellsRef.current, t.c0, t.r0, t.c1, t.r1, tool === "eraser" ? EMPTY : colorRef.current)
+      const w = toWorld(e.clientX, e.clientY, rectRef.current)
+      if (w) drawRef.current = { on: true, worldX: w.wx, worldY: w.wy }
+      rebuildRef.current()
+      canvas.setPointerCapture(e.pointerId)
     }
 
     const onMove = (e: PointerEvent) => {
       const p = panRef.current
       if (p.on) {
-        const w = worldRef.current
-        if (!w) return
-        w.x = p.startWX + e.clientX - p.startX
-        w.y = p.startWY + e.clientY - p.startY
+        const ctx = getPixi()
+        if (!ctx) return
+        ctx.world.x = p.startWX + e.clientX - p.startX
+        ctx.world.y = p.startWY + e.clientY - p.startY
         redrawGridRef.current()
         return
       }
@@ -374,19 +330,17 @@ export function usePixiCanvas(
     }
 
     const onUp = (e: PointerEvent) => {
-      if (e.button === 1 || e.button === 2) panRef.current.on = false
+      if (isPanButton(e.button)) panRef.current.on = false
       if (e.button === 0) drawRef.current = { on: false, worldX: 0, worldY: 0 }
       rectRef.current = null
     }
 
     const onContextMenu = (e: Event) => e.preventDefault()
 
-    canvas.addEventListener("pointerdown", onDown)
-    canvas.addEventListener("pointermove", onMove)
-    canvas.addEventListener("pointerup", onUp)
-    canvas.addEventListener("pointercancel", onUp)
-    canvas.addEventListener("pointerleave", onUp)
-    canvas.addEventListener("contextmenu", onContextMenu)
+    for (const [ev, fn] of [["pointerdown", onDown], ["pointermove", onMove], ["pointerup", onUp], ["pointercancel", onUp], ["pointerleave", onUp], ["contextmenu", onContextMenu]] as const) {
+      canvas.addEventListener(ev, fn)
+    }
+
     return () => {
       canvas.removeEventListener("pointerdown", onDown)
       canvas.removeEventListener("pointermove", onMove)
@@ -397,19 +351,20 @@ export function usePixiCanvas(
     }
   }, [canvasRef, toWorld, toPaintTarget])
 
-  /** Clear canvas and re-render with the new brand's colours after a palette switch. */
+  /** Clear canvas and re-render after a brand switch. */
+
   useEffect(() => {
-    paletteRef.current = palette ?? null
     cellsRef.current = new Map()
     rebuildRef.current()
   }, [palette])
 
+  /** Public API returned by the hook. */
+
   const fitToCanvas = useCallback(() => {
-    const app = appRef.current
-    const world = worldRef.current
-    if (!app || !world) return
-    world.x = app.screen.width / 2
-    world.y = app.screen.height / 2
+    const ctx = getPixi()
+    if (!ctx) return
+    ctx.world.x = ctx.app.screen.width / 2
+    ctx.world.y = ctx.app.screen.height / 2
     setZoom(initialZoom)
   }, [setZoom, initialZoom])
 
@@ -418,14 +373,13 @@ export function usePixiCanvas(
     rebuildRef.current()
   }, [])
 
-  /** Export the sparse grid for publishing. */
   const getCellsData = useCallback((): {
     grid: number[][]; brandId: string
   } | null => {
     const grid = serializeGrid(cellsRef.current)
     if (!grid) return null
-    return { grid, brandId: paletteRef.current?.id ?? "mard" }
-  }, [])
+    return { grid, brandId: palette.id }
+  }, [palette])
 
   return { zoom, setZoom, fitToCanvas, clearCanvas, getCellsData }
 }

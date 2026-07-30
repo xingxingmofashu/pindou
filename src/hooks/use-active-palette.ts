@@ -8,8 +8,8 @@ import type { BeadPalette } from "@/types/palette"
 interface ActivePalette {
   /** Id of the active brand, e.g. `"mard"`. */
   brandId: string
-  /** The active palette, or `undefined` if the registry is empty. */
-  palette: BeadPalette | undefined
+  /** The active palette. */
+  palette: BeadPalette
   /** Switch the active brand by id; unknown ids are ignored. */
   setBrandId: (id: string) => void
 }
@@ -29,6 +29,6 @@ export function useActivePalette(): ActivePalette {
     getActivePaletteId,
     () => DEFAULT_PALETTE_ID
   )
-  const palette = PALETTES.get(brandId) ?? PALETTES.get(DEFAULT_PALETTE_ID)
+  const palette = PALETTES.get(brandId) ?? PALETTES.get(DEFAULT_PALETTE_ID)!
   return { brandId, palette, setBrandId: setActivePaletteId }
 }
