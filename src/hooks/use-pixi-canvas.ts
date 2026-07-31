@@ -1,9 +1,8 @@
 "use client"
 
-import { useEffect, useRef, useState, useCallback, type RefObject } from "react"
-import { Text } from "pixi.js"
+import { useEffect, useRef, useState, useCallback } from "react"
+import { Application, Container, Graphics, Text } from "pixi.js"
 import { EMPTY, paintBlock, serializeGrid, walkLine, lodParams, drawGrid, buildBeadEntries, getGridBounds, centerViewport, type ViewRect, type BeadEntry } from "@/lib/editor"
-import { usePixiApp } from "@/hooks/use-pixi-app"
 import { useActivePalette } from "@/hooks/use-active-palette"
 import { hexToRgb } from "@/lib/utils"
 import type { ToolKind } from "@/components/editor/tool-bar"
@@ -14,10 +13,18 @@ const MAX_ZOOM = 20
 const ZOOM_FACTOR = 1.15
 const DEFAULT_ZOOM = 3
 
+/** PixiJS scene graph objects passed into {@link usePixiCanvas}. */
+export interface PixiContext {
+  app: Application
+  world: Container
+  beadsGfx: Graphics
+  gridGfx: Graphics
+  labels: Container
+}
+
 interface UsePixiCanvasOptions {
   gridColor?: number
   gridAlpha?: number
-  backgroundColor?: string
   initialZoom?: number
   activeTool?: ToolKind
   /** 0 = empty, 1..N = 1‑based index into `palette.colors` */
@@ -31,13 +38,12 @@ interface UsePixiCanvasOptions {
 }
 
 export function usePixiCanvas(
-  canvasRef: RefObject<HTMLCanvasElement | null>,
+  pixiCtx: PixiContext | null,
   options: UsePixiCanvasOptions = {}
 ) {
   const {
     gridColor = 0x000000,
     gridAlpha = 0.12,
-    backgroundColor = "#fafafa",
     initialZoom = DEFAULT_ZOOM,
     activeTool = "pen",
     activeColorIndex = 1,
@@ -48,8 +54,6 @@ export function usePixiCanvas(
 
   const { palette: activePalette } = useActivePalette()
   const palette = paletteOverride ?? activePalette
-
-  const pixiCtx = usePixiApp(canvasRef, backgroundColor)
 
   const [zoom, setZoomState] = useState(initialZoom)
   const zoomRef = useRef(initialZoom)
@@ -62,6 +66,8 @@ export function usePixiCanvas(
   const pixiRef = useRef(pixiCtx)
   const panRef = useRef({ on: false, startX: 0, startY: 0, startWX: 0, startWY: 0 })
   const drawRef = useRef({ on: false, worldX: 0, worldY: 0 })
+
+  const canvas = pixiCtx?.app.canvas as HTMLCanvasElement | undefined
 
   const viewport = useCallback((): ViewRect | null => {
     const ctx = pixiRef.current
@@ -138,7 +144,6 @@ export function usePixiCanvas(
     }
   }, [gridColor, gridAlpha, viewport, palette, showLabels])
 
-  /** Keep refs current via effect so callbacks see the latest. */
   const rebuildRef = useRef(rebuild)
   const redrawGridRef = useRef(redrawGrid)
   const toolRef = useRef(activeTool)
@@ -153,7 +158,7 @@ export function usePixiCanvas(
     readonlyRef.current = readonly
   })
 
-  /** Sync pixiCtx to rebuild + centre when canvas becomes ready. */
+  /** Centre viewport and rebuild when pixiCtx becomes ready. */
   useEffect(() => {
     const ctx = pixiRef.current
     if (!ctx?.app.screen) return
@@ -212,14 +217,14 @@ export function usePixiCanvas(
 
   const toWorld = useCallback(
     (clientX: number, clientY: number, rect?: DOMRect | null) => {
-      const canvas = canvasRef.current
       const ctx = pixiRef.current
-      if (!canvas || !ctx) return null
-      const r = rect ?? canvas.getBoundingClientRect()
+      const cvs = canvas
+      if (!cvs || !ctx) return null
+      const r = rect ?? cvs.getBoundingClientRect()
       const z = zoomRef.current
       return { wx: (clientX - r.left - ctx.world.x) / z, wy: (clientY - r.top - ctx.world.y) / z }
     },
-    [canvasRef]
+    [canvas]
   )
 
   const toPaintTarget = useCallback(
@@ -237,15 +242,15 @@ export function usePixiCanvas(
   /** Cursor-centred wheel zoom. */
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
+    const cvs = canvas
+    if (!cvs) return
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
       const ctx = pixiRef.current
       if (!ctx) return
 
-      const r = canvas.getBoundingClientRect()
+      const r = cvs.getBoundingClientRect()
       const cx = e.clientX - r.left
       const cy = e.clientY - r.top
       const old = zoomRef.current
@@ -261,22 +266,22 @@ export function usePixiCanvas(
       syncZoom()
     }
 
-    canvas.addEventListener("wheel", onWheel, { passive: false })
-    return () => canvas.removeEventListener("wheel", onWheel)
-  }, [canvasRef, syncZoom])
+    cvs.addEventListener("wheel", onWheel, { passive: false })
+    return () => cvs.removeEventListener("wheel", onWheel)
+  }, [canvas, syncZoom])
 
   /** Pointer event handling: pan + pen / eraser. */
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
+    const cvs = canvas
+    if (!cvs) return
 
     const isDraw = (t: ToolKind) => t === "pen" || t === "eraser"
 
     const isPanButton = (b: number) => b === 1 || b === 2
 
     const onDown = (e: PointerEvent) => {
-      rectRef.current = canvas.getBoundingClientRect()
+      rectRef.current = cvs.getBoundingClientRect()
 
       if (isPanButton(e.button)) {
         e.preventDefault()
@@ -285,7 +290,7 @@ export function usePixiCanvas(
         const p = panRef.current
         p.on = true; p.startX = e.clientX; p.startY = e.clientY
         p.startWX = ctx.world.x; p.startWY = ctx.world.y
-        canvas.setPointerCapture(e.pointerId)
+        cvs.setPointerCapture(e.pointerId)
         return
       }
       if (e.button !== 0) return
@@ -302,7 +307,7 @@ export function usePixiCanvas(
       const w = toWorld(e.clientX, e.clientY, rectRef.current)
       if (w) drawRef.current = { on: true, worldX: w.wx, worldY: w.wy }
       rebuildRef.current()
-      canvas.setPointerCapture(e.pointerId)
+      cvs.setPointerCapture(e.pointerId)
     }
 
     const onMove = (e: PointerEvent) => {
@@ -347,18 +352,18 @@ export function usePixiCanvas(
     const onContextMenu = (e: Event) => e.preventDefault()
 
     for (const [ev, fn] of [["pointerdown", onDown], ["pointermove", onMove], ["pointerup", onUp], ["pointercancel", onUp], ["pointerleave", onUp], ["contextmenu", onContextMenu]] as const) {
-      canvas.addEventListener(ev, fn)
+      cvs.addEventListener(ev, fn)
     }
 
     return () => {
-      canvas.removeEventListener("pointerdown", onDown)
-      canvas.removeEventListener("pointermove", onMove)
-      canvas.removeEventListener("pointerup", onUp)
-      canvas.removeEventListener("pointercancel", onUp)
-      canvas.removeEventListener("pointerleave", onUp)
-      canvas.removeEventListener("contextmenu", onContextMenu)
+      cvs.removeEventListener("pointerdown", onDown)
+      cvs.removeEventListener("pointermove", onMove)
+      cvs.removeEventListener("pointerup", onUp)
+      cvs.removeEventListener("pointercancel", onUp)
+      cvs.removeEventListener("pointerleave", onUp)
+      cvs.removeEventListener("contextmenu", onContextMenu)
     }
-  }, [canvasRef, toWorld, toPaintTarget])
+  }, [canvas, toWorld, toPaintTarget])
 
   /** Clear canvas and re-render after a brand switch. */
 

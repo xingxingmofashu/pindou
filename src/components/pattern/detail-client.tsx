@@ -1,7 +1,7 @@
 "use client"
 
 import type { BeadPalette } from "@/types/palette"
-import { PatternCanvas } from "@/components/pattern/canvas"
+import { PixiCanvas } from "@/components/pixi-canvas"
 
 interface PatternDetailClientProps {
   grid: number[][]
@@ -89,9 +89,10 @@ export function PatternDetailClient({
         </div>
 
         {/* Canvas */}
-        <PatternCanvas
+        <PixiCanvas
           grid={grid}
           palette={palette}
+          readonly
           className="flex-1 min-w-0 border"
         />
       </div>
