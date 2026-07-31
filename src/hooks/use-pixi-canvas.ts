@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback, type RefObject } from "react"
 import { Text } from "pixi.js"
-import { EMPTY, paintBlock, serializeGrid, walkLine, lodParams, drawGrid, buildBeadEntries, type ViewRect, type BeadEntry, CELL } from "@/lib/editor"
+import { EMPTY, paintBlock, serializeGrid, walkLine, lodParams, drawGrid, buildBeadEntries, getGridBounds, centerViewport, type ViewRect, type BeadEntry } from "@/lib/editor"
 import { usePixiApp } from "@/hooks/use-pixi-app"
 import { useActivePalette } from "@/hooks/use-active-palette"
 import { hexToRgb } from "@/lib/utils"
@@ -160,19 +160,9 @@ export function usePixiCanvas(
     ctx.world.scale.set(zoomRef.current)
 
     const map = cellsRef.current
-    if (map.size > 0) {
-      let minC = Infinity, maxC = -Infinity, minR = Infinity, maxR = -Infinity
-      for (const key of map.keys()) {
-        const [c, r] = key.split(",").map(Number)
-        if (c < minC) minC = c
-        if (c > maxC) maxC = c
-        if (r < minR) minR = r
-        if (r > maxR) maxR = r
-      }
-      const ww = (maxC + 1) * CELL
-      const wh = (maxR + 1) * CELL
-      ctx.world.x = (ctx.app.screen.width - ww * zoomRef.current) / 2
-      ctx.world.y = (ctx.app.screen.height - wh * zoomRef.current) / 2
+    const bounds = getGridBounds(map)
+    if (bounds) {
+      centerViewport(ctx.world, bounds, ctx.app.screen.width, ctx.app.screen.height, zoomRef.current)
     }
 
     rebuildRef.current()
@@ -402,28 +392,19 @@ export function usePixiCanvas(
 
   const loadGrid = useCallback((grid: number[][]) => {
     const map = new Map<string, number>()
-    let minC = Infinity, maxC = -Infinity, minR = Infinity, maxR = -Infinity
     for (let r = 0; r < grid.length; r++) {
       const row = grid[r]
       for (let c = 0; c < row.length; c++) {
-        if (row[c] !== EMPTY) {
-          map.set(`${c},${r}`, row[c])
-          if (c < minC) minC = c
-          if (c > maxC) maxC = c
-          if (r < minR) minR = r
-          if (r > maxR) maxR = r
-        }
+        if (row[c] !== EMPTY) map.set(`${c},${r}`, row[c])
       }
     }
     cellsRef.current = map
 
-    if (map.size > 0) {
+    const bounds = getGridBounds(map)
+    if (bounds) {
       const ctx = pixiRef.current
       if (ctx?.app.screen) {
-        const ww = (maxC + 1) * CELL
-        const wh = (maxR + 1) * CELL
-        ctx.world.x = (ctx.app.screen.width - ww * zoomRef.current) / 2
-        ctx.world.y = (ctx.app.screen.height - wh * zoomRef.current) / 2
+        centerViewport(ctx.world, bounds, ctx.app.screen.width, ctx.app.screen.height, zoomRef.current)
       }
     }
 

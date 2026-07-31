@@ -121,27 +121,17 @@ export function paintBlock(
  *          the bounding box exceeds {@link MAX_GRID_DIMENSION} in either axis.
  */
 export function serializeGrid(cells: Map<string, number>): number[][] | null {
-  if (cells.size === 0) return null
+  const bounds = getGridBounds(cells)
+  if (!bounds) return null
 
-  let minC = Infinity, maxC = -Infinity
-  let minR = Infinity, maxR = -Infinity
-
-  for (const key of cells.keys()) {
-    const [c, r] = key.split(",").map(Number)
-    if (c < minC) minC = c
-    if (c > maxC) maxC = c
-    if (r < minR) minR = r
-    if (r > maxR) maxR = r
-  }
-
-  const w = maxC - minC + 1
-  const h = maxR - minR + 1
+  const w = bounds.maxC - bounds.minC + 1
+  const h = bounds.maxR - bounds.minR + 1
   if (w > MAX_GRID_DIMENSION || h > MAX_GRID_DIMENSION) return null
 
   const grid: number[][] = Array.from({ length: h }, () => Array(w).fill(EMPTY))
   for (const [key, color] of cells) {
     const [c, r] = key.split(",").map(Number)
-    grid[r - minR][c - minC] = color
+    grid[r - bounds.minR][c - bounds.minC] = color
   }
 
   return grid

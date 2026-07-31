@@ -34,14 +34,18 @@ export function usePixiApp(
 
     rafRef.current = requestAnimationFrame(async () => {
 
-      await app.init({
-        canvas,
-        resizeTo: parent,
-        background: backgroundColor,
-        antialias: true,
-        resolution: window.devicePixelRatio || 1,
-        autoDensity: true,
-      })
+      try {
+        await app.init({
+          canvas,
+          resizeTo: parent,
+          background: backgroundColor,
+          antialias: true,
+          resolution: window.devicePixelRatio || 1,
+          autoDensity: true,
+        })
+      } catch {
+        return /* WebGL unavailable */
+      }
 
       const world = new Container()
       world.label = "world"
@@ -63,7 +67,7 @@ export function usePixiApp(
     return () => {
       cancelAnimationFrame(rafRef.current)
       canvas.removeEventListener("webglcontextlost", onContextLost)
-      if (app.renderer) app.destroy(true)
+      if (app.renderer) app.destroy(false, { children: true })
       setCtx(null)
     }
   }, [canvasRef, backgroundColor])
