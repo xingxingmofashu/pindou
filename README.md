@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 拼豆 Pindou
+
+Fuse bead / Perler bead pattern editor and community. Create pixel-art patterns, share them anonymously, and discover designs from others — no account needed.
+
+## Features
+
+- **Canvas editor** — WebGL-powered (PixiJS v8) with infinite sparse grid, zoom, pan, pen and eraser tools
+- **Level-of-detail rendering** — adaptive cell size so beads stay interactive at any zoom level
+- **Multi-brand palettes** — MARD (漫漫), Perler, Hama, Artkal with switchable series
+- **Anonymous publishing** — publish patterns without creating an account; manage with edit tokens
+- **Pattern gallery** — browse recently published patterns with thumbnail previews
+- **Detail view** — interactive read-only canvas on each pattern page
+
+## Tech Stack
+
+| | |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| Canvas | PixiJS v8 (WebGL) |
+| Styling | Tailwind CSS v4 + shadcn/ui (Base UI) |
+| Database | SQLite via better-sqlite3 + Drizzle ORM |
+| Color math | culori |
+| Language | TypeScript (strict) |
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+# Install dependencies
+pnpm install
+
+# Start dev server (http://localhost:3000)
 pnpm dev
-# or
-bun dev
+
+# Production build
+pnpm build
+
+# Lint
+pnpm lint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Project Structure
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+src/
+  app/                  # Next.js App Router pages
+    editor/             # Editor page (user-controlled)
+    pattern/[id]/       # Pattern detail page
+    api/patterns/       # REST API (GET list, POST publish)
+  components/
+    editor/             # ToolBar, ZoomControls, ColorPalette, PublishDialog
+    pattern/            # PatternCard, PatternGrid
+    pixi-canvas.tsx     # Reusable PixiJS canvas component
+    ui/                 # shadcn/ui components (never edited manually)
+  hooks/
+    use-pixi-app.ts     # PixiJS Application lifecycle (WebGL context management)
+    use-pixi-canvas.ts  # Zoom/pan/draw pointer events, LOD rebuild
+    use-active-palette.ts # Active brand store subscription
+  lib/
+    editor/index.ts     # Pure functions: grid math, LOD, bounds, serialization
+    palette/            # Brand color data (MARD, Perler, Hama, Artkal)
+    thumbnail.ts        # Server-side PNG thumbnail generation (sharp)
+    utils.ts            # Shared helpers
+  db/                   # Drizzle schema + migrations (SQLite)
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Editor
 
-## Learn More
+The editor at `/editor` provides:
 
-To learn more about Next.js, take a look at the following resources:
+- **Pen** — paint with the active color; drag interpolates via Bresenham's algorithm
+- **Eraser** — remove beads (sets cell to empty)
+- **Zoom** — wheel zoom (cursor-centered, 0.5×–20×), percentage input, fit button
+- **Pan** — middle-button drag
+- **Palette sidebar** — brand switcher, swatches grouped by series
+- **Publish** — save pattern to the gallery with title, description, and optional author name
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## API
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Method | Route | Description |
+|---|---|---|
+| `GET` | `/api/patterns?page=1` | List published patterns (paginated) |
+| `POST` | `/api/patterns` | Publish a new pattern |
 
-## Deploy on Vercel
+## License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
