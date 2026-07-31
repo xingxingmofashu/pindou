@@ -1,6 +1,8 @@
 /**
  * Pixel font for A–Z (5×7 grid). `true` = filled cell.
  */
+import { parseHex } from "@/lib/utils"
+
 const GLYPHS: Record<string, boolean[][]> = {
   P: [
     [true, true, true, false],
@@ -64,10 +66,8 @@ const GAP = 1
 
 /** Interpolate between two hex colors. */
 function lerpColor(a: string, b: string, t: number): string {
-  const ah = parseInt(a.replace("#", ""), 16)
-  const bh = parseInt(b.replace("#", ""), 16)
-  const ar = (ah >> 16) & 0xff, ag = (ah >> 8) & 0xff, ab = ah & 0xff
-  const br = (bh >> 16) & 0xff, bg = (bh >> 8) & 0xff, bb = bh & 0xff
+  const [ar, ag, ab] = parseHex(a)
+  const [br, bg, bb] = parseHex(b)
   const r = Math.round(ar + (br - ar) * t)
   const g = Math.round(ag + (bg - ag) * t)
   const bv = Math.round(ab + (bb - ab) * t)

@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { formatDistanceToNow, parseISO, isValid } from "date-fns"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
+import { totalBeadCount } from "@/lib/utils"
 
 function safeFormatDistance(dateStr: string): string {
   const date = parseISO(dateStr)
@@ -17,7 +18,7 @@ interface PatternCardProps {
 }
 
 export function PatternCard({ id, title, authorName, beadStats, createdAt, thumbPng }: PatternCardProps) {
-  const totalBeads = Object.values(beadStats).reduce((a, b) => a + b, 0)
+  const totalBeads = totalBeadCount(beadStats)
 
   return (
     <Link href={`/pattern/${id}`} className="block">

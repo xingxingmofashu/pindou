@@ -30,6 +30,57 @@ export interface BeadEntry {
   code: string
 }
 
+/** Bounding box of painted cells in data-cell coordinates. */
+export interface GridBounds {
+  minC: number
+  maxC: number
+  minR: number
+  maxR: number
+}
+
+/**
+ * Compute the bounding box of all painted cells in a sparse grid.
+ *
+ * @param cells - The sparse cell map.
+ * @returns The bounding box, or `null` if the map is empty.
+ */
+export function getGridBounds(cells: Map<string, number>): GridBounds | null {
+  if (cells.size === 0) return null
+  let minC = Infinity, maxC = -Infinity, minR = Infinity, maxR = -Infinity
+  for (const key of cells.keys()) {
+    const [c, r] = key.split(",").map(Number)
+    if (c < minC) minC = c
+    if (c > maxC) maxC = c
+    if (r < minR) minR = r
+    if (r > maxR) maxR = r
+  }
+  return { minC, maxC, minR, maxR }
+}
+
+/**
+ * Position the world container so painted cells are centred in the viewport.
+ *
+ * @param world - The PixiJS world Container (mutated in place).
+ * @param bounds - The bounding box of painted cells.
+ * @param screenW - Viewport width in screen pixels.
+ * @param screenH - Viewport height in screen pixels.
+ * @param zoom - Current zoom level.
+ */
+export function centerViewport(
+  world: { x: number; y: number },
+  bounds: GridBounds,
+  screenW: number,
+  screenH: number,
+  zoom: number,
+): void {
+  const ww = (bounds.maxC - bounds.minC + 1) * CELL
+  const wh = (bounds.maxR - bounds.minR + 1) * CELL
+  const ox = bounds.minC * CELL
+  const oy = bounds.minR * CELL
+  world.x = (screenW - ww * zoom) / 2 - ox * zoom
+  world.y = (screenH - wh * zoom) / 2 - oy * zoom
+}
+
 /**
  * Write a rectangular block of data cells to the sparse grid.
  *
@@ -153,7 +204,7 @@ export function lodParams(zoom: number): { scale: number; size: number } {
  * @param counts - Map from colour index to occurrence count.
  * @returns The dominant colour index, or 0 if the map is empty.
  */
-export function dominant(counts: Map<number, number>): number {
+function dominant(counts: Map<number, number>): number {
   let best = 0
   let bestN = 0
   for (const [c, n] of counts) {

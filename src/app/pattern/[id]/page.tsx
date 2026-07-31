@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm"
 import { db } from "@/db"
 import { patterns } from "@/db/schema"
 import { PALETTES } from "@/lib/palette/registry"
-import { parseBeadStats } from "@/lib/utils"
+import { parseBeadStats, totalBeadCount } from "@/lib/utils"
 import { PatternDetailClient } from "@/components/pattern/detail-client"
 import { formatDistanceToNow, parseISO, isValid } from "date-fns"
 
@@ -31,7 +31,7 @@ export default async function PatternDetailPage({ params }: PageProps) {
   const grid: number[][] = (() => { try { return JSON.parse(row.gridData) } catch { return [] } })()
   const rows = grid.length
   const cols = grid[0]?.length ?? 0
-  const totalBeads = Object.values(beadStats).reduce((a, b) => a + b, 0)
+  const totalBeads = totalBeadCount(beadStats)
 
   const sortedStats = Object.entries(beadStats)
     .sort(([, a], [, b]) => b - a)
@@ -40,15 +40,13 @@ export default async function PatternDetailPage({ params }: PageProps) {
       return { code, count, name: color?.name, hex: color?.hex }
     })
 
-  const absoluteDate = (() => {
-    const d = parseISO(row.createdAt)
-    return isValid(d) ? d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : ""
-  })()
-
-  const relativeDate = (() => {
-    const d = parseISO(row.createdAt)
-    return isValid(d) ? formatDistanceToNow(d, { addSuffix: true }) : ""
-  })()
+  const createdAt = parseISO(row.createdAt)
+  const absoluteDate = isValid(createdAt)
+    ? createdAt.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+    : ""
+  const relativeDate = isValid(createdAt)
+    ? formatDistanceToNow(createdAt, { addSuffix: true })
+    : ""
 
   return (
     <PatternDetailClient

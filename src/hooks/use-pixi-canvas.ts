@@ -60,8 +60,6 @@ export function usePixiCanvas(
   const rectRef = useRef<DOMRect | null>(null)
 
   const pixiRef = useRef(pixiCtx)
-  useEffect(() => { pixiRef.current = pixiCtx })
-
   const panRef = useRef({ on: false, startX: 0, startY: 0, startWX: 0, startWY: 0 })
   const drawRef = useRef({ on: false, worldX: 0, worldY: 0 })
 
@@ -143,15 +141,17 @@ export function usePixiCanvas(
   /** Keep refs current via effect so callbacks see the latest. */
   const rebuildRef = useRef(rebuild)
   const redrawGridRef = useRef(redrawGrid)
-  useEffect(() => { rebuildRef.current = rebuild })
-  useEffect(() => { redrawGridRef.current = redrawGrid })
-
   const toolRef = useRef(activeTool)
   const colorRef = useRef(activeColorIndex)
   const readonlyRef = useRef(readonly)
-  useEffect(() => { toolRef.current = activeTool })
-  useEffect(() => { colorRef.current = activeColorIndex })
-  useEffect(() => { readonlyRef.current = readonly })
+  useEffect(() => {
+    pixiRef.current = pixiCtx
+    rebuildRef.current = rebuild
+    redrawGridRef.current = redrawGrid
+    toolRef.current = activeTool
+    colorRef.current = activeColorIndex
+    readonlyRef.current = readonly
+  })
 
   /** Sync pixiCtx to rebuild + centre when canvas becomes ready. */
   useEffect(() => {
