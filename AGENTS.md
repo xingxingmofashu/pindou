@@ -46,9 +46,10 @@ EditorPage (src/app/editor/page.tsx — user-controlled, DO NOT MODIFY)
 **`usePixiCanvas` hook** (`src/hooks/use-pixi-canvas.ts`) is a thin coordinator for the PixiJS lifecycle; the logic lives in pure, React-free library modules:
 
 ```
-src/lib/editor/index.ts      EMPTY/serializeGrid/paintBlock, walkLine, lodParams/drawGrid/buildBeadEntries
-src/hooks/use-pixi-app.ts   usePixiApp() — PixiJS Application lifecycle hook
-src/hooks/use-pixi-canvas.ts PixiJS lifecycle coordinator, wheel + pointer events, zoom/pan state
+src/lib/editor/index.ts      EMPTY/serializeGrid/deserializeGrid/paintBlock, walkLine, lodParams/computeGridLines/buildBeadEntries, PixiContext type
+src/hooks/use-pixi-app.ts    usePixiApp() — PixiJS Application lifecycle hook (owns app.destroy(true))
+src/hooks/use-pixi-canvas.ts PixiJS lifecycle coordinator, wheel + pointer events, zoom/pan state. Takes a fully-resolved palette argument (never subscribes to the active-palette store itself).
+src/components/pixi-canvas.tsx PixiCanvas resolves the palette: read-only views that pin `palette` render without a store subscription; the editor branch subscribes via `useActivePalette`.
 ```
 
 ```
@@ -56,7 +57,8 @@ PixiJS Application (WebGL)
 └── Stage
     └── "world" Container (scale = zoom, position = pan offset)
         ├── Graphics "beads" (coloured bead rectangles, rendered first)
-        └── Graphics "grid" (grid lines on top of beads)
+        ├── Graphics "grid" (grid lines on top of beads)
+        └── Container "labels" (moved inside world so it pans/zooms with the grid automatically)
 ```
 
 ### Data model
@@ -91,10 +93,10 @@ Both tools are implemented in the pointer interaction effect:
 
 | Tool | Behaviour |
 |---|---|
-| **Pen** | Paints the active colour into the visual-cell block via `paintBlock()`. Drag uses Bresenham interpolation (`walkLine`) between world-space coords (stored in `drawRef` as `worldX/worldY`, converted back to visual-cell each move via current LOD — survives zoom changes mid-stroke). |
+| **Pen** | Paints the active colour into the visual-cell block via `paintBlock()`. Drag uses Bresenham interpolation (`walkLine`) between visual-cell coords (stored in `drawRef` as `vc/vr`, rederived from `toPaintTarget` each move at the current LOD — survives zoom changes mid-stroke). |
 | **Eraser** | Same as pen but writes `EMPTY` (deletes from the sparse map). |
 
-The fill and eyedropper tools were removed. `onColorPick` remains in the hook options only because the user-controlled EditorPage still passes it — nothing currently fires it.
+The fill and eyedropper tools were removed. `onColorPick` remains as a dead prop on `PixiCanvas` only because the user-controlled EditorPage still passes it (`onColorPick={handleColorPick}`) — the prop is silently dropped and nothing fires it.
 
 ### Zoom / pan
 
@@ -120,7 +122,7 @@ src/lib/palette/brand/*.ts   Individual brand data (MARD 291, Perler, Hama, Artk
 - `BeadColor.id` is lowercase (e.g. `"a1"`), `code`/`name` are uppercase (`"A1"`)
 - `BeadColor.series` is optional (`?`) — use `c.series ?? "?"` as fallback
 - `PALETTES.get(DEFAULT_PALETTE_ID)` to get the default palette; no helper functions exported from registry
-- The active brand lives in `src/lib/palette/active.ts` (module-level external store) behind the `useActivePalette()` hook — ColorPalette (switcher) and usePixiCanvas (rendering) share it because the user-controlled EditorPage cannot wire it as a prop. Only brands registered in `PALETTES` appear in the switcher.
+- The active brand lives in `src/lib/palette/active.ts` (module-level external store) behind the `useActivePalette()` hook. ColorPalette (switcher) and the editor branch of `PixiCanvas` (`EditablePaletteBridge`) share it because the user-controlled EditorPage cannot wire it as a prop. Read-only views that pin a `palette` prop bypass the store entirely. Only brands registered in `PALETTES` appear in the switcher.
 
 ### shadcn/ui components
 

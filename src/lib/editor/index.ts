@@ -1,4 +1,4 @@
-import { Graphics } from "pixi.js"
+import type { Application, Container, Graphics } from "pixi.js"
 import type { BeadPalette } from "@/types/palette"
 
 /** Sentinel for an unpainted cell. */
@@ -12,6 +12,15 @@ export const CELL = 10
 
 /** Minimum screen pixels per visual cell — drives the LOD threshold. */
 export const MIN_PX = 10
+
+/** PixiJS scene-graph objects passed between {@link usePixiApp} and {@link usePixiCanvas}. */
+export interface PixiContext {
+  app: Application
+  world: Container
+  beadsGfx: Graphics
+  gridGfx: Graphics
+  labels: Container
+}
 
 /** Axis-aligned viewport rectangle in world space. */
 export interface ViewRect {
@@ -113,28 +122,55 @@ export function paintBlock(
 /**
  * Convert the sparse cell map into a compact 2D array suitable for storage.
  *
- * Computes the bounding box of all painted cells and produces a `number[][]`
- * where 0 = empty.
+ * Iterates the painted cells once, tracking the bounding box inline, and
+ * produces a `number[][]` where 0 = empty.
  *
  * @param cells - The sparse cell map.
  * @returns A rectangular `number[][]`, or `null` if the canvas is empty or
  *          the bounding box exceeds {@link MAX_GRID_DIMENSION} in either axis.
  */
 export function serializeGrid(cells: Map<string, number>): number[][] | null {
-  const bounds = getGridBounds(cells)
-  if (!bounds) return null
+  if (cells.size === 0) return null
 
-  const w = bounds.maxC - bounds.minC + 1
-  const h = bounds.maxR - bounds.minR + 1
+  let minC = Infinity, maxC = -Infinity, minR = Infinity, maxR = -Infinity
+  for (const key of cells.keys()) {
+    const [c, r] = key.split(",").map(Number)
+    if (c < minC) minC = c
+    if (c > maxC) maxC = c
+    if (r < minR) minR = r
+    if (r > maxR) maxR = r
+  }
+
+  const w = maxC - minC + 1
+  const h = maxR - minR + 1
   if (w > MAX_GRID_DIMENSION || h > MAX_GRID_DIMENSION) return null
 
   const grid: number[][] = Array.from({ length: h }, () => Array(w).fill(EMPTY))
   for (const [key, color] of cells) {
     const [c, r] = key.split(",").map(Number)
-    grid[r - bounds.minR][c - bounds.minC] = color
+    grid[r - minR][c - minC] = color
   }
 
   return grid
+}
+
+/**
+ * The inverse of {@link serializeGrid} — rebuild a sparse cell map from a
+ * compact 2D array. Co-located with {@link serializeGrid} so the sparse-grid
+ * key format (`"c,r"`) is owned in one place.
+ *
+ * @param grid - The rectangular `number[][]` (0 = empty) to load.
+ * @returns A new sparse cell map.
+ */
+export function deserializeGrid(grid: number[][]): Map<string, number> {
+  const map = new Map<string, number>()
+  for (let r = 0; r < grid.length; r++) {
+    const row = grid[r]
+    for (let c = 0; c < row.length; c++) {
+      if (row[c] !== EMPTY) map.set(`${c},${r}`, row[c])
+    }
+  }
+  return map
 }
 
 /**
@@ -204,39 +240,49 @@ function dominant(counts: Map<number, number>): number {
   return best
 }
 
+/** One axis-aligned rectangle describing a grid line, in world units. */
+export interface GridRect {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 /**
- * Draw grid lines onto a PixiJS Graphics object.
+ * Compute the grid-line rectangles for the visible viewport.
  *
- * @param gfx      - Target Graphics object (cleared before drawing).
+ * Renderer-agnostic: returns a list of world-space rectangles. The caller
+ * (the PixiJS hook) is responsible for drawing them, keeping this pure
+ * library free of any rendering dependency.
+ *
  * @param view     - Visible viewport rectangle in world space.
  * @param cellSize - World-unit size of each visual cell.
  * @param zoom     - Current zoom level (affects line width).
- * @param color    - Fill colour of the grid lines.
- * @param alpha    - Alpha value of the grid lines.
+ * @returns The list of grid-line rectangles covering the viewport (plus a
+ *          margin), and the computed line width.
  */
-export function drawGrid(
-  gfx: Graphics,
+export function computeGridLines(
   view: ViewRect,
   cellSize: number,
-  zoom: number,
-  color: number,
-  alpha: number
-): void {
-  const lw = 1 / zoom
+  zoom: number
+): { rects: GridRect[]; lineWidth: number } {
+  const lineWidth = 1 / zoom
   const m = cellSize * 2
   const x0 = Math.floor((view.left - m) / cellSize) * cellSize
   const y0 = Math.floor((view.top - m) / cellSize) * cellSize
   const x1 = view.right + m
   const y1 = view.bottom + m
+  const hSpan = view.bottom - view.top + m * 2
+  const wSpan = view.right - view.left + m * 2
 
-  gfx.clear()
+  const rects: GridRect[] = []
   for (let x = x0; x <= x1; x += cellSize) {
-    gfx.rect(x, view.top - m, lw, view.bottom - view.top + m * 2)
+    rects.push({ x, y: view.top - m, width: lineWidth, height: hSpan })
   }
   for (let y = y0; y <= y1; y += cellSize) {
-    gfx.rect(view.left - m, y, view.right - view.left + m * 2, lw)
+    rects.push({ x: view.left - m, y, width: wSpan, height: lineWidth })
   }
-  gfx.fill({ color, alpha })
+  return { rects, lineWidth }
 }
 
 /**
