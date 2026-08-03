@@ -19,7 +19,7 @@ import {
   type GridRect,
 } from "@/lib/editor"
 import { hexToRgb } from "@/lib/utils"
-import type { ToolKind } from "@/components/editor/tool-bar"
+import type { ToolKind } from "@/components/editor/toolbar"
 import type { BeadPalette } from "@/types/palette"
 
 const MIN_ZOOM = 0.5

@@ -1,8 +1,20 @@
 "use client"
 
-import { useState, useCallback } from "react"
-import { Button } from "@/components/ui/button"
-import { createPatternSchema, errorResponseSchema } from "@/lib/validation"
+import { useCallback, useState } from "react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { CreatePatternSchema, ErrorSchema } from "@/lib/validation"
 
 interface PublishDialogProps {
   open: boolean
@@ -27,12 +39,12 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
       return
     }
 
-    const parsed = createPatternSchema.safeParse({
+    const parsed = CreatePatternSchema.safeParse({
       title,
       description: description || undefined,
-      author_name: authorName || undefined,
-      grid: data.grid,
-      brand_id: data.brandId,
+      authorName: authorName || undefined,
+      gridData: data.grid,
+      brandId: data.brandId,
     })
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? "Invalid input")
@@ -49,7 +61,7 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
 
       const result = await res.json()
       if (!res.ok) {
-        const parsed = errorResponseSchema.safeParse(result)
+        const parsed = ErrorSchema.safeParse(result)
         setError(parsed.success ? parsed.data.error : "Failed to publish")
         return
       }
@@ -71,89 +83,93 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
     onClose()
   }, [onClose])
 
-  if (!open) return null
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/10 backdrop-blur-xs" onClick={handleClose} />
-
-      <div className="relative z-10 w-full max-w-sm rounded-xl bg-popover p-6 text-popover-foreground shadow-lg ring-1 ring-foreground/10">
+    <AlertDialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) handleClose()
+      }}
+    >
+      <AlertDialogContent>
         {patternId ? (
-          <div className="grid gap-4">
-            <div>
-              <h2 className="font-heading text-base font-medium">Published</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
+          <>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Published</AlertDialogTitle>
+              <AlertDialogDescription>
                 Your pattern is live at{" "}
-                <code className="rounded bg-muted px-1 text-xs">/patterns/{patternId}</code>
-              </p>
-            </div>
-            <div className="flex justify-end">
-              <Button variant="outline" onClick={handleClose}>Close</Button>
-            </div>
-          </div>
+                <code className="rounded bg-muted px-1 text-xs">
+                  /patterns/{patternId}
+                </code>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction onClick={handleClose}>Close</AlertDialogAction>
+            </AlertDialogFooter>
+          </>
         ) : (
-          <div className="grid gap-4">
-            <div>
-              <h2 className="font-heading text-base font-medium">Publish Pattern</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
+          <>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Publish Pattern</AlertDialogTitle>
+              <AlertDialogDescription>
                 Share your pattern with the community. Published anonymously.
-              </p>
-            </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
 
             <div className="grid gap-3">
-              <label className="grid gap-1.5">
-                <span className="text-sm font-medium">
+              <div className="grid gap-1.5">
+                <Label htmlFor="publish-title">
                   Title <span className="text-destructive">*</span>
-                </span>
-                <input
+                </Label>
+                <Input
+                  id="publish-title"
                   type="text"
                   maxLength={100}
                   placeholder="My cool pattern"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus:border-foreground/30 focus:ring-1 focus:ring-foreground/20"
                 />
-              </label>
+              </div>
 
-              <label className="grid gap-1.5">
-                <span className="text-sm font-medium">Description</span>
-                <textarea
+              <div className="grid gap-1.5">
+                <Label htmlFor="publish-description">Description</Label>
+                <Textarea
+                  id="publish-description"
                   maxLength={280}
                   rows={2}
                   placeholder="Optional description..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus:border-foreground/30 focus:ring-1 focus:ring-foreground/20 resize-none"
+                  className="resize-none"
                 />
-              </label>
+              </div>
 
-              <label className="grid gap-1.5">
-                <span className="text-sm font-medium">Your name</span>
-                <input
+              <div className="grid gap-1.5">
+                <Label htmlFor="publish-author">Your name</Label>
+                <Input
+                  id="publish-author"
                   type="text"
                   maxLength={50}
                   placeholder="Anonymous"
                   value={authorName}
                   onChange={(e) => setAuthorName(e.target.value)}
-                  className="rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus:border-foreground/30 focus:ring-1 focus:ring-foreground/20"
                 />
-              </label>
+              </div>
             </div>
 
             {error && <p className="text-sm text-destructive">{error}</p>}
 
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={handleClose}>Cancel</Button>
-              <Button
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
                 onClick={handleSubmit}
                 disabled={submitting || title.trim().length === 0}
               >
                 {submitting ? "Publishing..." : "Publish"}
-              </Button>
-            </div>
-          </div>
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </>
         )}
-      </div>
-    </div>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }

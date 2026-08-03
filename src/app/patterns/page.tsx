@@ -4,7 +4,8 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { PatternCard } from "@/components/pattern/card"
 import { Button } from "@/components/ui/button"
-import { patternListResponseSchema, type PatternListResponse } from "@/lib/validation"
+import { parseBeadStats } from "@/lib/utils"
+import { PatternListResponseSchema, type PatternListResponse } from "@/lib/validation"
 
 export default function PatternsPage() {
   const [page, setPage] = useState(1)
@@ -23,7 +24,7 @@ export default function PatternsPage() {
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("Request failed"))))
       .then((d: unknown) => {
         if (cancelled) return
-        const result = patternListResponseSchema.safeParse(d)
+        const result = PatternListResponseSchema.safeParse(d)
         if (result.success) setData(result.data)
         else setError(true)
       })
@@ -59,7 +60,15 @@ export default function PatternsPage() {
           <>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
               {list.map((p) => (
-                <PatternCard key={p.id} {...p} />
+                <PatternCard
+                  key={p.id}
+                  id={p.id}
+                  title={p.title}
+                  authorName={p.authorName ?? null}
+                  beadStats={parseBeadStats(p.brandStats)}
+                  createdAt={p.createdAt}
+                  thumbPng={p.thumbPng}
+                />
               ))}
             </div>
 

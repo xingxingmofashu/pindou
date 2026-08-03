@@ -3,7 +3,6 @@ import { eq } from "drizzle-orm"
 import { db } from "@/db"
 import { patterns } from "@/db/schema"
 import { PALETTES } from "@/lib/palette/registry"
-import { parseBeadStats } from "@/lib/utils"
 
 export async function GET(
   _request: Request,
@@ -37,11 +36,12 @@ export async function GET(
     id: row.id,
     title: row.title,
     description: row.description,
-    authorName: row.authorName,
+    authorName: row.authorName ?? undefined,
     brandId: row.brandId,
-    grid,
-    beadStats: parseBeadStats(row.beadStats),
+    gridData: grid,
+    brandStats: row.beadStats,
+    thumbPng: row.thumbPng,
     createdAt: row.createdAt,
-    palette,
+    updatedAt: row.updatedAt,
   })
 }

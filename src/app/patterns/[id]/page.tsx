@@ -2,18 +2,19 @@
 
 import { useEffect, useState } from "react"
 import { useParams, notFound } from "next/navigation"
-import { PatternDetailPanel } from "@/components/pattern/detail-panel"
-import { PatternDetailToolbar } from "@/components/pattern/detail-toolbar"
+import { PatternDetailPanel } from "@/components/pattern/detail/panel"
+import { PatternDetailToolbar } from "@/components/pattern/detail/toolbar"
 import { PixiCanvas } from "@/components/pixi-canvas"
-import { totalBeadCount } from "@/lib/utils"
-import { patternDetailResponseSchema, type PatternDetailResponse } from "@/lib/validation"
+import { PALETTES, DEFAULT_PALETTE_ID } from "@/lib/palette/registry"
+import { parseBeadStats, totalBeadCount } from "@/lib/utils"
+import { PaletteSchema, type PaletteType } from "@/lib/validation"
 import { formatDistanceToNow, parseISO, isValid } from "date-fns"
 
 type Status = "loading" | "ready" | "notfound" | "error"
 
 export default function PatternDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const [data, setData] = useState<PatternDetailResponse | null>(null)
+  const [data, setData] = useState<PaletteType | null>(null)
   const [status, setStatus] = useState<Status>("loading")
   const [prevId, setPrevId] = useState(id)
 
@@ -37,7 +38,7 @@ export default function PatternDetailPage() {
           setStatus("notfound")
           return
         }
-        const result = patternDetailResponseSchema.safeParse(d)
+        const result = PaletteSchema.safeParse(d)
         if (result.success) {
           setData(result.data)
           setStatus("ready")
@@ -69,7 +70,11 @@ export default function PatternDetailPage() {
     )
   }
 
-  const { palette, grid, beadStats } = data
+  const grid = data.gridData
+  const palette =
+    PALETTES.get(data.brandId ?? DEFAULT_PALETTE_ID) ??
+    PALETTES.get(DEFAULT_PALETTE_ID)!
+  const beadStats = parseBeadStats(data.brandStats)
   const rows = grid.length
   const cols = grid[0]?.length ?? 0
   const totalBeads = totalBeadCount(beadStats)
@@ -94,10 +99,10 @@ export default function PatternDetailPage() {
       <PatternDetailToolbar title={data.title} />
       <div className="flex-1 min-h-0 flex gap-2">
         <PatternDetailPanel
-          authorName={data.authorName}
+          authorName={data.authorName ?? null}
           relativeDate={relativeDate}
           absoluteDate={absoluteDate}
-          description={data.description}
+          description={data.description ?? null}
           cols={cols}
           rows={rows}
           totalBeads={totalBeads}

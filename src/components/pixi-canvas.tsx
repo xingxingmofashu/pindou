@@ -4,7 +4,7 @@ import { useEffect, useRef, useImperativeHandle, type RefObject } from "react"
 import { usePixiApp } from "@/hooks/use-pixi-app"
 import { usePixiCanvas } from "@/hooks/use-pixi-canvas"
 import { useActivePalette } from "@/hooks/use-active-palette"
-import type { ToolKind } from "@/components/editor/tool-bar"
+import type { ToolKind } from "@/components/editor/toolbar"
 import type { BeadPalette } from "@/types/palette"
 
 export interface PixiCanvasApi {

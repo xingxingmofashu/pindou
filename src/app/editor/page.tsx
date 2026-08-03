@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback } from "react"
 import { PixiCanvas, type PixiCanvasApi } from "@/components/pixi-canvas"
-import { ToolBar, type ToolKind } from "@/components/editor/tool-bar"
+import { ToolBar, type ToolKind } from "@/components/editor/toolbar"
 import { ColorPalette } from "@/components/editor/color-palette"
 import { PublishDialog } from "@/components/editor/publish-dialog"
 
