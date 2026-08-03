@@ -3,15 +3,15 @@
 import { useSyncExternalStore } from "react"
 import { PALETTES, DEFAULT_PALETTE_ID } from "@/lib/palette/registry"
 import { getActivePaletteId, setActivePaletteId, subscribePalette } from "@/lib/palette/active"
-import type { BeadPalette } from "@/types/palette"
+import type { BeadPalette, Brand } from "@/types/palette"
 
 interface ActivePalette {
   /** Id of the active brand, e.g. `"mard"`. */
-  brandId: string
+  brandId: Brand
   /** The active palette. */
   palette: BeadPalette
   /** Switch the active brand by id; unknown ids are ignored. */
-  setBrandId: (id: string) => void
+  setBrandId: (id: Brand) => void
 }
 
 /**
@@ -24,7 +24,7 @@ interface ActivePalette {
  * @returns The current palette, its id, and a setter.
  */
 export function useActivePalette(): ActivePalette {
-  const brandId = useSyncExternalStore(
+  const brandId = useSyncExternalStore<Brand>(
     subscribePalette,
     getActivePaletteId,
     () => DEFAULT_PALETTE_ID

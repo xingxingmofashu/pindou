@@ -1,80 +1,41 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useParams, notFound } from "next/navigation"
+import { useParams } from "next/navigation"
 import { PatternDetailPanel } from "@/components/pattern/detail/panel"
 import { PatternDetailToolbar } from "@/components/pattern/detail/toolbar"
 import { PixiCanvas } from "@/components/pixi-canvas"
-import { PALETTES, DEFAULT_PALETTE_ID } from "@/lib/palette/registry"
+import { PALETTES } from "@/lib/palette/registry"
 import { parseBeadStats, totalBeadCount } from "@/lib/utils"
 import { PaletteSchema, type PaletteType } from "@/lib/validation"
 import { formatDistanceToNow, parseISO, isValid } from "date-fns"
 
-type Status = "loading" | "ready" | "notfound" | "error"
-
 export default function PatternDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const [data, setData] = useState<PaletteType | null>(null)
-  const [status, setStatus] = useState<Status>("loading")
-  const [prevId, setPrevId] = useState(id)
-
-  if (prevId !== id) {
-    setPrevId(id)
-    setData(null)
-    setStatus("loading")
-  }
+  const [data, setData] = useState<PaletteType>()
 
   useEffect(() => {
-    let cancelled = false
-    fetch(`/api/patterns/${id}`)
-      .then((r) => {
-        if (r.status === 404) return null
-        if (!r.ok) throw new Error("Request failed")
-        return r.json()
-      })
-      .then((d: unknown) => {
-        if (cancelled) return
-        if (d === null) {
-          setStatus("notfound")
-          return
-        }
-        const result = PaletteSchema.safeParse(d)
-        if (result.success) {
-          setData(result.data)
-          setStatus("ready")
-        } else {
-          setStatus("error")
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setStatus("error")
-      })
-    return () => {
-      cancelled = true
+    async function load() {
+      const res = await fetch(`/api/patterns/${id}`)
+      if (!res.ok) throw new Error("Request failed")
+      const d: unknown = await res.json()
+      const result = PaletteSchema.safeParse(d)
+      if (result.success) {
+        setData(result.data)
+      }
     }
+    load()
   }, [id])
 
-  if (status === "notfound") notFound()
-  if (status === "loading") {
+  if (!data) {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      </div>
-    )
-  }
-  if (status === "error" || !data) {
-    return (
-      <div className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-muted-foreground">Failed to load pattern.</p>
-      </div>
+      <></>
     )
   }
 
   const grid = data.gridData
-  const palette =
-    PALETTES.get(data.brandId ?? DEFAULT_PALETTE_ID) ??
-    PALETTES.get(DEFAULT_PALETTE_ID)!
-  const beadStats = parseBeadStats(data.brandStats)
+  const palette = PALETTES.get(data.brandId)!
+  const beadStats = parseBeadStats(data.beadStats)
   const rows = grid.length
   const cols = grid[0]?.length ?? 0
   const totalBeads = totalBeadCount(beadStats)
@@ -88,7 +49,11 @@ export default function PatternDetailPage() {
 
   const createdAt = parseISO(data.createdAt)
   const absoluteDate = isValid(createdAt)
-    ? createdAt.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+    ? createdAt.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
     : ""
   const relativeDate = isValid(createdAt)
     ? formatDistanceToNow(createdAt, { addSuffix: true })

@@ -3,8 +3,14 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { PatternCard } from "@/components/pattern/card"
-import { Button } from "@/components/ui/button"
-import { parseBeadStats } from "@/lib/utils"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
+import { cn, parseBeadStats } from "@/lib/utils"
 import { PatternListResponseSchema, type PatternListResponse } from "@/lib/validation"
 
 export default function PatternsPage() {
@@ -19,21 +25,19 @@ export default function PatternsPage() {
   }
 
   useEffect(() => {
-    let cancelled = false
-    fetch(`/api/patterns?page=${page}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("Request failed"))))
-      .then((d: unknown) => {
-        if (cancelled) return
+    async function load() {
+      try {
+        const res = await fetch(`/api/patterns?page=${page}`)
+        if (!res.ok) throw new Error("Request failed")
+        const d: unknown = await res.json()
         const result = PatternListResponseSchema.safeParse(d)
         if (result.success) setData(result.data)
         else setError(true)
-      })
-      .catch(() => {
-        if (!cancelled) setError(true)
-      })
-    return () => {
-      cancelled = true
+      } catch {
+        setError(true)
+      }
     }
+    load()
   }, [page])
 
   const list = data?.patterns ?? []
@@ -65,7 +69,7 @@ export default function PatternsPage() {
                   id={p.id}
                   title={p.title}
                   authorName={p.authorName ?? null}
-                  beadStats={parseBeadStats(p.brandStats)}
+                  beadStats={parseBeadStats(p.beadStats)}
                   createdAt={p.createdAt}
                   thumbPng={p.thumbPng}
                 />
@@ -73,27 +77,39 @@ export default function PatternsPage() {
             </div>
 
             {totalPages > 1 && (
-              <nav className="mt-8 flex items-center justify-center gap-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => goToPage(page - 1)}
-                >
-                  Previous
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  Page {page} of {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages}
-                  onClick={() => goToPage(page + 1)}
-                >
-                  Next
-                </Button>
-              </nav>
+              <Pagination className="mt-8">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      aria-disabled={page <= 1}
+                      className={cn(page <= 1 && "pointer-events-none opacity-50")}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        goToPage(page - 1)
+                      }}
+                    />
+                  </PaginationItem>
+
+                  <PaginationItem>
+                    <span className="px-3 text-sm text-muted-foreground">
+                      Page {page} of {totalPages}
+                    </span>
+                  </PaginationItem>
+
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      aria-disabled={page >= totalPages}
+                      className={cn(page >= totalPages && "pointer-events-none opacity-50")}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        goToPage(page + 1)
+                      }}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             )}
           </>
         ) : data ? (

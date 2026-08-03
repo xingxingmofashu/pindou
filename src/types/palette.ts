@@ -1,3 +1,5 @@
+export type Brand = 'mard' | 'perler' | 'artkal' | 'hama'
+
 export interface BeadColor {
   id:string
   /** Brand color code, e.g. "A1" */
@@ -12,7 +14,7 @@ export interface BeadColor {
 
 export interface BeadPalette {
   /** Palette identifier, e.g. "mard" */
-  id: string
+  id: Brand
   /** Brand display name, e.g. "MARD/漫漫" */
   brand: string
   colors: BeadColor[]

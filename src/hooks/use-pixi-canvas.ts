@@ -7,6 +7,7 @@ import {
   paintBlock,
   serializeGrid,
   deserializeGrid,
+  computeBeadStats,
   walkLine,
   lodParams,
   computeGridLines,
@@ -393,11 +394,11 @@ const rebuildRef = useRef(rebuild)
   }, [resetModel])
 
   const getCellsData = useCallback((): {
-    grid: number[][]; brandId: string
+    grid: number[][]; brandId: string; beadStats: string
   } | null => {
     const grid = serializeGrid(cellsRef.current)
     if (!grid) return null
-    return { grid, brandId: palette.id }
+    return { grid, brandId: palette.id, beadStats: computeBeadStats(grid, palette) }
   }, [palette])
 
   const loadGrid = useCallback((grid: number[][]) => {
@@ -414,5 +415,5 @@ const rebuildRef = useRef(rebuild)
     rebuildRef.current()
   }, [])
 
-  return { zoom, setZoom, fitToCanvas, clearCanvas, getCellsData, loadGrid, resetModel }
+  return { zoom, setZoom, onReset: fitToCanvas, onClear: clearCanvas, getCellsData, loadGrid, resetModel }
 }

@@ -1,4 +1,5 @@
 import { PALETTES, DEFAULT_PALETTE_ID } from "./registry"
+import type { Brand } from "@/types/palette"
 
 /**
  * Module-level store for the active bead brand.
@@ -7,11 +8,11 @@ import { PALETTES, DEFAULT_PALETTE_ID } from "./registry"
  * ColorPalette to usePixiCanvas, so both sides share this external store
  * instead of props. Consumed by React via `useActivePalette`.
  */
-let activeId = DEFAULT_PALETTE_ID
+let activeId: Brand = DEFAULT_PALETTE_ID
 const listeners = new Set<() => void>()
 
 /** Return the id of the currently active palette. */
-export function getActivePaletteId(): string {
+export function getActivePaletteId(): Brand {
   return activeId
 }
 
@@ -21,7 +22,7 @@ export function getActivePaletteId(): string {
  * @param id - Palette identifier to switch to (must be registered in {@link PALETTES}).
  * Unknown ids and no-op switches are ignored.
  */
-export function setActivePaletteId(id: string): void {
+export function setActivePaletteId(id: Brand): void {
   if (!PALETTES.has(id) || id === activeId) return
   activeId = id
   for (const listener of listeners) listener()

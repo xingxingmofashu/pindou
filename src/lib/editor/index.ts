@@ -155,6 +155,28 @@ export function serializeGrid(cells: Map<string, number>): number[][] | null {
 }
 
 /**
+ * Count beads per colour code for a serialized grid.
+ *
+ * Grid values are 1‑based indices into `palette.colors` (0 = empty); cells
+ * with an out-of-range index are skipped.
+ *
+ * @param grid    - The rectangular `number[][]` to count.
+ * @param palette - Palette used to resolve index → colour code.
+ * @returns A JSON string mapping colour code → bead count, e.g. `{"A1":12}`.
+ */
+export function computeBeadStats(grid: number[][], palette: BeadPalette): string {
+  const counts = new Map<string, number>()
+  for (const row of grid) {
+    for (const val of row) {
+      if (val <= 0 || val > palette.colors.length) continue
+      const code = palette.colors[val - 1].code
+      counts.set(code, (counts.get(code) ?? 0) + 1)
+    }
+  }
+  return JSON.stringify(Object.fromEntries(counts))
+}
+
+/**
  * The inverse of {@link serializeGrid} — rebuild a sparse cell map from a
  * compact 2D array. Co-located with {@link serializeGrid} so the sparse-grid
  * key format (`"c,r"`) is owned in one place.

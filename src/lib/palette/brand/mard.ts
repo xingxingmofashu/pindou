@@ -1,4 +1,6 @@
-export const MARD_PALETTE = {
+import type { BeadPalette } from "@/types/palette";
+
+export const MARD_PALETTE: BeadPalette = {
   id: 'mard',
   brand: 'MARD',
   colors: [

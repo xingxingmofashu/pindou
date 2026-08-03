@@ -5,6 +5,7 @@ import { PALETTES } from "@/lib/palette/registry"
 import { useActivePalette } from "@/hooks/use-active-palette"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import type { Brand } from "@/types/palette"
 
 interface ColorPaletteProps {
   /**
@@ -13,7 +14,7 @@ interface ColorPaletteProps {
    */
   activeColorIndex: number
   /** Called when the user selects a colour (or the eraser). */
-  onSelectColor: (index: number) => void
+  onColorPick: (index: number) => void
 }
 
 /**
@@ -23,7 +24,7 @@ interface ColorPaletteProps {
  * brand. Colours of the active brand are grouped by series letter, plus an
  * eraser / empty-cell swatch at the top.
  */
-export function ColorPalette({ activeColorIndex, onSelectColor }: ColorPaletteProps) {
+export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProps) {
   const { brandId, palette, setBrandId } = useActivePalette()
 
   const brandOptions = useMemo(() => [...PALETTES.values()], [])
@@ -47,9 +48,9 @@ export function ColorPalette({ activeColorIndex, onSelectColor }: ColorPalettePr
    * Switch the active brand and reset to the first colour.
    * The canvas is cleared on brand switch by usePixiCanvas.
    */
-  const handleBrandChange = (id: string) => {
+  const handleBrandChange = (id: Brand) => {
     setBrandId(id)
-    onSelectColor(1)
+    onColorPick(1)
   }
 
   return (
@@ -60,7 +61,7 @@ export function ColorPalette({ activeColorIndex, onSelectColor }: ColorPalettePr
             aria-label="Bead brand"
             className="min-w-0 flex-1 cursor-pointer bg-transparent text-xs font-medium text-muted-foreground outline-none"
             value={brandId}
-            onChange={(e) => handleBrandChange(e.target.value)}
+            onChange={(e) => handleBrandChange(e.target.value as Brand)}
           >
             {brandOptions.map((p) => (
               <option key={p.id} value={p.id}>
@@ -94,7 +95,7 @@ export function ColorPalette({ activeColorIndex, onSelectColor }: ColorPalettePr
               background:
                 "repeating-linear-gradient(45deg, #ccc 0px, #ccc 2px, #fff 2px, #fff 4px)",
             }}
-            onClick={() => onSelectColor(0)}
+            onClick={() => onColorPick(0)}
             aria-label="Eraser (empty cell)"
           />
         </div>
@@ -117,7 +118,7 @@ export function ColorPalette({ activeColorIndex, onSelectColor }: ColorPalettePr
                       : "hover:scale-105 transition-transform"
                   )}
                   style={{ backgroundColor: hex }}
-                  onClick={() => onSelectColor(index)}
+                  onClick={() => onColorPick(index)}
                   title={`${code} — ${hex}`}
                   aria-label={`Color ${code}`}
                 />

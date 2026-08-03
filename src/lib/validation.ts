@@ -1,5 +1,7 @@
 import { z } from "zod"
 import { MAX_GRID_DIMENSION } from "@/lib/editor"
+import {PALETTES} from '@/lib/palette/registry'
+import { Brand } from "@/types/palette"
 
 export const PaginationSchema = z.object({
   page: z.coerce.number().int().min(1).catch(1),
@@ -20,7 +22,7 @@ export const PaletteSchema = z.object({
   authorName: z
     .string()
     .max(50, "Author name must be ≤50 characters")
-    .optional(),
+    .nullish(),
   gridData: z
     .array(z.array(z.number().int().min(0)))
     .min(1, `Grid rows must be 1–${MAX_GRID_DIMENSION}`)
@@ -33,8 +35,11 @@ export const PaletteSchema = z.object({
       message: "Grid must be rectangular",
     })
   ,
-  brandId: z.string().optional(),
-  brandStats: z.string(),
+  brandId: z.enum(
+    [...PALETTES.keys()] as [Brand, ...Brand[]],
+    "Unknown brand",
+  ),
+  beadStats: z.string(),
   thumbPng: z.string(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -42,12 +47,12 @@ export const PaletteSchema = z.object({
 
 
 /**
- * Client-supplied fields for POST /api/patterns. Server-generated fields
- * (brandStats, thumbPng, createdAt, updatedAt) are added on the route.
+ * Client-supplied fields for POST /api/patterns. `beadStats` is computed
+ * client-side at publish time; the remaining server-generated fields
+ * (thumbPng, createdAt, updatedAt) are added on the route.
  */
 export const CreatePatternSchema = PaletteSchema.omit({
   id: true,
-  brandStats: true,
   thumbPng: true,
   createdAt: true,
   updatedAt: true,

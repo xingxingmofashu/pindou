@@ -19,7 +19,7 @@ import { CreatePatternSchema, ErrorSchema } from "@/lib/validation"
 interface PublishDialogProps {
   open: boolean
   onClose: () => void
-  getCellsData: () => { grid: number[][]; brandId: string } | null
+  getCellsData: () => { grid: number[][]; brandId: string; beadStats: string } | null
 }
 
 export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProps) {
@@ -41,16 +41,16 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
 
     const parsed = CreatePatternSchema.safeParse({
       title,
-      description: description || undefined,
-      authorName: authorName || undefined,
+      description,
+      authorName,
       gridData: data.grid,
       brandId: data.brandId,
+      beadStats: data.beadStats,
     })
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? "Invalid input")
       return
     }
-
     setSubmitting(true)
     try {
       const res = await fetch("/api/patterns", {

@@ -10,9 +10,9 @@ import type { BeadPalette } from "@/types/palette"
 export interface PixiCanvasApi {
   zoom: number
   setZoom: (z: number | ((prev: number) => number)) => void
-  fitToCanvas: () => void
-  clearCanvas: () => void
-  getCellsData: () => { grid: number[][]; brandId: string } | null
+  onReset: () => void
+  onClear: () => void
+  getCellsData: () => { grid: number[][]; brandId: string; beadStats: string } | null
 }
 
 export interface PixiCanvasProps {
@@ -24,7 +24,7 @@ export interface PixiCanvasProps {
    * inside PixiCanvas fires it — the eyedropper/fill tools were removed.
    */
   onColorPick?: (colorIndex: number) => void
-  showLabels?: boolean
+  label?: boolean
   readonly?: boolean
   palette?: BeadPalette
   grid?: number[][]
@@ -39,7 +39,7 @@ interface InnerProps {
   activeTool?: ToolKind
   activeColorIndex?: number
   onColorPick?: (colorIndex: number) => void
-  showLabels?: boolean
+  label?: boolean
   readonly?: boolean
   grid?: number[][]
   apiRef?: RefObject<PixiCanvasApi | null>
@@ -56,15 +56,15 @@ function PixiCanvasInner({
   palette,
   activeTool = "pen",
   activeColorIndex = 1,
-  showLabels = false,
+  label = false,
   readonly = false,
   grid,
   apiRef,
   onZoomChange,
 }: InnerProps) {
   const ctx = usePixiApp(canvasRef, "#fafafa")
-  const { zoom, setZoom, fitToCanvas, clearCanvas, getCellsData, loadGrid, resetModel } =
-    usePixiCanvas(ctx, palette, { activeTool, activeColorIndex, showLabels, readonly })
+  const { zoom, setZoom, onReset, onClear, getCellsData, loadGrid, resetModel } =
+    usePixiCanvas(ctx, palette, { activeTool, activeColorIndex, showLabels: label, readonly })
 
   useEffect(() => {
     onZoomChange?.(zoom)
@@ -83,10 +83,10 @@ function PixiCanvasInner({
   useImperativeHandle(apiRef, () => ({
     zoom,
     setZoom,
-    fitToCanvas,
-    clearCanvas,
+    onReset,
+    onClear,
     getCellsData,
-  }), [zoom, setZoom, fitToCanvas, clearCanvas, getCellsData])
+  }), [zoom, setZoom, onReset, onClear, getCellsData])
 
   return null
 }

@@ -47,7 +47,7 @@ interface ToolBarProps {
    */
   onSetZoom: (z: number | ((prev: number) => number)) => void
   /** Reset zoom to default and centre the view. */
-  onFit: () => void
+  onReset: () => void
 }
 
 /**
@@ -64,7 +64,7 @@ export function ToolBar({
   onPublish,
   zoom,
   onSetZoom,
-  onFit,
+  onReset,
 }: ToolBarProps) {
   const [clearOpen, setClearOpen] = useState(false)
 
@@ -153,7 +153,7 @@ export function ToolBar({
           Publish
         </Button>
       </div>
-      <ZoomControls zoom={zoom} onSetZoom={onSetZoom} onFit={onFit} />
+      <ZoomControls zoom={zoom} onSetZoom={onSetZoom} onReset={onReset} />
     </div>
   )
 }

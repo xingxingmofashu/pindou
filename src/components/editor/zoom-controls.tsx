@@ -16,13 +16,13 @@ interface ZoomControlsProps {
    */
   onSetZoom: (z: number | ((prev: number) => number)) => void
   /** Reset zoom to default and centre the view. */
-  onFit: () => void
+  onReset: () => void
 }
 
 /**
  * Zoom-in / zoom-out / fit buttons with a read-only percentage readout.
  */
-export function ZoomControls({ zoom, onSetZoom, onFit }: ZoomControlsProps) {
+export function ZoomControls({ zoom, onSetZoom, onReset: onFit }: ZoomControlsProps) {
   return (
     <div className="flex items-center gap-0.5">
       <Tooltip>

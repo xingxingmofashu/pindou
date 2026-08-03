@@ -1,4 +1,5 @@
 import { pgTable, text } from "drizzle-orm/pg-core"
+import type { Brand } from "@/types/palette"
 
 export const patterns = pgTable("patterns", {
   id: text("id").primaryKey(),
@@ -7,7 +8,7 @@ export const patterns = pgTable("patterns", {
   authorName: text("author_name"),
   /** Dense 2D grid serialized as JSON: number[][] — 0 = empty, ≥1 = palette index */
   gridData: text("grid_data").notNull(),
-  brandId: text("brand_id").notNull().default("mard"),
+  brandId: text("brand_id").$type<Brand>().notNull().default("mard"),
   beadStats: text("bead_stats").notNull().default("{}"),
   /** PNG thumbnail (base64) generated server-side on publish. */
   thumbPng: text("thumb_png").notNull().default(""),
