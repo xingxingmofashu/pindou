@@ -4,7 +4,9 @@ import { db } from "@/db"
 import { patterns } from "@/db/schema"
 import { PALETTES } from "@/lib/palette/registry"
 import { parseBeadStats, totalBeadCount } from "@/lib/utils"
-import { PatternDetailClient } from "@/components/pattern/detail-client"
+import { PatternDetailPanel } from "@/components/pattern/detail-panel"
+import { PatternDetailToolbar } from "@/components/pattern/detail-toolbar"
+import { PixiCanvas } from "@/components/pixi-canvas"
 import { formatDistanceToNow, parseISO, isValid } from "date-fns"
 
 export const revalidate = 60
@@ -48,19 +50,29 @@ export default async function PatternDetailPage({ params }: PageProps) {
     : ""
 
   return (
-    <PatternDetailClient
-      grid={grid}
-      palette={palette}
-      title={row.title}
-      description={row.description}
-      authorName={row.authorName}
-      relativeDate={relativeDate}
-      absoluteDate={absoluteDate}
-      cols={cols}
-      rows={rows}
-      totalBeads={totalBeads}
-      brand={palette.brand}
-      sortedStats={sortedStats}
-    />
+    <div className="flex h-full flex-col p-2 gap-2 overflow-hidden">
+      <PatternDetailToolbar title={row.title} />
+
+      {/* Main content */}
+      <div className="flex-1 min-h-0 flex gap-2">
+        <PatternDetailPanel
+          authorName={row.authorName}
+          relativeDate={relativeDate}
+          absoluteDate={absoluteDate}
+          description={row.description}
+          cols={cols}
+          rows={rows}
+          totalBeads={totalBeads}
+          brand={palette.brand}
+          sortedStats={sortedStats}
+        />
+        <PixiCanvas
+          grid={grid}
+          palette={palette}
+          readonly
+          className="flex-1 min-w-0 border"
+        />
+      </div>
+    </div>
   )
 }
