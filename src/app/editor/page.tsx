@@ -5,6 +5,7 @@ import { PixiCanvas, type PixiCanvasApi } from "@/components/pixi-canvas"
 import { ToolBar, type ToolKind } from "@/components/editor/toolbar"
 import { ColorPalette } from "@/components/editor/color-palette"
 import { PublishDialog } from "@/components/editor/publish-dialog"
+import { ImportImageDialog } from "@/components/editor/import-image-dialog"
 
 const DEFAULT_ZOOM = 3
 
@@ -14,6 +15,7 @@ export default function EditorPage() {
   const [activeColorIndex, setActiveColorIndex] = useState(1)
   const [toggleLabels, setToggleLabels] = useState(false)
   const [publishOpen, setPublishOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [zoom, setZoom] = useState(DEFAULT_ZOOM)
 
   return (
@@ -22,6 +24,7 @@ export default function EditorPage() {
         activeTool={activeTool}
         onSelectTool={setActiveTool}
         onClearCanvas={() => canvasApiRef.current?.onClear()}
+        onImportImage={() => setImportOpen(true)}
         showLabels={toggleLabels}
         onToggleLabels={() => setToggleLabels((v) => !v)}
         onPublish={() => setPublishOpen(true)}
@@ -51,6 +54,12 @@ export default function EditorPage() {
         open={publishOpen}
         onClose={() => setPublishOpen(false)}
         getCellsData={() => canvasApiRef.current?.getCellsData() ?? null}
+      />
+
+      <ImportImageDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onApply={(grid) => canvasApiRef.current?.loadGrid(grid)}
       />
     </div>
   )

@@ -13,6 +13,8 @@ export interface PixiCanvasApi {
   onReset: () => void
   onClear: () => void
   getCellsData: () => { grid: number[][]; brandId: string; beadStats: string } | null
+  /** Replace the canvas contents with a serialized grid. */
+  loadGrid: (grid: number[][]) => void
 }
 
 export interface PixiCanvasProps {
@@ -86,7 +88,8 @@ function PixiCanvasInner({
     onReset,
     onClear,
     getCellsData,
-  }), [zoom, setZoom, onReset, onClear, getCellsData])
+    loadGrid,
+  }), [zoom, setZoom, onReset, onClear, getCellsData, loadGrid])
 
   return null
 }

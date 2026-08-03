@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Pencil, Eraser, Trash2, CaseSensitive } from "lucide-react"
+import { Pencil, Eraser, Trash2, CaseSensitive, ImagePlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -33,6 +33,8 @@ interface ToolBarProps {
   onSelectTool: (tool: ToolKind) => void
   /** Called when the user clicks the clear-canvas button. */
   onClearCanvas?: () => void
+  /** Called when the user clicks the import-from-image button. */
+  onImportImage?: () => void
   /** Whether colour codes are shown on the canvas. */
   showLabels?: boolean
   /** Called when the user toggles colour-code labels. */
@@ -59,6 +61,7 @@ export function ToolBar({
   activeTool,
   onSelectTool,
   onClearCanvas,
+  onImportImage,
   showLabels,
   onToggleLabels,
   onPublish,
@@ -149,6 +152,19 @@ export function ToolBar({
             </>
           )}
         </div>
+        {onImportImage && (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button size="sm" variant="outline" onClick={onImportImage}>
+                  <ImagePlus data-icon="inline-start" />
+                  From image
+                </Button>
+              }
+            />
+            <TooltipContent side="bottom">Import from image</TooltipContent>
+          </Tooltip>
+        )}
         <Button size="sm" variant="outline" onClick={onPublish}>
           Publish
         </Button>

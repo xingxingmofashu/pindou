@@ -404,16 +404,22 @@ const rebuildRef = useRef(rebuild)
   const loadGrid = useCallback((grid: number[][]) => {
     cellsRef.current = deserializeGrid(grid)
 
-    const bounds = getGridBounds(cellsRef.current)
-    if (bounds) {
-      const ctx = pixiRef.current
-      if (ctx?.app.screen) {
-        centerViewport(ctx.world, bounds, ctx.app.screen.width, ctx.app.screen.height, zoomRef.current)
+    const ctx = pixiRef.current
+    if (ctx?.app.screen) {
+      zoomRef.current = initialZoom
+      ctx.world.scale.set(initialZoom)
+      const bounds = getGridBounds(cellsRef.current)
+      if (bounds) {
+        centerViewport(ctx.world, bounds, ctx.app.screen.width, ctx.app.screen.height, initialZoom)
+      } else {
+        ctx.world.x = ctx.app.screen.width / 2
+        ctx.world.y = ctx.app.screen.height / 2
       }
+      syncZoom()
     }
 
     rebuildRef.current()
-  }, [])
+  }, [initialZoom, syncZoom])
 
   return { zoom, setZoom, onReset: fitToCanvas, onClear: clearCanvas, getCellsData, loadGrid, resetModel }
 }
