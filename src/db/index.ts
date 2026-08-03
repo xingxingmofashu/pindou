@@ -1,8 +1,9 @@
-import Database from "better-sqlite3"
-import { drizzle } from "drizzle-orm/better-sqlite3"
+import { Pool } from "@neondatabase/serverless"
+import { drizzle } from "drizzle-orm/neon-serverless"
 
-const sqlite = new Database(".data/pindou.db")
-sqlite.pragma("journal_mode = WAL")
-sqlite.pragma("foreign_keys = ON")
+const globalForDb = globalThis as unknown as { pool?: Pool }
+const pool =
+  globalForDb.pool ?? new Pool({ connectionString: process.env.DATABASE_URL })
+if (process.env.NODE_ENV !== "production") globalForDb.pool = pool
 
-export const db = drizzle(sqlite)
+export const db = drizzle(pool)

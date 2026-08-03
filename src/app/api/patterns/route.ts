@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const page = Math.max(1, Number(searchParams.get("page")) || 1)
 
-  const rows = db
+  const rows = await db
     .select({
       id: patterns.id,
       title: patterns.title,
@@ -28,7 +28,6 @@ export async function GET(request: NextRequest) {
     .orderBy(desc(patterns.createdAt))
     .limit(PAGE_SIZE)
     .offset((page - 1) * PAGE_SIZE)
-    .all()
 
   const total = rows[0]?.total ?? 0
 
@@ -103,7 +102,7 @@ export async function POST(request: NextRequest) {
   const thumbPng = palette ? await generateThumbnail(grid, palette) : ""
   const now = new Date().toISOString()
 
-  db.insert(patterns).values({
+  await db.insert(patterns).values({
     id,
     title: title.trim(),
     description: typeof description === "string" ? description.slice(0, 280) : "",
@@ -114,7 +113,7 @@ export async function POST(request: NextRequest) {
     brandId: brand,
     createdAt: now,
     updatedAt: now,
-  }).run()
+  })
 
   return NextResponse.json({ id }, { status: 201 })
 }

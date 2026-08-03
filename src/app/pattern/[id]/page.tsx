@@ -16,11 +16,10 @@ interface PageProps {
 export default async function PatternDetailPage({ params }: PageProps) {
   const { id } = await params
 
-  const row = db
+  const [row] = await db
     .select()
     .from(patterns)
     .where(eq(patterns.id, id))
-    .get()
 
   if (!row) notFound()
 

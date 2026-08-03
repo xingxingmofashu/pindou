@@ -1,6 +1,6 @@
-import { sqliteTable, text } from "drizzle-orm/sqlite-core"
+import { pgTable, text } from "drizzle-orm/pg-core"
 
-export const patterns = sqliteTable("patterns", {
+export const patterns = pgTable("patterns", {
   id: text("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description").notNull().default(""),

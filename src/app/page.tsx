@@ -7,8 +7,8 @@ import { parseBeadStats } from "@/lib/utils"
 
 export const revalidate = 60
 
-export default function HomePage() {
-  const rows = db
+export default async function HomePage() {
+  const rows = await db
     .select({
       id: patterns.id,
       title: patterns.title,
@@ -20,7 +20,6 @@ export default function HomePage() {
     .from(patterns)
     .orderBy(desc(patterns.createdAt))
     .limit(12)
-    .all()
 
   const list = rows.map((r) => ({
     ...r,

@@ -1,33 +1,12 @@
 {
   "version": "7",
-  "dialect": "sqlite",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1785391822085,
-      "tag": "0000_real_bushwacker",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1785395640943,
-      "tag": "0001_brainy_baron_zemo",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1785398040333,
-      "tag": "0002_fresh_invisible_woman",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1785398407579,
-      "tag": "0003_silly_william_stryker",
+      "version": "7",
+      "when": 1785723125392,
+      "tag": "0000_typical_wolf_cub",
       "breakpoints": true
     }
   ]
