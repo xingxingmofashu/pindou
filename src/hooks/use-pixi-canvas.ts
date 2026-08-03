@@ -112,7 +112,9 @@ export function usePixiCanvas(
     return {
       x: e.worldX + e.size / 2,
       y: e.worldY + e.size / 2,
-      fontSize: Math.max(7, Math.round(e.size * zoomRef.current * 0.35)),
+      // `world` is already scaled by zoom, so don't multiply by it again here —
+      // doing so makes the text grow with zoom² and overflow the bead.
+      fontSize: Math.round(e.size * 0.35),
     }
   }
 
@@ -138,6 +140,10 @@ export function usePixiCanvas(
 
     ctx.labels.removeChildren()
     if (showLabels) {
+      // `world` scales these labels by `zoom`, so without `resolution` the
+      // texture is rasterized at the tiny world-unit font size and upscaled —
+      // blurry. resolution = zoom makes texture pixels equal screen pixels.
+      const labelResolution = Math.max(1, z)
       for (const e of entries) {
         const pos = placeLabel(e)
         const text = new Text({
@@ -148,6 +154,8 @@ export function usePixiCanvas(
             fontFamily: "monospace",
             fontWeight: "bold",
           },
+          resolution: labelResolution,
+          roundPixels: true,
         })
         text.anchor.set(0.5)
         text.x = pos.x
