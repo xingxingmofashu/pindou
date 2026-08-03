@@ -4,8 +4,8 @@ import type { BeadPalette } from "@/types/palette"
 /** Sentinel for an unpainted cell. */
 export const EMPTY = 0
 
-/** Grid dimensions are limited to prevent abuse. */
-export const MAX_GRID_DIMENSION = 256
+/** Grid dimensions are limited only to prevent memory abuse. */
+export const MAX_GRID_DIMENSION = 4096
 
 /** World units per data cell. */
 export const CELL = 10

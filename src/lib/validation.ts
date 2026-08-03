@@ -3,6 +3,11 @@ import { MAX_GRID_DIMENSION } from "@/lib/editor"
 import {PALETTES} from '@/lib/palette/registry'
 import { Brand } from "@/types/palette"
 
+export const BrandIdSchema = z.enum(
+  [...PALETTES.keys()] as [Brand, ...Brand[]],
+  "Unknown brand",
+)
+
 export const PaginationSchema = z.object({
   page: z.coerce.number().int().min(1).catch(1),
   pageSize:  z.coerce.number().int().min(1).max(100).default(20).catch(20),
@@ -35,10 +40,7 @@ export const PaletteSchema = z.object({
       message: "Grid must be rectangular",
     })
   ,
-  brandId: z.enum(
-    [...PALETTES.keys()] as [Brand, ...Brand[]],
-    "Unknown brand",
-  ),
+  brandId: BrandIdSchema,
   beadStats: z.string(),
   thumbPng: z.string(),
   createdAt: z.string(),
