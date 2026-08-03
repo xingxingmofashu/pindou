@@ -19,6 +19,14 @@ export function Header() {
           <NavigationMenuList>
             <NavigationMenuItem>
               <NavigationMenuLink
+                render={<Link href="/patterns" />}
+                className={navigationMenuTriggerStyle()}
+              >
+                Patterns
+              </NavigationMenuLink>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
+              <NavigationMenuLink
                 render={<Link href="/editor" />}
                 className={navigationMenuTriggerStyle()}
               >

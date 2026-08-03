@@ -21,7 +21,7 @@ export function PatternCard({ id, title, authorName, beadStats, createdAt, thumb
   const totalBeads = totalBeadCount(beadStats)
 
   return (
-    <Link href={`/pattern/${id}`} className="block">
+    <Link href={`/patterns/${id}`} className="block">
       <Card>
         {thumbPng ? (
           // eslint-disable-next-line @next/next/no-img-element

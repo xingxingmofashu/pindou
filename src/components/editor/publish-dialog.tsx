@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
+import { createPatternSchema, errorResponseSchema } from "@/lib/validation"
 
 interface PublishDialogProps {
   open: boolean
@@ -26,23 +27,30 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
       return
     }
 
+    const parsed = createPatternSchema.safeParse({
+      title,
+      description: description || undefined,
+      author_name: authorName || undefined,
+      grid: data.grid,
+      brand_id: data.brandId,
+    })
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? "Invalid input")
+      return
+    }
+
     setSubmitting(true)
     try {
       const res = await fetch("/api/patterns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          description: description || undefined,
-          author_name: authorName || undefined,
-          grid: data.grid,
-          brand_id: data.brandId,
-        }),
+        body: JSON.stringify(parsed.data),
       })
 
       const result = await res.json()
       if (!res.ok) {
-        setError(result.error ?? "Failed to publish")
+        const parsed = errorResponseSchema.safeParse(result)
+        setError(parsed.success ? parsed.data.error : "Failed to publish")
         return
       }
 
@@ -76,7 +84,7 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
               <h2 className="font-heading text-base font-medium">Published</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Your pattern is live at{" "}
-                <code className="rounded bg-muted px-1 text-xs">/pattern/{patternId}</code>
+                <code className="rounded bg-muted px-1 text-xs">/patterns/{patternId}</code>
               </p>
             </div>
             <div className="flex justify-end">

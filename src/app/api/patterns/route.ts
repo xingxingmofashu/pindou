@@ -3,16 +3,15 @@ import { randomUUID } from "crypto"
 import { desc, sql } from "drizzle-orm"
 import { db } from "@/db"
 import { patterns } from "@/db/schema"
-import { MAX_GRID_DIMENSION } from "@/lib/editor"
 import { PALETTES, DEFAULT_PALETTE_ID } from "@/lib/palette/registry"
 import { generateThumbnail } from "@/lib/thumbnail"
 import { parseBeadStats } from "@/lib/utils"
+import { createPatternSchema, pageSchema } from "@/lib/validation"
 
 const PAGE_SIZE = 24
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const page = Math.max(1, Number(searchParams.get("page")) || 1)
+  const page = pageSchema.parse(request.nextUrl.searchParams.get("page"))
 
   const rows = await db
     .select({
@@ -21,6 +20,7 @@ export async function GET(request: NextRequest) {
       brandId: patterns.brandId,
       authorName: patterns.authorName,
       beadStats: patterns.beadStats,
+      thumbPng: patterns.thumbPng,
       createdAt: patterns.createdAt,
       total: sql<number>`count(*) over()`.as("total"),
     })
@@ -32,10 +32,15 @@ export async function GET(request: NextRequest) {
   const total = rows[0]?.total ?? 0
 
   return NextResponse.json({
-    patterns: rows.map((r) => {
-      const { total: _, ...rest } = r
-      return { ...rest, beadStats: parseBeadStats(r.beadStats) }
-    }),
+    patterns: rows.map((r) => ({
+      id: r.id,
+      title: r.title,
+      brandId: r.brandId,
+      authorName: r.authorName,
+      beadStats: parseBeadStats(r.beadStats),
+      thumbPng: r.thumbPng,
+      createdAt: r.createdAt,
+    })),
     total,
     page,
     pageSize: PAGE_SIZE,
@@ -45,53 +50,26 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null)
-  if (!body || typeof body !== "object") {
+  if (body === null) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
 
-  const { title, description, author_name, grid, brand_id } = body as Record<string, unknown>
-
-  if (typeof title !== "string" || title.trim().length === 0) {
-    return NextResponse.json({ error: "Title is required" }, { status: 400 })
-  }
-  if (title.length > 100) {
-    return NextResponse.json({ error: "Title must be ≤100 characters" }, { status: 400 })
-  }
-
-  if (description !== undefined && typeof description !== "string") {
-    return NextResponse.json({ error: "Invalid description" }, { status: 400 })
+  const parsed = createPatternSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Invalid request" },
+      { status: 400 },
+    )
   }
 
-  if (author_name !== undefined && typeof author_name !== "string") {
-    return NextResponse.json({ error: "Invalid author_name" }, { status: 400 })
-  }
-
-  if (!Array.isArray(grid) || grid.length === 0 || grid.length > MAX_GRID_DIMENSION) {
-    return NextResponse.json({ error: `Grid rows must be 1–${MAX_GRID_DIMENSION}` }, { status: 400 })
-  }
-
-  const colCount = Array.isArray(grid[0]) ? grid[0].length : 0
-  if (colCount === 0 || colCount > MAX_GRID_DIMENSION) {
-    return NextResponse.json({ error: `Grid columns must be 1–${MAX_GRID_DIMENSION}` }, { status: 400 })
-  }
-
-  for (const row of grid) {
-    if (!Array.isArray(row) || row.length !== colCount) {
-      return NextResponse.json({ error: "Grid must be rectangular" }, { status: 400 })
-    }
-  }
-
-  if (brand_id !== undefined && typeof brand_id !== "string") {
-    return NextResponse.json({ error: "Invalid brand_id" }, { status: 400 })
-  }
-
-  const brand = (typeof brand_id === "string" ? brand_id : DEFAULT_PALETTE_ID)
+  const { title, description, author_name, grid, brand_id } = parsed.data
+  const brand = brand_id ?? DEFAULT_PALETTE_ID
   const palette = PALETTES.get(brand)
 
   const beadStats: Record<string, number> = {}
   for (const row of grid) {
     for (const cell of row) {
-      if (typeof cell !== "number" || cell === 0) continue
+      if (cell === 0) continue
       const color = palette?.colors[cell - 1]
       const code = color?.code ?? String(cell)
       beadStats[code] = (beadStats[code] ?? 0) + 1
@@ -104,9 +82,9 @@ export async function POST(request: NextRequest) {
 
   await db.insert(patterns).values({
     id,
-    title: title.trim(),
-    description: typeof description === "string" ? description.slice(0, 280) : "",
-    authorName: typeof author_name === "string" ? author_name.slice(0, 50) || null : null,
+    title,
+    description: description ?? "",
+    authorName: author_name || null,
     gridData: JSON.stringify(grid),
     beadStats: JSON.stringify(beadStats),
     thumbPng,
