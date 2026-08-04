@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
   }
 
   const [brand] = await db
-    .select({ id: brands.id, name: brands.name })
+    .select()
     .from(brands)
     .where(eq(brands.code, parsed.data.brandCode))
     .limit(1)
@@ -52,11 +52,7 @@ export async function POST(request: NextRequest) {
     .where(eq(colors.fkBrandId, brand.id))
     .orderBy(colors.sortOrder)
 
-  const palette: Palette = {
-    code: parsed.data.brandCode,
-    brand: brand.name,
-    colors: colorRows,
-  }
+  const palette: Palette = { ...brand, colors: colorRows }
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer())

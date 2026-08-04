@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
+import useSWR from "swr"
 import { PatternCard } from "@/components/pattern/card"
 import {
   Pagination,
@@ -10,35 +11,20 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
-import { cn, parseBeadStats } from "@/lib/utils"
-import { PatternListResponseSchema, type PatternListResponse } from "@/lib/validation"
+import { cn, fetcher, parseBeadStats } from "@/lib/utils"
+import type { PatternListResponse } from "@/lib/validation"
 
 export default function PatternsPage() {
   const [page, setPage] = useState(1)
-  const [data, setData] = useState<PatternListResponse | null>(null)
-  const [error, setError] = useState(false)
+  const { data, error, isLoading } = useSWR<PatternListResponse>(
+    `/api/patterns?page=${page}`,
+    fetcher,
+  )
 
   const goToPage = (next: number) => {
     if (next < 1) return
-    setError(false)
     setPage(next)
   }
-
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch(`/api/patterns?page=${page}`)
-        if (!res.ok) throw new Error("Request failed")
-        const d: unknown = await res.json()
-        const result = PatternListResponseSchema.safeParse(d)
-        if (result.success) setData(result.data)
-        else setError(true)
-      } catch {
-        setError(true)
-      }
-    }
-    load()
-  }, [page])
 
   const list = data?.patterns ?? []
   const total = data?.total ?? 0
@@ -51,9 +37,9 @@ export default function PatternsPage() {
         <p className="mb-6 text-sm text-muted-foreground">
           {error
             ? "Failed to load patterns."
-            : data
-              ? `${total.toLocaleString()} patterns published`
-              : "Loading…"}
+            : isLoading
+              ? "Loading…"
+              : `${total.toLocaleString()} patterns published`}
         </p>
 
         {error ? (

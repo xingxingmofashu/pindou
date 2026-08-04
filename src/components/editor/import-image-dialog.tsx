@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
+import useSWRMutation from "swr/mutation"
 import { Loader2, Upload } from "lucide-react"
 import {
   Dialog,
@@ -111,59 +112,52 @@ export function ImportImageDialog({ open, onClose, onApply }: ImportImageDialogP
   const { palette } = usePalette()
   const [file, setFile] = useState<File | null>(null)
   const [widthInput, setWidthInput] = useState(String(DEFAULT_WIDTH))
-  const [converting, setConverting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<TransformResult | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const reqId = useRef(0)
-
-  const convert = useCallback(
-    async (f: File, w: number) => {
-      const id = ++reqId.current
-      setConverting(true)
-      setError(null)
-      try {
-        const formData = new FormData()
-        formData.append("file", f)
-        formData.append("width", String(w))
-        formData.append("brandCode", palette?.code ?? "")
-        const res = await fetch("/api/transform", {
-          method: "POST",
-          body: formData,
-        })
-        if (id !== reqId.current) return
-        const data: unknown = await res.json()
-        if (!res.ok) {
-          const parsed = ErrorSchema.safeParse(data)
-          setResult(null)
-          setError(parsed.success ? parsed.data.error : "Failed to convert image")
-          return
-        }
-        setResult(data as TransformResult)
-      } catch {
-        if (id !== reqId.current) return
-        setResult(null)
-        setError("Network error. Please try again.")
-      } finally {
-        if (id === reqId.current) setConverting(false)
+  const { trigger, isMutating } = useSWRMutation(
+    "/api/transform",
+    async (url, { arg }: { arg: FormData }) => {
+      const res = await fetch(url, { method: "POST", body: arg })
+      const data: unknown = await res.json()
+      if (!res.ok) {
+        const parsed = ErrorSchema.safeParse(data)
+        throw new Error(parsed.success ? parsed.data.error : "Failed to convert image")
       }
+      return data as TransformResult
     },
-    [palette],
   )
 
-  // Convert when a file is chosen or the width changes (debounced).
+  // Convert when a file is chosen or the width changes (debounced). Each
+  // trigger bumps `reqId` so a stale response from an earlier width edit is
+  // dropped instead of overwriting a newer result.
   useEffect(() => {
     if (!file || !palette) return
     const w = Math.round(Number(widthInput))
     if (!Number.isFinite(w) || w <= 0) return
     const clamped = Math.min(MAX_GRID_DIMENSION, w)
     const t = setTimeout(() => {
-      setConverting(true)
-      void convert(file, clamped)
+      const id = ++reqId.current
+      setError(null)
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("width", String(clamped))
+      formData.append("brandCode", palette.code)
+      trigger(formData)
+        .then((converted) => {
+          if (id !== reqId.current) return
+          setResult(converted)
+        })
+        .catch((e) => {
+          if (id !== reqId.current) return
+          setResult(null)
+          setError(e instanceof Error ? e.message : "Network error. Please try again.")
+        })
     }, DEBOUNCE_MS)
     return () => clearTimeout(t)
-  }, [file, widthInput, palette, convert])
+  }, [file, widthInput, palette, trigger])
 
   // Render the preview whenever a result arrives.
   useEffect(() => {
@@ -189,7 +183,6 @@ export function ImportImageDialog({ open, onClose, onApply }: ImportImageDialogP
     reqId.current++
     setFile(null)
     setWidthInput(String(DEFAULT_WIDTH))
-    setConverting(false)
     setError(null)
     setResult(null)
     onClose()
@@ -213,7 +206,7 @@ export function ImportImageDialog({ open, onClose, onApply }: ImportImageDialogP
           <DialogTitle>Import from Image</DialogTitle>
           <DialogDescription>
             Convert an image into a bead pattern
-            {palette ? ` using the ${palette.brand} palette` : ""}.
+            {palette ? ` using the ${palette.name} palette` : ""}.
           </DialogDescription>
         </DialogHeader>
 
@@ -264,7 +257,7 @@ export function ImportImageDialog({ open, onClose, onApply }: ImportImageDialogP
           </p>
         </div>
 
-        {converting && (
+        {isMutating && (
           <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Loader2 className="size-3.5 animate-spin" data-icon="inline-start" />
             Processing…
@@ -273,7 +266,7 @@ export function ImportImageDialog({ open, onClose, onApply }: ImportImageDialogP
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 
-        {result && !converting && (
+        {result && !isMutating && (
           <div className="flex flex-col items-center gap-2">
             <div className="rounded-lg border bg-muted/30 p-2">
               <canvas
@@ -292,7 +285,7 @@ export function ImportImageDialog({ open, onClose, onApply }: ImportImageDialogP
           <Button variant="outline" onClick={handleClose}>
             Cancel
           </Button>
-          <Button onClick={handleApply} disabled={!result || converting}>
+          <Button onClick={handleApply} disabled={!result || isMutating}>
             Apply
           </Button>
         </DialogFooter>

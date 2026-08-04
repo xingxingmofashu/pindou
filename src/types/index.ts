@@ -7,10 +7,11 @@ export type Color = typeof colors.$inferSelect
 export type Pattern = typeof patterns.$inferSelect
 
 /**
- * A resolved brand palette: brand code + display name + its colors ordered by
- * `sortOrder` (the seed-time array index grid cells index into).
+ * A `brands` row with its colors nested — the resolved palette clients render
+ * with. Colors are ordered by `sortOrder` (the seed-time array index grid cells
+ * index into).
  */
-export type Palette = { code: string; brand: string; colors: Color[] }
+export type Palette = Brand & { colors: Color[] }
 
 /** A color as declared in the static brand source files (seed input, not a DB row). */
 export interface SeedColor {

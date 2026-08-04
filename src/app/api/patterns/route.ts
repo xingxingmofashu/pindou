@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 
   const { title, description, authorName, gridData, brandCode, beadStats } = parsed.data
   const [brand] = await db
-    .select({ id: brands.id, name: brands.name })
+    .select()
     .from(brands)
     .where(eq(brands.code, brandCode))
     .limit(1)
@@ -75,11 +75,7 @@ export async function POST(request: NextRequest) {
     .where(eq(colors.fkBrandId, brand.id))
     .orderBy(colors.sortOrder)
 
-  const palette: Palette = {
-    code: brandCode,
-    brand: brand.name,
-    colors: colorRows,
-  }
+  const palette: Palette = { ...brand, colors: colorRows }
   const thumbPng = await generateThumbnail(gridData, palette)
 
   const [inserted] = await db

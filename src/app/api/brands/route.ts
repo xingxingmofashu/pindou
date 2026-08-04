@@ -2,8 +2,7 @@ import { NextResponse } from "next/server"
 import { eq } from "drizzle-orm"
 import { db } from "@/db"
 import { brands, colors } from "@/db/schema"
-
-export const runtime = "nodejs"
+import { Palette } from "@/types"
 
 /**
  * GET /api/brands — every brand with its colors nested (the client catalog).
@@ -25,5 +24,5 @@ export async function GET() {
       colors: group.flatMap((row) => (row.colors ? [row.colors] : [])),
     }),
   )
-  return NextResponse.json({ brands: result })
+  return NextResponse.json<Array<Palette>>(result)
 }

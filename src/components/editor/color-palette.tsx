@@ -1,18 +1,11 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo } from "react"
+import useSWR from "swr"
 import { usePalette } from "@/hooks/use-palette"
-import { cn } from "@/lib/utils"
+import { cn, fetcher } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { BrandListSchema } from "@/lib/validation"
-import type { Brand, Color, Palette } from "@/types"
-
-type BrandWithColors = Brand & { colors: Color[] }
-
-/** Build a `Palette` from a brand row carrying its nested colors. */
-function toPalette(brand: BrandWithColors): Palette {
-  return { code: brand.code, brand: brand.name, colors: brand.colors }
-}
+import type { Palette } from "@/types"
 
 interface ColorPaletteProps {
   /**
@@ -33,26 +26,13 @@ interface ColorPaletteProps {
  */
 export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProps) {
   const { palette, setActivePalette } = usePalette()
-  const [brands, setBrands] = useState<BrandWithColors[]>([])
+  const { data: brands } = useSWR<Array<Palette>>("/api/brands", fetcher)
 
-  // Load the brand catalog for the switcher, then seed the active palette once.
+  // Seed the active palette once the catalog arrives.
   useEffect(() => {
-    let cancelled = false
-    async function load() {
-      const res = await fetch("/api/brands")
-      if (!res.ok) return
-      const data = BrandListSchema.parse(await res.json())
-      if (!cancelled) setBrands(data.brands)
-    }
-    void load()
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  useEffect(() => {
-    if (brands.length === 0 || palette) return
-    if (brands[0]) setActivePalette(toPalette(brands[0]))
+    const first = brands?.[0]
+    if (!first || palette) return
+    setActivePalette(first)
   }, [brands, palette, setActivePalette])
 
   /** Colours grouped by series letter, with 1‑based palette indices. */
@@ -76,8 +56,8 @@ export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProp
    * The canvas is cleared on brand switch by usePixiCanvas.
    */
   const handleBrandChange = (code: string) => {
-    const brand = brands.find((b) => b.code === code)
-    if (brand) setActivePalette(toPalette(brand))
+    const brand = brands?.find((b) => b.code === code)
+    if (brand) setActivePalette(brand)
     onColorPick(1)
   }
 
@@ -92,21 +72,21 @@ export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProp
   return (
     <div className="flex flex-col h-full border">
       <div className="flex items-center justify-between gap-2 px-3 py-2 border-b">
-        {brands.length > 1 ? (
+        {brands?.length ?? 0 > 1 ? (
           <select
             aria-label="Bead brand"
             className="min-w-0 flex-1 cursor-pointer bg-transparent text-xs font-medium text-muted-foreground outline-none"
             value={palette?.code ?? ""}
             onChange={(e) => handleBrandChange(e.target.value)}
           >
-            {brands.map((b) => (
+            {brands?.map((b) => (
               <option key={b.code} value={b.code}>
                 {b.name}
               </option>
             ))}
           </select>
         ) : (
-          <span className="text-xs font-medium text-muted-foreground">{palette.brand}</span>
+          <span className="text-xs font-medium text-muted-foreground">{palette.name}</span>
         )}
         <span className="shrink-0 text-[10px] text-muted-foreground">
           {palette.colors.length} colors

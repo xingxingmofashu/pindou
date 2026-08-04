@@ -1,52 +1,23 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import useSWR from "swr"
 import { useParams } from "next/navigation"
 import { PatternDetailPanel } from "@/components/pattern/detail/panel"
 import { PixiCanvas } from "@/components/pixi-canvas"
-import { parseBeadStats, totalBeadCount } from "@/lib/utils"
-import { BrandListSchema, PaletteSchema, type PaletteType } from "@/lib/validation"
+import { fetcher, parseBeadStats, totalBeadCount } from "@/lib/utils"
+import type { PaletteType } from "@/lib/validation"
 import type { Palette } from "@/types"
 import { formatDistanceToNow, parseISO, isValid } from "date-fns"
 
-/**
- * Fetch one brand's palette over the wire. Resolves to `undefined` when the
- * brand code is unknown or the request fails.
- */
-async function fetchPalette(code: string): Promise<Palette | undefined> {
-  try {
-    const res = await fetch("/api/brands")
-    if (!res.ok) return undefined
-    const data = BrandListSchema.parse(await res.json())
-    const brand = data.brands.find((b) => b.code === code)
-    if (!brand) return undefined
-    return { code: brand.code, brand: brand.name, colors: brand.colors }
-  } catch {
-    return undefined
-  }
-}
-
 export default function PatternDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const [data, setData] = useState<PaletteType>()
-  const [palette, setPalette] = useState<Palette>()
+  const { data } = useSWR<PaletteType>(`/api/patterns/${id}`, fetcher)
+  const { data: brand } = useSWR<Palette>(
+    data ? `/api/brands/${data.brandId}` : null,
+    fetcher,
+  )
 
-  useEffect(() => {
-    async function load() {
-      const res = await fetch(`/api/patterns/${id}`)
-      if (!res.ok) throw new Error("Request failed")
-      const d: unknown = await res.json()
-      const result = PaletteSchema.safeParse(d)
-      if (result.success) {
-        setData(result.data)
-        const pal = await fetchPalette(result.data.brandCode)
-        setPalette(pal)
-      }
-    }
-    load()
-  }, [id])
-
-  if (!data || !palette) {
+  if (!data || !brand) {
     return (
       <></>
     )
@@ -61,7 +32,7 @@ export default function PatternDetailPage() {
   const sortedStats = Object.entries(beadStats)
     .sort(([, a], [, b]) => b - a)
     .map(([code, count]) => {
-      const color = palette.colors.find((c) => c.code === code)
+      const color = brand.colors.find((c) => c.code === code)
       return { code, count, name: color?.name, hex: color?.hex }
     })
 
@@ -89,12 +60,12 @@ export default function PatternDetailPage() {
           cols={cols}
           rows={rows}
           totalBeads={totalBeads}
-          brand={palette.brand}
+          brand={brand.name}
           sortedStats={sortedStats}
         />
         <PixiCanvas
           grid={grid}
-          palette={palette}
+          palette={brand}
           readonly
           className="flex-1 min-w-0 border"
         />

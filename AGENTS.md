@@ -24,6 +24,7 @@ pnpm db:seed      # Idempotent — load brands + colors from the static brand fi
 - **shadcn/ui** with **Base UI** primitives (NOT Radix)
 - **PixiJS v8** for the editor canvas (WebGL)
 - **Zustand** for the shared editor palette store (`use-palette.ts`)
+- **SWR** for client-side data fetching (`useSWR` GETs, `useSWRMutation` POSTs; shared `fetcher` in `lib/utils.ts`)
 - **culori** for color-space conversions
 - pnpm package manager
 
@@ -123,25 +124,27 @@ files remain only as the seed source — neither the server nor the client reads
 them at runtime.
 
 ```
-src/types/index.ts                Row types for the three tables (Brand/Color/Pattern) via $inferSelect, plus Palette { code, brand, colors: Color[] } and SeedPalette for the static files
+src/types/index.ts                Row types for the three tables (Brand/Color/Pattern) via $inferSelect, plus Palette = Brand & { colors: Color[] } (a brand row with colors nested — the resolved palette shape) and SeedPalette for the static files
 src/db/schema.ts                   brands + colors + patterns (uuid id defaultRandom, timestamptz created_at/updated_at)
 src/db/seed.ts                     db:seed — upsert brands by code, colors by (fk_brand_id, code); read-back order check
 src/lib/palette/brand/*.ts         Static brand data (mard 291, perler 57, artkal 159, hama 53) — seed source only
 src/app/api/brands/route.ts        GET — all brands with their colors nested (the client catalog)
+src/app/api/brands/[id]/route.ts   GET — one brand by uuid id with colors nested
 src/hooks/use-palette.ts           Editor store (Zustand) — active palette (pushed in by ColorPalette, no fetch of its own)
 ```
 
-- The row types in `src/types/index.ts` are `$inferSelect` types derived from the Drizzle schema — the schema is the single definition. Wire schemas `BrandSchema`/`ColorSchema` in `src/lib/validation.ts` mirror those rows (uuid ids, timestamps coerced from ISO strings). `/api/brands` is the only palette endpoint — every brand with its colors nested (colors `ORDER BY sort_order`), grouped client-side into a `Palette` object.
+- The row types in `src/types/index.ts` are `$inferSelect` types derived from the Drizzle schema — the schema is the single definition. Wire schemas `BrandSchema`/`ColorSchema` in `src/lib/validation.ts` mirror those rows (uuid ids, timestamps coerced from ISO strings). `/api/brands` (the catalog — every brand with its colors nested, `ORDER BY sort_order`) and `/api/brands/[id]` (a single brand by its uuid row id, e.g. a pattern's `brandId`) are the palette endpoints; a resolved palette is a `Palette` (`Brand & { colors: Color[] }` — a brand row with `colors` nested).
 
 - `code`/`name` are uppercase (e.g. `"A1"`); `series` is nullable — use `c.series ?? "?"`
 - Grid cells are 1‑based indices into `palette.colors`, so colors are served `ORDER BY sort_order` (the seed-time array index). **Never reorder existing color rows** — it would corrupt every published pattern.
 - Wire contract between client and server is the brand **code** (a plain string matching `brands.code`, e.g. `"mard"`); the server maps code↔brand uuid (`patterns.fk_brand_id`) internally.
-- `usePalette()` (in `use-palette.ts`) reads a module-level Zustand store and returns `{ palette, setActivePalette }`; it holds only the active palette and makes no network requests. ColorPalette fetches `/api/brands` for its switcher, builds the chosen brand's palette from the nested colors, and pushes it into the store (seeding the first catalog brand on first load). The editor canvas (`EditablePaletteBridge`) and import dialog read the shared palette because the user-controlled EditorPage cannot wire it as a prop. Consumers that need a *specific* brand (pattern detail page, export dialog) fetch it directly in their own page code (a single `/api/brands` call — colors are nested) instead of touching the store. Consumers must guard `palette === undefined` while it loads (`EditablePaletteBridge` returns null; ColorPalette shows a placeholder). Read-only views pin a `palette` prop and bypass the store entirely. SSR snapshots are null, so hydration stays consistent.
+- `usePalette()` (in `use-palette.ts`) reads a module-level Zustand store and returns `{ palette, setActivePalette }`; it holds only the active palette (a `Palette` — a brand row with colors nested) and makes no network requests. ColorPalette fetches `/api/brands` via `useSWR` for its switcher and pushes the chosen brand (which already carries nested colors) into the store, seeding the first catalog brand on first load. The editor canvas (`EditablePaletteBridge`) and import dialog read the shared palette because the user-controlled EditorPage cannot wire it as a prop. Consumers that need a *specific* brand (pattern detail page, export dialog) fetch it directly with `useSWR` (a single `/api/brands/[id]` call keyed by the brand uuid — colors are nested) instead of touching the store. Consumers must guard `palette === undefined` while it loads (`EditablePaletteBridge` returns null; ColorPalette shows a placeholder). Read-only views pin a `palette` prop and bypass the store entirely. SSR snapshots are null, so hydration stays consistent.
 
 ### Server-side (`/api` + database)
 
 ```
 src/app/api/brands/route.ts            GET — all brands + colors (the client catalog)
+src/app/api/brands/[id]/route.ts       GET — one brand by uuid id + colors
 src/app/api/patterns/route.ts          GET (paginated list) + POST (publish)
 src/app/api/patterns/[id]/route.ts     GET (single pattern)
 src/app/api/transform/route.ts         POST (image → grid), `export const runtime = "nodejs"`

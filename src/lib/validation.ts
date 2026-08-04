@@ -56,6 +56,7 @@ export const PaletteSchema = z.object({
     })
   ,
   brandCode: z.string(),
+  brandId: z.uuid(),
   beadStats: z.string(),
   thumbPng: z.string(),
   createdAt: z.string(),
@@ -70,6 +71,7 @@ export const PaletteSchema = z.object({
  */
 export const CreatePatternSchema = PaletteSchema.omit({
   id: true,
+  brandId: true,
   thumbPng: true,
   createdAt: true,
   updatedAt: true,
@@ -78,6 +80,7 @@ export const CreatePatternSchema = PaletteSchema.omit({
 /** A gallery card item — the pattern record minus heavy detail fields. */
 export const PatternSummarySchema = PaletteSchema.omit({
   description: true,
+  brandId: true,
   gridData: true,
   updatedAt: true,
 })
@@ -94,12 +97,8 @@ export const PatternListResponseSchema = z.object({
 /** Every API error response shares this `{ error }` envelope. */
 export const ErrorSchema = z.object({ error: z.string() })
 
-/** Response shape of GET /api/brands — each brand with its colors nested. */
-export const BrandListSchema = z.object({
-  brands: z.array(BrandSchema.extend({ colors: z.array(ColorSchema) })),
-})
+
 
 export type PaletteType = z.infer<typeof PaletteSchema>
 export type PatternSummary = z.infer<typeof PatternSummarySchema>
 export type PatternListResponse = z.infer<typeof PatternListResponseSchema>
-export type BrandList = z.infer<typeof BrandListSchema>

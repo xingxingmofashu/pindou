@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useMemo, useState } from "react"
+import useSWR from "swr"
 import {
   Dialog,
   DialogContent,
@@ -13,31 +14,16 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { fetcher } from "@/lib/utils"
 import { exportGridPng, exportGridSize, DEFAULT_EXPORT_SCALE } from "@/lib/export"
-import { BrandListSchema } from "@/lib/validation"
 import type { Palette } from "@/types"
-
-/**
- * Fetch one brand's palette over the wire. Resolves to `undefined` when the
- * brand code is unknown or the request fails.
- */
-async function fetchPalette(code: string): Promise<Palette | undefined> {
-  try {
-    const res = await fetch("/api/brands")
-    if (!res.ok) return undefined
-    const data = BrandListSchema.parse(await res.json())
-    const brand = data.brands.find((b) => b.code === code)
-    if (!brand) return undefined
-    return { code: brand.code, brand: brand.name, colors: brand.colors }
-  } catch {
-    return undefined
-  }
-}
 
 interface ExportDialogProps {
   open: boolean
   onClose: () => void
-  getCellsData: () => { grid: number[][]; brandCode: string; beadStats: string } | null
+  getCellsData: () => {
+    grid: number[][]; brandCode: string; brandId: string; beadStats: string
+  } | null
 }
 
 /**
@@ -54,25 +40,35 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
   // Snapshot the grid once when the dialog opens — it can't change behind the
   // modal, so re-serializing on every scale keystroke would be wasted work.
   const data = useMemo(() => (open ? getCellsData() : null), [open, getCellsData])
+  // Prefetch the pattern's brand palette as soon as the dialog opens so the
+  // Export click is instant; the key stays null while closed, so no request.
+  const { data: brand } = useSWR<Palette>(
+    data ? `/api/brands/${data.brandId}` : null,
+    fetcher,
+  )
   const grid = data?.grid ?? null
   const rows = grid?.length ?? 0
   const cols = grid?.[0]?.length ?? 0
   const scale = Math.max(1, Math.floor(Number(scaleInput)) || 1)
   const size = grid ? exportGridSize(grid, scale) : null
 
-  const handleExport = useCallback(async () => {
+  const handleExport = useCallback(() => {
     if (!data) {
       setError("Canvas is empty. Draw something first.")
       return
     }
-    const palette = await fetchPalette(data.brandCode)
-    if (!palette) {
+    if (!brand) {
       setError("Unknown palette.")
       return
     }
-    exportGridPng(data.grid, palette, scale, { showLabels: labelsOn })
+    exportGridPng(
+      data.grid,
+      brand,
+      scale,
+      { showLabels: labelsOn },
+    )
     onClose()
-  }, [data, scale, labelsOn, onClose])
+  }, [data, brand, scale, labelsOn, onClose])
 
   const handleClose = useCallback(() => {
     setError(null)

@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useState } from "react"
+import useSWRMutation from "swr/mutation"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,16 +20,33 @@ import { CreatePatternSchema, ErrorSchema } from "@/lib/validation"
 interface PublishDialogProps {
   open: boolean
   onClose: () => void
-  getCellsData: () => { grid: number[][]; brandCode: string; beadStats: string } | null
+  getCellsData: () => {
+    grid: number[][]; brandCode: string; brandId: string; beadStats: string
+  } | null
 }
 
 export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProps) {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [authorName, setAuthorName] = useState("")
-  const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [patternId, setPatternId] = useState<string | null>(null)
+  const { trigger, isMutating } = useSWRMutation(
+    "/api/patterns",
+    async (url, { arg }: { arg: string }) => {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: arg,
+      })
+      const result = await res.json()
+      if (!res.ok) {
+        const parsed = ErrorSchema.safeParse(result)
+        throw new Error(parsed.success ? parsed.data.error : "Failed to publish")
+      }
+      return result as { id: string }
+    },
+  )
 
   const handleSubmit = useCallback(async () => {
     setError(null)
@@ -51,28 +69,14 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
       setError(parsed.error.issues[0]?.message ?? "Invalid input")
       return
     }
-    setSubmitting(true)
+
     try {
-      const res = await fetch("/api/patterns", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(parsed.data),
-      })
-
-      const result = await res.json()
-      if (!res.ok) {
-        const parsed = ErrorSchema.safeParse(result)
-        setError(parsed.success ? parsed.data.error : "Failed to publish")
-        return
-      }
-
+      const result = await trigger(JSON.stringify(parsed.data))
       setPatternId(result.id)
-    } catch {
-      setError("Network error. Please try again.")
-    } finally {
-      setSubmitting(false)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Network error. Please try again.")
     }
-  }, [title, description, authorName, getCellsData])
+  }, [title, description, authorName, getCellsData, trigger])
 
   const handleClose = useCallback(() => {
     setTitle("")
@@ -162,9 +166,9 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleSubmit}
-                disabled={submitting || title.trim().length === 0}
+                disabled={isMutating || title.trim().length === 0}
               >
-                {submitting ? "Publishing..." : "Publish"}
+                {isMutating ? "Publishing..." : "Publish"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </>

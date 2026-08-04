@@ -12,7 +12,9 @@ export interface PixiCanvasApi {
   setZoom: (z: number | ((prev: number) => number)) => void
   onReset: () => void
   onClear: () => void
-  getCellsData: () => { grid: number[][]; brandCode: string; beadStats: string } | null
+  getCellsData: () => {
+    grid: number[][]; brandCode: string; brandId: string; beadStats: string
+  } | null
   /** Replace the canvas contents with a serialized grid. */
   loadGrid: (grid: number[][]) => void
 }

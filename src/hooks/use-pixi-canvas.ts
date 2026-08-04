@@ -391,11 +391,16 @@ const rebuildRef = useRef(rebuild)
   }, [resetModel])
 
   const getCellsData = useCallback((): {
-    grid: number[][]; brandCode: string; beadStats: string
+    grid: number[][]; brandCode: string; brandId: string; beadStats: string
   } | null => {
     const grid = serializeGrid(cellsRef.current)
     if (!grid) return null
-    return { grid, brandCode: palette.code, beadStats: computeBeadStats(grid, palette) }
+    return {
+      grid,
+      brandCode: palette.code,
+      brandId: palette.id,
+      beadStats: computeBeadStats(grid, palette),
+    }
   }, [palette])
 
   const loadGrid = useCallback((grid: number[][]) => {
