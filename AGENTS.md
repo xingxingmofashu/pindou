@@ -37,16 +37,17 @@ Base UI is used instead of Radix. Key API differences:
 
 ```
 EditorPage (src/app/editor/page.tsx — user-controlled, DO NOT MODIFY)
-├── ToolBar (pen / eraser)
-├── ZoomControls (button zoom ±1.3×, editable percentage input, fit button)
+├── ToolBar (pen / eraser; embeds ZoomControls: ±1.3× buttons, editable %, fit)
 ├── ColorPalette (left sidebar, brand switcher + swatches grouped by series + eraser)
-└── <canvas> → usePixiCanvas hook
+├── <canvas> → usePixiCanvas hook
+├── PublishDialog (title/desc/author → POST /api/patterns via getCellsData)
+└── ImportImageDialog (upload → POST /api/transform → Apply → loadGrid(grid))
 ```
 
 **`usePixiCanvas` hook** (`src/hooks/use-pixi-canvas.ts`) is a thin coordinator for the PixiJS lifecycle; the logic lives in pure, React-free library modules:
 
 ```
-src/lib/editor/index.ts      EMPTY/serializeGrid/deserializeGrid/paintBlock, walkLine, lodParams/computeGridLines/buildBeadEntries, PixiContext type
+src/lib/editor/index.ts      EMPTY/CELL/MIN_PX/MAX_GRID_DIMENSION, serializeGrid/deserializeGrid/computeBeadStats, paintBlock/walkLine, lodParams/computeGridLines/buildBeadEntries, getGridBounds/centerViewport, PixiContext/ViewRect/BeadEntry/GridRect types
 src/hooks/use-pixi-app.ts    usePixiApp() — PixiJS Application lifecycle hook (owns app.destroy(true))
 src/hooks/use-pixi-canvas.ts PixiJS lifecycle coordinator, wheel + pointer events, zoom/pan state. Takes a fully-resolved palette argument (never subscribes to the active-palette store itself).
 src/components/pixi-canvas.tsx PixiCanvas resolves the palette: read-only views that pin `palette` render without a store subscription; the editor branch subscribes via `useActivePalette`.
@@ -124,6 +125,22 @@ src/lib/palette/brand/*.ts   Individual brand data (MARD 291, Perler, Hama, Artk
 - `PALETTES.get(DEFAULT_PALETTE_ID)` to get the default palette; no helper functions exported from registry
 - The active brand lives in `src/lib/palette/active.ts` (module-level external store) behind the `useActivePalette()` hook. ColorPalette (switcher) and the editor branch of `PixiCanvas` (`EditablePaletteBridge`) share it because the user-controlled EditorPage cannot wire it as a prop. Read-only views that pin a `palette` prop bypass the store entirely. Only brands registered in `PALETTES` appear in the switcher.
 
+### Server-side (`/api` + database)
+
+```
+src/app/api/patterns/route.ts       GET (paginated list) + POST (publish)
+src/app/api/patterns/[id]/route.ts  GET (single pattern)
+src/app/api/transform/route.ts      POST (image → grid), `export const runtime = "nodejs"`
+src/lib/transform.ts                transform(buffer, { width, palette }) — Node-only (imports sharp)
+src/lib/validation.ts               BrandIdSchema, PaletteSchema, CreatePatternSchema, ErrorSchema
+src/db/                             Drizzle schema + Neon Postgres Pool (@neondatabase/serverless)
+```
+
+- **Grid contract**: conversion returns `number[][]`, `grid[row][col]` = 0 (empty) or 1‑based `palette.colors` index — the same value domain as the editor's sparse map, so `ImportImageDialog` feeds the result straight into `loadGrid`.
+- `lib/transform.ts` imports sharp and must never be imported from a client component — only `api/transform/route.ts` uses it.
+- The editor posts multipart `file + width + brandId`, where `brandId` comes from `useActivePalette()` so the conversion matches the palette shown on the canvas.
+- Database is PostgreSQL on Neon (not the earlier better‑sqlite3/SQLite setup) — don't reintroduce SQLite.
+
 ### shadcn/ui components
 
 `src/components/ui/` — managed by shadcn CLI. **NEVER modify these files.** New components are added via `pnpm dlx shadcn@latest add <name>`.
@@ -138,8 +155,6 @@ src/lib/palette/brand/*.ts   Individual brand data (MARD 291, Perler, Hama, Artk
 
 ## Key constraints
 
-- No user accounts — anonymous publishing via Supabase (planned, not yet implemented)
 - Editor canvas must use PixiJS v8 WebGL renderer
-- Comments and UI labels use English
 - JSDoc conventions for all documentation comments (`/** ... */` with `@param` / `@returns`)
 - Grid lines extend infinitely; beads (painted cells) use a sparse Map with no fixed boundary
