@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
+import { eq } from "drizzle-orm"
+import { db } from "@/db"
+import { brands, colors } from "@/db/schema"
 import { MAX_GRID_DIMENSION } from "@/lib/editor"
 import { transform } from "@/lib/transform"
-import { PALETTES } from "@/lib/palette/registry"
-import { BrandIdSchema } from "@/lib/validation"
+import type { Palette } from "@/types"
 
 export const runtime = "nodejs"
 
 const ConvertRequestSchema = z.object({
   width: z.coerce.number().int().min(1).max(MAX_GRID_DIMENSION),
-  brandId: BrandIdSchema,
+  brandCode: z.string(),
 })
 
 export async function POST(request: NextRequest) {
@@ -26,7 +28,7 @@ export async function POST(request: NextRequest) {
 
   const parsed = ConvertRequestSchema.safeParse({
     width: formData.get("width"),
-    brandId: formData.get("brandId"),
+    brandCode: formData.get("brandCode"),
   })
   if (!parsed.success) {
     return NextResponse.json(
@@ -35,9 +37,25 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const palette = PALETTES.get(parsed.data.brandId)
-  if (!palette) {
+  const [brand] = await db
+    .select({ id: brands.id, name: brands.name })
+    .from(brands)
+    .where(eq(brands.code, parsed.data.brandCode))
+    .limit(1)
+  if (!brand) {
     return NextResponse.json({ error: "Unknown brand" }, { status: 400 })
+  }
+
+  const colorRows = await db
+    .select()
+    .from(colors)
+    .where(eq(colors.fkBrandId, brand.id))
+    .orderBy(colors.sortOrder)
+
+  const palette: Palette = {
+    code: parsed.data.brandCode,
+    brand: brand.name,
+    colors: colorRows,
   }
 
   try {

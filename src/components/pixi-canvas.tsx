@@ -3,16 +3,16 @@
 import { useEffect, useRef, useImperativeHandle, type RefObject } from "react"
 import { usePixiApp } from "@/hooks/use-pixi-app"
 import { usePixiCanvas } from "@/hooks/use-pixi-canvas"
-import { useActivePalette } from "@/hooks/use-active-palette"
+import { usePalette } from "@/hooks/use-palette"
 import type { ToolKind } from "@/components/editor/toolbar"
-import type { BeadPalette, Brand } from "@/types/palette"
+import type { Palette } from "@/types"
 
 export interface PixiCanvasApi {
   zoom: number
   setZoom: (z: number | ((prev: number) => number)) => void
   onReset: () => void
   onClear: () => void
-  getCellsData: () => { grid: number[][]; brandId: Brand; beadStats: string } | null
+  getCellsData: () => { grid: number[][]; brandCode: string; beadStats: string } | null
   /** Replace the canvas contents with a serialized grid. */
   loadGrid: (grid: number[][]) => void
 }
@@ -28,7 +28,7 @@ export interface PixiCanvasProps {
   onColorPick?: (colorIndex: number) => void
   label?: boolean
   readonly?: boolean
-  palette?: BeadPalette
+  palette?: Palette
   grid?: number[][]
   apiRef?: RefObject<PixiCanvasApi | null>
   onZoomChange?: (zoom: number) => void
@@ -37,7 +37,7 @@ export interface PixiCanvasProps {
 
 interface InnerProps {
   canvasRef: RefObject<HTMLCanvasElement | null>
-  palette: BeadPalette
+  palette: Palette
   activeTool?: ToolKind
   activeColorIndex?: number
   onColorPick?: (colorIndex: number) => void
@@ -80,7 +80,7 @@ function PixiCanvasInner({
   // editor); the detail page pins its palette so this never fires there.
   useEffect(() => {
     resetModel()
-  }, [palette.id, resetModel])
+  }, [palette.code, resetModel])
 
   useImperativeHandle(apiRef, () => ({
     zoom,
@@ -125,10 +125,10 @@ function EditablePaletteBridge({
   ...props
 }: {
   canvasRef: RefObject<HTMLCanvasElement | null>
-  pinnedPalette?: BeadPalette
+  pinnedPalette?: Palette
 } & Omit<InnerProps, "canvasRef" | "palette">) {
-  const { palette: activePalette } = useActivePalette()
-  return (
-    <PixiCanvasInner canvasRef={canvasRef} palette={pinnedPalette ?? activePalette} {...props} />
-  )
+  const { palette: activePalette } = usePalette()
+  const palette = pinnedPalette ?? activePalette
+  if (!palette) return null
+  return <PixiCanvasInner canvasRef={canvasRef} palette={palette} {...props} />
 }

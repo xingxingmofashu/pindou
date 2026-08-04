@@ -8,6 +8,34 @@
       "when": 1785723125392,
       "tag": "0000_typical_wolf_cub",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785815469732,
+      "tag": "0001_empty_franklin_storm",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785815838901,
+      "tag": "0002_wakeful_harrier",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785817895931,
+      "tag": "0003_lame_dragon_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785818030557,
+      "tag": "0004_lowly_dexter_bennett",
+      "breakpoints": true
     }
   ]
 }

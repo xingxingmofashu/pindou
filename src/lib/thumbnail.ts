@@ -1,7 +1,7 @@
 import sharp from "sharp"
 import { EMPTY, MIN_PX } from "@/lib/editor"
 import { hexToRgb } from "@/lib/utils"
-import type { BeadPalette } from "@/types/palette"
+import type { Palette } from "@/types"
 
 /** Maximum cells per axis before downsampling kicks in. */
 const MAX_CELLS = 48
@@ -16,7 +16,7 @@ const SIZE = MAX_CELLS * MIN_PX
  * per axis; otherwise each cell is scaled up to fill the canvas.
  * Background is #fafafa (editor canvas colour).
  */
-export async function generateThumbnail(grid: number[][], palette: BeadPalette): Promise<string> {
+export async function generateThumbnail(grid: number[][], palette: Palette): Promise<string> {
   const h = grid.length
   const w = grid[0]?.length ?? 0
   if (h === 0 || w === 0) return ""

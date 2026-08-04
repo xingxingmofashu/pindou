@@ -4,14 +4,32 @@ import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import { PatternDetailPanel } from "@/components/pattern/detail/panel"
 import { PixiCanvas } from "@/components/pixi-canvas"
-import { PALETTES } from "@/lib/palette/registry"
 import { parseBeadStats, totalBeadCount } from "@/lib/utils"
-import { PaletteSchema, type PaletteType } from "@/lib/validation"
+import { BrandListSchema, PaletteSchema, type PaletteType } from "@/lib/validation"
+import type { Palette } from "@/types"
 import { formatDistanceToNow, parseISO, isValid } from "date-fns"
+
+/**
+ * Fetch one brand's palette over the wire. Resolves to `undefined` when the
+ * brand code is unknown or the request fails.
+ */
+async function fetchPalette(code: string): Promise<Palette | undefined> {
+  try {
+    const res = await fetch("/api/brands")
+    if (!res.ok) return undefined
+    const data = BrandListSchema.parse(await res.json())
+    const brand = data.brands.find((b) => b.code === code)
+    if (!brand) return undefined
+    return { code: brand.code, brand: brand.name, colors: brand.colors }
+  } catch {
+    return undefined
+  }
+}
 
 export default function PatternDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [data, setData] = useState<PaletteType>()
+  const [palette, setPalette] = useState<Palette>()
 
   useEffect(() => {
     async function load() {
@@ -21,19 +39,20 @@ export default function PatternDetailPage() {
       const result = PaletteSchema.safeParse(d)
       if (result.success) {
         setData(result.data)
+        const pal = await fetchPalette(result.data.brandCode)
+        setPalette(pal)
       }
     }
     load()
   }, [id])
 
-  if (!data) {
+  if (!data || !palette) {
     return (
       <></>
     )
   }
 
   const grid = data.gridData
-  const palette = PALETTES.get(data.brandId)!
   const beadStats = parseBeadStats(data.beadStats)
   const rows = grid.length
   const cols = grid[0]?.length ?? 0

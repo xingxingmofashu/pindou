@@ -1,7 +1,7 @@
-import { BeadPalette } from "@/types/palette";
+import type { SeedPalette } from "@/types";
 
-export const ARTKAL_PALETTE: BeadPalette = {
-  id: "artkal",
+export const ARTKAL_PALETTE: SeedPalette = {
+  code: "artkal",
   brand: "ARTKAL",
   colors: [
     {

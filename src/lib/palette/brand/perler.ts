@@ -1,7 +1,7 @@
-import type { BeadPalette, Brand } from "@/types/palette";
+import type { SeedPalette } from "@/types";
 
-export const PERLER_PALETTE: BeadPalette = {
-  id: 'perler' as Brand,
+export const PERLER_PALETTE: SeedPalette = {
+  code: 'perler',
   brand: 'PERLER',
   colors: [
     {

@@ -19,7 +19,7 @@ import { CreatePatternSchema, ErrorSchema } from "@/lib/validation"
 interface PublishDialogProps {
   open: boolean
   onClose: () => void
-  getCellsData: () => { grid: number[][]; brandId: string; beadStats: string } | null
+  getCellsData: () => { grid: number[][]; brandCode: string; beadStats: string } | null
 }
 
 export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProps) {
@@ -44,7 +44,7 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
       description,
       authorName,
       gridData: data.grid,
-      brandId: data.brandId,
+      brandCode: data.brandCode,
       beadStats: data.beadStats,
     })
     if (!parsed.success) {

@@ -1,5 +1,5 @@
 import type { Application, Container, Graphics } from "pixi.js"
-import type { BeadPalette } from "@/types/palette"
+import type { Palette } from "@/types"
 
 /** Sentinel for an unpainted cell. */
 export const EMPTY = 0
@@ -164,7 +164,7 @@ export function serializeGrid(cells: Map<string, number>): number[][] | null {
  * @param palette - Palette used to resolve index → colour code.
  * @returns A JSON string mapping colour code → bead count, e.g. `{"A1":12}`.
  */
-export function computeBeadStats(grid: number[][], palette: BeadPalette): string {
+export function computeBeadStats(grid: number[][], palette: Palette): string {
   const counts = new Map<string, number>()
   for (const row of grid) {
     for (const val of row) {
@@ -332,7 +332,7 @@ export function buildBeadEntries(
   view: ViewRect,
   lodScale: number,
   cellSize: number,
-  palette: BeadPalette
+  palette: Palette
 ): BeadEntry[] {
   const margin = cellSize * 2
   const dc0 = Math.floor((view.left - margin) / CELL)

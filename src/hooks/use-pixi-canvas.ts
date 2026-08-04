@@ -22,7 +22,7 @@ import {
 } from "@/lib/editor"
 import { hexToRgb } from "@/lib/utils"
 import type { ToolKind } from "@/components/editor/toolbar"
-import type { BeadPalette, Brand } from "@/types/palette"
+import type { Palette } from "@/types"
 
 const MIN_ZOOM = 0.5
 const MAX_ZOOM = 20
@@ -59,7 +59,7 @@ function paintGridLines(poly: import("pixi.js").Graphics, rects: GridRect[], col
 
 export function usePixiCanvas(
   pixiCtx: PixiContext | null,
-  palette: BeadPalette,
+  palette: Palette,
   options: UsePixiCanvasOptions = {}
 ) {
   const {
@@ -391,11 +391,11 @@ const rebuildRef = useRef(rebuild)
   }, [resetModel])
 
   const getCellsData = useCallback((): {
-    grid: number[][]; brandId: Brand; beadStats: string
+    grid: number[][]; brandCode: string; beadStats: string
   } | null => {
     const grid = serializeGrid(cellsRef.current)
     if (!grid) return null
-    return { grid, brandId: palette.id, beadStats: computeBeadStats(grid, palette) }
+    return { grid, brandCode: palette.code, beadStats: computeBeadStats(grid, palette) }
   }, [palette])
 
   const loadGrid = useCallback((grid: number[][]) => {

@@ -1,4 +1,4 @@
-import type { BeadPalette } from "@/types/palette"
+import type { Palette } from "@/types"
 
 /** Default pixels per bead when the caller doesn't specify a scale. */
 export const DEFAULT_EXPORT_SCALE = 128
@@ -111,7 +111,7 @@ export function exportGridSize(
  */
 export function exportGridPng(
   grid: number[][],
-  palette: BeadPalette,
+  palette: Palette,
   scale = DEFAULT_EXPORT_SCALE,
   opts: ExportGridOptions = {},
 ): void {

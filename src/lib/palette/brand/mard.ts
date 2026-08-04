@@ -1,7 +1,7 @@
-import type { BeadPalette } from "@/types/palette";
+import type { SeedPalette } from "@/types";
 
-export const MARD_PALETTE: BeadPalette = {
-  id: 'mard',
+export const MARD_PALETTE: SeedPalette = {
+  code: 'mard',
   brand: 'MARD',
   colors: [
     {

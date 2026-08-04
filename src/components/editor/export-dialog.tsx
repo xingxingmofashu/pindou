@@ -13,14 +13,31 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { PALETTES } from "@/lib/palette/registry"
 import { exportGridPng, exportGridSize, DEFAULT_EXPORT_SCALE } from "@/lib/export"
-import type { Brand } from "@/types/palette"
+import { BrandListSchema } from "@/lib/validation"
+import type { Palette } from "@/types"
+
+/**
+ * Fetch one brand's palette over the wire. Resolves to `undefined` when the
+ * brand code is unknown or the request fails.
+ */
+async function fetchPalette(code: string): Promise<Palette | undefined> {
+  try {
+    const res = await fetch("/api/brands")
+    if (!res.ok) return undefined
+    const data = BrandListSchema.parse(await res.json())
+    const brand = data.brands.find((b) => b.code === code)
+    if (!brand) return undefined
+    return { code: brand.code, brand: brand.name, colors: brand.colors }
+  } catch {
+    return undefined
+  }
+}
 
 interface ExportDialogProps {
   open: boolean
   onClose: () => void
-  getCellsData: () => { grid: number[][]; brandId: Brand; beadStats: string } | null
+  getCellsData: () => { grid: number[][]; brandCode: string; beadStats: string } | null
 }
 
 /**
@@ -43,12 +60,12 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
   const scale = Math.max(1, Math.floor(Number(scaleInput)) || 1)
   const size = grid ? exportGridSize(grid, scale) : null
 
-  const handleExport = useCallback(() => {
+  const handleExport = useCallback(async () => {
     if (!data) {
       setError("Canvas is empty. Draw something first.")
       return
     }
-    const palette = PALETTES.get(data.brandId)
+    const palette = await fetchPalette(data.brandCode)
     if (!palette) {
       setError("Unknown palette.")
       return

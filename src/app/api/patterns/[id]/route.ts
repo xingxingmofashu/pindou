@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { eq } from "drizzle-orm"
 import { db } from "@/db"
-import { patterns } from "@/db/schema"
+import { brands, patterns } from "@/db/schema"
 
 export async function GET(
   _request: Request,
@@ -10,8 +10,20 @@ export async function GET(
   const { id } = await params
 
   const [row] = await db
-    .select()
+    .select({
+      id: patterns.id,
+      title: patterns.title,
+      description: patterns.description,
+      authorName: patterns.authorName,
+      brandCode: brands.code,
+      gridData: patterns.gridData,
+      beadStats: patterns.beadStats,
+      thumbPng: patterns.thumbPng,
+      createdAt: patterns.createdAt,
+      updatedAt: patterns.updatedAt,
+    })
     .from(patterns)
+    .innerJoin(brands, eq(patterns.fkBrandId, brands.id))
     .where(eq(patterns.id, id))
 
   if (!row) {
@@ -23,7 +35,7 @@ export async function GET(
     title: row.title,
     description: row.description,
     authorName: row.authorName,
-    brandId: row.brandId,
+    brandCode: row.brandCode,
     gridData: JSON.parse(row.gridData),
     beadStats: row.beadStats,
     thumbPng: row.thumbPng,

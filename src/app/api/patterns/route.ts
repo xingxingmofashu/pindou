@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-import { randomUUID } from "crypto"
-import { desc, sql } from "drizzle-orm"
+import { desc, eq, sql } from "drizzle-orm"
 import { db } from "@/db"
-import { patterns } from "@/db/schema"
-import { PALETTES } from "@/lib/palette/registry"
+import { brands, colors, patterns } from "@/db/schema"
 import { generateThumbnail } from "@/lib/thumbnail"
 import { CreatePatternSchema, PaginationSchema } from "@/lib/validation"
+import type { Palette } from "@/types"
 
 export async function GET(request: NextRequest) {
   const { page, pageSize } = PaginationSchema.parse({
@@ -18,13 +17,14 @@ export async function GET(request: NextRequest) {
       id: patterns.id,
       title: patterns.title,
       authorName: patterns.authorName,
-      brandId: patterns.brandId,
+      brandCode: brands.code,
       beadStats: patterns.beadStats,
       thumbPng: patterns.thumbPng,
       createdAt: patterns.createdAt,
       total: sql<number>`count(*) over()`.as("total"),
     })
     .from(patterns)
+    .innerJoin(brands, eq(patterns.fkBrandId, brands.id))
     .orderBy(desc(patterns.createdAt))
     .limit(pageSize)
     .offset((page - 1) * pageSize)
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       id: r.id,
       title: r.title,
       authorName: r.authorName ?? undefined,
-      brandId: r.brandId,
+      brandCode: r.brandCode,
       beadStats: r.beadStats,
       thumbPng: r.thumbPng,
       createdAt: r.createdAt,
@@ -59,24 +59,41 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { title, description, authorName, gridData, brandId,beadStats } = parsed.data
-  const palette = PALETTES.get(brandId)!
-  const id = randomUUID()
-  const thumbPng =  await generateThumbnail(gridData, palette)
-  const now = new Date().toISOString()
+  const { title, description, authorName, gridData, brandCode, beadStats } = parsed.data
+  const [brand] = await db
+    .select({ id: brands.id, name: brands.name })
+    .from(brands)
+    .where(eq(brands.code, brandCode))
+    .limit(1)
+  if (!brand) {
+    return NextResponse.json({ error: "Unknown brand" }, { status: 400 })
+  }
 
-  await db.insert(patterns).values({
-    id,
-    title,
-    description,
-    authorName,
-    gridData: JSON.stringify(gridData),
-    beadStats,
-    thumbPng,
-    brandId,
-    createdAt: now,
-    updatedAt: now,
-  })
+  const colorRows = await db
+    .select()
+    .from(colors)
+    .where(eq(colors.fkBrandId, brand.id))
+    .orderBy(colors.sortOrder)
 
-  return NextResponse.json({ id }, { status: 201 })
+  const palette: Palette = {
+    code: brandCode,
+    brand: brand.name,
+    colors: colorRows,
+  }
+  const thumbPng = await generateThumbnail(gridData, palette)
+
+  const [inserted] = await db
+    .insert(patterns)
+    .values({
+      title,
+      description,
+      authorName,
+      gridData: JSON.stringify(gridData),
+      beadStats,
+      thumbPng,
+      fkBrandId: brand.id,
+    })
+    .returning({ id: patterns.id })
+
+  return NextResponse.json({ id: inserted.id }, { status: 201 })
 }

@@ -1,12 +1,27 @@
 import { z } from "zod"
 import { MAX_GRID_DIMENSION } from "@/lib/editor"
-import {PALETTES} from '@/lib/palette/registry'
-import { Brand } from "@/types/palette"
 
-export const BrandIdSchema = z.enum(
-  [...PALETTES.keys()] as [Brand, ...Brand[]],
-  "Unknown brand",
-)
+/** A `brands` row as served over JSON (uuid id, timestamps as ISO strings). */
+export const BrandSchema = z.object({
+  id: z.uuid(),
+  code: z.string(),
+  name: z.string(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+/** A `colors` row as served over JSON (uuid ids, timestamps as ISO strings). */
+export const ColorSchema = z.object({
+  id: z.uuid(),
+  fkBrandId: z.uuid(),
+  code: z.string(),
+  name: z.string(),
+  hex: z.string(),
+  series: z.string().nullable(),
+  sortOrder: z.number(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
 
 export const PaginationSchema = z.object({
   page: z.coerce.number().int().min(1).catch(1),
@@ -14,7 +29,7 @@ export const PaginationSchema = z.object({
 })
 
 export const PaletteSchema = z.object({
-  id: z.string(),
+  id: z.uuid(),
   title: z
     .string()
     .trim()
@@ -40,7 +55,7 @@ export const PaletteSchema = z.object({
       message: "Grid must be rectangular",
     })
   ,
-  brandId: BrandIdSchema,
+  brandCode: z.string(),
   beadStats: z.string(),
   thumbPng: z.string(),
   createdAt: z.string(),
@@ -79,6 +94,12 @@ export const PatternListResponseSchema = z.object({
 /** Every API error response shares this `{ error }` envelope. */
 export const ErrorSchema = z.object({ error: z.string() })
 
+/** Response shape of GET /api/brands — each brand with its colors nested. */
+export const BrandListSchema = z.object({
+  brands: z.array(BrandSchema.extend({ colors: z.array(ColorSchema) })),
+})
+
 export type PaletteType = z.infer<typeof PaletteSchema>
 export type PatternSummary = z.infer<typeof PatternSummarySchema>
 export type PatternListResponse = z.infer<typeof PatternListResponseSchema>
+export type BrandList = z.infer<typeof BrandListSchema>

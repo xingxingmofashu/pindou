@@ -15,9 +15,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { MAX_GRID_DIMENSION } from "@/lib/editor"
 import { ErrorSchema } from "@/lib/validation"
-import { useActivePalette } from "@/hooks/use-active-palette"
+import { usePalette } from "@/hooks/use-palette"
 import type { TransformResult } from "@/lib/transform"
-import type { BeadPalette } from "@/types/palette"
+import type { Palette } from "@/types"
 
 /** Maximum accepted upload size, mirroring the serverless body limit. */
 const MAX_FILE_BYTES = 4 * 1024 * 1024
@@ -44,7 +44,7 @@ interface ImportImageDialogProps {
 function drawGridToCanvas(
   canvas: HTMLCanvasElement,
   grid: number[][],
-  palette: BeadPalette,
+  palette: Palette,
 ): void {
   const rows = grid.length
   const cols = grid[0]?.length ?? 0
@@ -108,7 +108,7 @@ function drawGridToCanvas(
 }
 
 export function ImportImageDialog({ open, onClose, onApply }: ImportImageDialogProps) {
-  const { brandId, palette } = useActivePalette()
+  const { palette } = usePalette()
   const [file, setFile] = useState<File | null>(null)
   const [widthInput, setWidthInput] = useState(String(DEFAULT_WIDTH))
   const [converting, setConverting] = useState(false)
@@ -127,7 +127,7 @@ export function ImportImageDialog({ open, onClose, onApply }: ImportImageDialogP
         const formData = new FormData()
         formData.append("file", f)
         formData.append("width", String(w))
-        formData.append("brandId", brandId)
+        formData.append("brandCode", palette?.code ?? "")
         const res = await fetch("/api/transform", {
           method: "POST",
           body: formData,
@@ -149,12 +149,12 @@ export function ImportImageDialog({ open, onClose, onApply }: ImportImageDialogP
         if (id === reqId.current) setConverting(false)
       }
     },
-    [brandId],
+    [palette],
   )
 
   // Convert when a file is chosen or the width changes (debounced).
   useEffect(() => {
-    if (!file) return
+    if (!file || !palette) return
     const w = Math.round(Number(widthInput))
     if (!Number.isFinite(w) || w <= 0) return
     const clamped = Math.min(MAX_GRID_DIMENSION, w)
@@ -163,11 +163,11 @@ export function ImportImageDialog({ open, onClose, onApply }: ImportImageDialogP
       void convert(file, clamped)
     }, DEBOUNCE_MS)
     return () => clearTimeout(t)
-  }, [file, widthInput, convert])
+  }, [file, widthInput, palette, convert])
 
   // Render the preview whenever a result arrives.
   useEffect(() => {
-    if (!result || !canvasRef.current) return
+    if (!result || !palette || !canvasRef.current) return
     drawGridToCanvas(canvasRef.current, result.grid, palette)
   }, [result, palette])
 
@@ -212,7 +212,8 @@ export function ImportImageDialog({ open, onClose, onApply }: ImportImageDialogP
         <DialogHeader>
           <DialogTitle>Import from Image</DialogTitle>
           <DialogDescription>
-            Convert an image into a bead pattern using the {palette.brand} palette.
+            Convert an image into a bead pattern
+            {palette ? ` using the ${palette.brand} palette` : ""}.
           </DialogDescription>
         </DialogHeader>
 

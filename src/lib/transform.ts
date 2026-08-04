@@ -2,7 +2,7 @@ import sharp from "sharp"
 import { converter, differenceCiede2000 } from "culori"
 import { MAX_GRID_DIMENSION } from "@/lib/editor"
 import { parseHex } from "@/lib/utils"
-import type { BeadPalette } from "@/types/palette"
+import type { Palette } from "@/types"
 
 /** Pixels with alpha below this are treated as empty cells. */
 const ALPHA_THRESHOLD = 128
@@ -22,7 +22,7 @@ export interface TransformOptions {
   /** Target width in beads. */
   width: number
   /** Palette to quantize against; grid values are 1-based indices into `colors`. */
-  palette: BeadPalette
+  palette: Palette
 }
 
 export interface TransformResult {
@@ -45,7 +45,7 @@ interface PaletteSamples {
   lab: LabColor[]
 }
 
-function buildPaletteSamples(palette: BeadPalette): PaletteSamples {
+function buildPaletteSamples(palette: Palette): PaletteSamples {
   const ok: [number, number, number][] = []
   const lab: LabColor[] = []
   for (const c of palette.colors) {

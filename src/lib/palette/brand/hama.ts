@@ -1,7 +1,7 @@
-import { BeadPalette } from "@/types/palette";
+import type { SeedPalette } from "@/types";
 
-export const HAMA_PALETTE: BeadPalette = {
-  id: "hama",
+export const HAMA_PALETTE: SeedPalette = {
+  code: "hama",
   brand: "HAMA",
   colors: [
     {
