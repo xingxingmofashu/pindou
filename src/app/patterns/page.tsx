@@ -21,11 +21,6 @@ export default function PatternsPage() {
     fetcher,
   )
 
-  const goToPage = (next: number) => {
-    if (next < 1) return
-    setPage(next)
-  }
-
   const list = data?.patterns ?? []
   const total = data?.total ?? 0
   const totalPages = data?.totalPages ?? 0
@@ -72,7 +67,7 @@ export default function PatternsPage() {
                       className={cn(page <= 1 && "pointer-events-none opacity-50")}
                       onClick={(e) => {
                         e.preventDefault()
-                        goToPage(page - 1)
+                        setPage(page - 1)
                       }}
                     />
                   </PaginationItem>
@@ -90,7 +85,7 @@ export default function PatternsPage() {
                       className={cn(page >= totalPages && "pointer-events-none opacity-50")}
                       onClick={(e) => {
                         e.preventDefault()
-                        goToPage(page + 1)
+                        setPage(page + 1)
                       }}
                     />
                   </PaginationItem>

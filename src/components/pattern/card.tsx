@@ -3,11 +3,6 @@ import { formatDistanceToNow, parseISO, isValid } from "date-fns"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { totalBeadCount } from "@/lib/utils"
 
-function safeFormatDistance(dateStr: string): string {
-  const date = parseISO(dateStr)
-  return isValid(date) ? formatDistanceToNow(date, { addSuffix: true }) : ""
-}
-
 interface PatternCardProps {
   id: string
   title: string
@@ -19,6 +14,8 @@ interface PatternCardProps {
 
 export function PatternCard({ id, title, authorName, beadStats, createdAt, thumbPng }: PatternCardProps) {
   const totalBeads = totalBeadCount(beadStats)
+  const date = parseISO(createdAt)
+  const relativeDate = isValid(date) ? formatDistanceToNow(date, { addSuffix: true }) : ""
 
   return (
     <Link href={`/patterns/${id}`} className="block">
@@ -43,7 +40,7 @@ export function PatternCard({ id, title, authorName, beadStats, createdAt, thumb
           <p className="text-xs text-muted-foreground">
             {totalBeads.toLocaleString()} beads
             <span aria-hidden="true"> · </span>
-            {safeFormatDistance(createdAt)}
+            {relativeDate}
           </p>
         </CardHeader>
       </Card>
