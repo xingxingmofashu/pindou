@@ -5,6 +5,13 @@ import useSWR from "swr"
 import { usePalette } from "@/hooks/use-palette"
 import { cn, fetcher } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import type { Palette } from "@/types"
 
 interface ColorPaletteProps {
@@ -55,7 +62,8 @@ export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProp
    * Switch the active brand and reset to the first colour.
    * The canvas is cleared on brand switch by usePixiCanvas.
    */
-  const handleBrandChange = (code: string) => {
+  const handleBrandChange = (code: string | null) => {
+    if (!code) return
     const brand = brands?.find((b) => b.code === code)
     if (brand) setActivePalette(brand)
     onColorPick(1)
@@ -72,19 +80,22 @@ export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProp
   return (
     <div className="flex flex-col h-full border">
       <div className="flex items-center justify-between gap-2 px-3 py-2 border-b">
-        {brands?.length ?? 0 > 1 ? (
-          <select
-            aria-label="Bead brand"
-            className="min-w-0 flex-1 cursor-pointer bg-transparent text-xs font-medium text-muted-foreground outline-none"
-            value={palette?.code ?? ""}
-            onChange={(e) => handleBrandChange(e.target.value)}
-          >
-            {brands?.map((b) => (
-              <option key={b.code} value={b.code}>
-                {b.name}
-              </option>
-            ))}
-          </select>
+        {(brands?.length ?? 0) > 1 ? (
+          <Select value={palette.code} onValueChange={handleBrandChange}>
+            <SelectTrigger
+              aria-label="Bead brand"
+              className="h-auto w-full min-w-0 flex-1 gap-1.5 rounded-none border-0 bg-transparent px-0 py-0 text-xs font-medium text-muted-foreground shadow-none focus-visible:ring-0"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="start" sideOffset={6}>
+              {brands?.map((b) => (
+                <SelectItem key={b.code} value={b.code}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         ) : (
           <span className="text-xs font-medium text-muted-foreground">{palette.name}</span>
         )}
