@@ -63,10 +63,14 @@ export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProp
    * The canvas is cleared on brand switch by usePixiCanvas.
    */
   const handleBrandChange = (code: string | null) => {
-    if (!code) return
+    // Ignore a no-op re-selection of the active brand — Base UI fires
+    // onValueChange even when the currently-selected item is clicked again.
+    if (!code || code === palette?.code) return
     const brand = brands?.find((b) => b.code === code)
-    if (brand) setActivePalette(brand)
-    onColorPick(1)
+    if (brand) {
+      setActivePalette(brand)
+      onColorPick(1)
+    }
   }
 
   if (!palette) {
@@ -84,7 +88,7 @@ export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProp
           <Select value={palette.code} onValueChange={handleBrandChange}>
             <SelectTrigger
               aria-label="Bead brand"
-              className="h-auto w-full min-w-0 flex-1 gap-1.5 rounded-none border-0 bg-transparent px-0 py-0 text-xs font-medium text-muted-foreground shadow-none focus-visible:ring-0"
+              className="w-full min-w-0 flex-1 cursor-pointer gap-1.5 rounded-none border-0 bg-transparent px-0 py-0 text-xs font-medium text-muted-foreground shadow-none data-[size=default]:h-auto"
             >
               <SelectValue />
             </SelectTrigger>
