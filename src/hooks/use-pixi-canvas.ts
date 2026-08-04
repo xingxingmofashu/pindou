@@ -22,7 +22,7 @@ import {
 } from "@/lib/editor"
 import { hexToRgb } from "@/lib/utils"
 import type { ToolKind } from "@/components/editor/toolbar"
-import type { BeadPalette } from "@/types/palette"
+import type { BeadPalette, Brand } from "@/types/palette"
 
 const MIN_ZOOM = 0.5
 const MAX_ZOOM = 20
@@ -391,7 +391,7 @@ const rebuildRef = useRef(rebuild)
   }, [resetModel])
 
   const getCellsData = useCallback((): {
-    grid: number[][]; brandId: string; beadStats: string
+    grid: number[][]; brandId: Brand; beadStats: string
   } | null => {
     const grid = serializeGrid(cellsRef.current)
     if (!grid) return null

@@ -1,11 +1,12 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import { PixiCanvas, type PixiCanvasApi } from "@/components/pixi-canvas"
 import { ToolBar, type ToolKind } from "@/components/editor/toolbar"
 import { ColorPalette } from "@/components/editor/color-palette"
 import { PublishDialog } from "@/components/editor/publish-dialog"
 import { ImportImageDialog } from "@/components/editor/import-image-dialog"
+import { ExportDialog } from "@/components/editor/export-dialog"
 
 const DEFAULT_ZOOM = 3
 
@@ -16,7 +17,12 @@ export default function EditorPage() {
   const [toggleLabels, setToggleLabels] = useState(false)
   const [publishOpen, setPublishOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const [zoom, setZoom] = useState(DEFAULT_ZOOM)
+
+  // Stable: both dialogs read the canvas grid through it, and the export dialog
+  // memoizes on it, so an identity change per render would defeat the memo.
+  const getCellsData = useCallback(() => canvasApiRef.current?.getCellsData() ?? null, [])
 
   return (
     <div className="flex h-full flex-col p-2 gap-2 overflow-hidden">
@@ -25,6 +31,7 @@ export default function EditorPage() {
         onSelectTool={setActiveTool}
         onClearCanvas={() => canvasApiRef.current?.onClear()}
         onImportImage={() => setImportOpen(true)}
+        onExportImage={() => setExportOpen(true)}
         showLabels={toggleLabels}
         onToggleLabels={() => setToggleLabels((v) => !v)}
         onPublish={() => setPublishOpen(true)}
@@ -53,13 +60,19 @@ export default function EditorPage() {
       <PublishDialog
         open={publishOpen}
         onClose={() => setPublishOpen(false)}
-        getCellsData={() => canvasApiRef.current?.getCellsData() ?? null}
+        getCellsData={getCellsData}
       />
 
       <ImportImageDialog
         open={importOpen}
         onClose={() => setImportOpen(false)}
         onApply={(grid) => canvasApiRef.current?.loadGrid(grid)}
+      />
+
+      <ExportDialog
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        getCellsData={getCellsData}
       />
     </div>
   )

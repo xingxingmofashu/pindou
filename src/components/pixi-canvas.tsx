@@ -5,14 +5,14 @@ import { usePixiApp } from "@/hooks/use-pixi-app"
 import { usePixiCanvas } from "@/hooks/use-pixi-canvas"
 import { useActivePalette } from "@/hooks/use-active-palette"
 import type { ToolKind } from "@/components/editor/toolbar"
-import type { BeadPalette } from "@/types/palette"
+import type { BeadPalette, Brand } from "@/types/palette"
 
 export interface PixiCanvasApi {
   zoom: number
   setZoom: (z: number | ((prev: number) => number)) => void
   onReset: () => void
   onClear: () => void
-  getCellsData: () => { grid: number[][]; brandId: string; beadStats: string } | null
+  getCellsData: () => { grid: number[][]; brandId: Brand; beadStats: string } | null
   /** Replace the canvas contents with a serialized grid. */
   loadGrid: (grid: number[][]) => void
 }
