@@ -15,12 +15,6 @@ export async function fetcher<T = unknown>(url: string): Promise<T> {
   return (await res.json()) as T
 }
 
-/** Parse a hex colour string into its R, G, B components. */
-export function parseHex(hex: string): [number, number, number] {
-  const n = parseInt(hex.replace("#", ""), 16)
-  return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff]
-}
-
 export function hexToRgb(hex: string): number {
   return parseInt(hex.replace("#", ""), 16)
 }

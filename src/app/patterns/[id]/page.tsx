@@ -7,7 +7,7 @@ import { PixiCanvas } from "@/components/pixi-canvas"
 import { fetcher, parseBeadStats, totalBeadCount } from "@/lib/utils"
 import type { PaletteType } from "@/lib/validation"
 import type { Palette } from "@/types"
-import { formatDistanceToNow, parseISO, isValid } from "date-fns"
+import { format, formatDistanceToNow, parseISO, isValid } from "date-fns"
 
 export default function PatternDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -38,11 +38,7 @@ export default function PatternDetailPage() {
 
   const createdAt = parseISO(data.createdAt)
   const absoluteDate = isValid(createdAt)
-    ? createdAt.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
+    ? format(createdAt, "MMMM d, yyyy")
     : ""
   const relativeDate = isValid(createdAt)
     ? formatDistanceToNow(createdAt, { addSuffix: true })

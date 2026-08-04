@@ -1,7 +1,6 @@
 import sharp from "sharp"
 import { converter, differenceCiede2000 } from "culori"
 import { MAX_GRID_DIMENSION } from "@/lib/editor"
-import { parseHex } from "@/lib/utils"
 import type { Palette } from "@/types"
 
 /** Pixels with alpha below this are treated as empty cells. */
@@ -49,10 +48,10 @@ function buildPaletteSamples(palette: Palette): PaletteSamples {
   const ok: [number, number, number][] = []
   const lab: LabColor[] = []
   for (const c of palette.colors) {
-    const [r, g, b] = parseHex(c.hex)
-    const rgbColor = { mode: "rgb" as const, r: r / 255, g: g / 255, b: b / 255 }
-    const o = toOklab(rgbColor)
-    lab.push(toLab(rgbColor))
+    // Palette hexes come from the DB (validated 6-digit values); culori's
+    // string-input conversions type as `| undefined` but cannot fail here.
+    const o = toOklab(c.hex)!
+    lab.push(toLab(c.hex)!)
     ok.push([o.l, o.a, o.b])
   }
   return { ok, lab }

@@ -1,7 +1,7 @@
 /**
  * Pixel font for A–Z (5×7 grid). `true` = filled cell.
  */
-import { parseHex } from "@/lib/utils"
+import { formatHex, interpolate } from "culori"
 
 const GLYPHS: Record<string, boolean[][]> = {
   P: [
@@ -66,12 +66,7 @@ const GAP = 1
 
 /** Interpolate between two hex colors. */
 function lerpColor(a: string, b: string, t: number): string {
-  const [ar, ag, ab] = parseHex(a)
-  const [br, bg, bb] = parseHex(b)
-  const r = Math.round(ar + (br - ar) * t)
-  const g = Math.round(ag + (bg - ag) * t)
-  const bv = Math.round(ab + (bb - ab) * t)
-  return `#${((r << 16) | (g << 8) | bv).toString(16).padStart(6, "0")}`
+  return formatHex(interpolate([a, b])(t))
 }
 
 export function Logo({ className }: { className?: string }) {
