@@ -5,13 +5,13 @@ import { useParams } from "next/navigation"
 import { PatternDetailPanel } from "@/components/pattern/detail/panel"
 import { PixiCanvas } from "@/components/pixi-canvas"
 import { fetcher, parseBeadStats, totalBeadCount } from "@/lib/utils"
-import type { PaletteType } from "@/lib/validation"
+import type { PaletteSelectType } from "@/db/schema"
 import type { Palette } from "@/types"
 import { format, formatDistanceToNow, parseISO, isValid } from "date-fns"
 
 export default function PatternDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const { data } = useSWR<PaletteType>(`/api/patterns/${id}`, fetcher)
+  const { data } = useSWR<PaletteSelectType>(`/api/patterns/${id}`, fetcher)
   const { data: brand } = useSWR<Palette>(
     data ? `/api/brands/${data.brandId}` : null,
     fetcher,

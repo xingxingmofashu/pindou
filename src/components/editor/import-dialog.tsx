@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { MAX_GRID_DIMENSION } from "@/lib/editor"
-import { ErrorSchema } from "@/lib/validation"
+import { ErrorSchema } from "@/db/schema"
 import { usePalette } from "@/hooks/use-palette"
 import type { TransformResult } from "@/lib/transform"
 import type { Palette } from "@/types"
@@ -29,7 +29,7 @@ const DEFAULT_WIDTH = 64
 /** Debounce width edits before re-converting. */
 const DEBOUNCE_MS = 300
 
-interface ImportImageDialogProps {
+interface ImportDialogProps {
   open: boolean
   onClose: () => void
   /** Called with the converted grid (`grid[row][col]`, 0 = empty) when the user applies. */
@@ -108,7 +108,7 @@ function drawGridToCanvas(
   }
 }
 
-export function ImportImageDialog({ open, onClose, onApply }: ImportImageDialogProps) {
+export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
   const { palette } = usePalette()
   const [file, setFile] = useState<File | null>(null)
   const [widthInput, setWidthInput] = useState(String(DEFAULT_WIDTH))

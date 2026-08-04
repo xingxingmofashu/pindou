@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { CreatePatternSchema, ErrorSchema } from "@/lib/validation"
+import { PatternInsertSchema, ErrorSchema } from "@/db/schema"
 
 interface PublishDialogProps {
   open: boolean
@@ -57,7 +57,7 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
       return
     }
 
-    const parsed = CreatePatternSchema.safeParse({
+    const parsed = PatternInsertSchema.safeParse({
       title,
       description,
       authorName,

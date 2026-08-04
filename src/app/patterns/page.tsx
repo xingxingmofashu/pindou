@@ -12,18 +12,20 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import { cn, fetcher, parseBeadStats } from "@/lib/utils"
-import type { PatternListResponse } from "@/lib/validation"
+import type { PatternResponseType } from "@/db/schema"
 
 export default function PatternsPage() {
   const [page, setPage] = useState(1)
-  const { data, error, isLoading } = useSWR<PatternListResponse>(
+  const { data, error, isLoading } = useSWR<PatternResponseType>(
     `/api/patterns?page=${page}`,
     fetcher,
   )
 
   const list = data?.patterns ?? []
-  const total = data?.total ?? 0
-  const totalPages = data?.totalPages ?? 0
+  const total = data?.pagination.total ?? 0
+  const totalPages = data
+    ? Math.ceil(data.pagination.total / data.pagination.pageSize)
+    : 0
 
   return (
     <div className="flex flex-1 flex-col overflow-y-auto px-4 py-6">

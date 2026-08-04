@@ -19,6 +19,7 @@
     "culori": "^4.0.2",
     "date-fns": "^4.4.0",
     "drizzle-orm": "^0.45.2",
+    "drizzle-zod": "^0.8.3",
     "lucide-react": "^1.27.0",
     "next": "16.2.12",
     "pixi.js": "^8.19.0",

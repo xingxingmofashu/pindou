@@ -1,4 +1,7 @@
 import { integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
+import { z } from "zod"
+import { createSchemaFactory } from "drizzle-zod"
+import { MAX_GRID_DIMENSION } from "../lib/editor"
 
 export const patterns = pgTable("patterns", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -47,3 +50,85 @@ export const colors = pgTable("colors", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 })
+
+/**
+ * Zod mirrors of the tables plus the composite wire shapes, generated from the
+ * tables above via drizzle-zod instead of hand-written. Dates are coerced so
+ * the ISO strings JSON responses serve parse cleanly.
+ */
+const { createSelectSchema, createInsertSchema } = createSchemaFactory({
+  coerce: { date: true },
+})
+
+/** A `brands` row as served over JSON. */
+export const BrandSelectSchema = createSelectSchema(brands)
+
+/** A `colors` row as served over JSON. */
+export const ColorSelectSchema = createSelectSchema(colors)
+
+
+/**
+ * Wire shape of a published pattern (GET /api/patterns/[id]): the `patterns`
+ * row joined with the brand code, `gridData` parsed to a number[][], and the
+ * brand FK surfaced as `brandId` alongside the wire `brandCode`.
+ */
+export const PatternSelectSchema = createSelectSchema(patterns, {
+  gridData: z
+    .array(z.array(z.number().int().min(0)))
+    .min(1, `Grid rows must be 1–${MAX_GRID_DIMENSION}`)
+    .max(MAX_GRID_DIMENSION, `Grid rows must be 1–${MAX_GRID_DIMENSION}`)
+    .refine(
+      (rows) => rows[0].length > 0 && rows[0].length <= MAX_GRID_DIMENSION,
+      { message: `Grid columns must be 1–${MAX_GRID_DIMENSION}` },
+    )
+    .refine((rows) => rows.every((row) => row.length === rows[0].length), {
+      message: "Grid must be rectangular",
+    }),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+  .extend({ brandCode: z.string(), brandId: z.uuid() })
+  .omit({ fkBrandId: true })
+
+/**
+ * Client-supplied fields for POST /api/patterns. `beadStats` is computed
+ * client-side at publish time; server-generated fields (thumbPng, timestamps)
+ * are added on the route.
+ */
+export const PatternInsertSchema = createInsertSchema(patterns, {
+  gridData: z
+    .array(z.array(z.number().int().min(0)))
+    .min(1, `Grid rows must be 1–${MAX_GRID_DIMENSION}`)
+    .max(MAX_GRID_DIMENSION, `Grid rows must be 1–${MAX_GRID_DIMENSION}`)
+    .refine(
+      (rows) => rows[0].length > 0 && rows[0].length <= MAX_GRID_DIMENSION,
+      { message: `Grid columns must be 1–${MAX_GRID_DIMENSION}` },
+    )
+    .refine((rows) => rows.every((row) => row.length === rows[0].length), {
+      message: "Grid must be rectangular",
+    }),
+  beadStats: z.string(),
+})
+  .omit({ id: true, fkBrandId: true, thumbPng: true, createdAt: true, updatedAt: true })
+  .extend({ brandCode: z.string() })
+
+/** Query-parameter pagination for GET /api/patterns. */
+export const PaginationSchema = z.object({
+  total: z.number().int().min(0).catch(0),
+  page: z.coerce.number().int().min(1).catch(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20).catch(20),
+})
+
+/** Response shape for the paginated GET /api/patterns. */
+export const PatternsResponseSchema = z.object({
+  patterns: z.array(PatternSelectSchema),
+  pagination: PaginationSchema,
+})
+
+
+
+/** Every API error response shares this `{ error }` envelope. */
+export const ErrorSchema = z.object({ error: z.string() })
+
+export type PaletteSelectType = z.infer<typeof PatternSelectSchema>
+export type PatternResponseType = z.infer<typeof PatternsResponseSchema>

@@ -3,7 +3,7 @@ import { desc, eq, sql } from "drizzle-orm"
 import { db } from "@/db"
 import { brands, colors, patterns } from "@/db/schema"
 import { generateThumbnail } from "@/lib/thumbnail"
-import { CreatePatternSchema, PaginationSchema } from "@/lib/validation"
+import { PatternInsertSchema, PaginationSchema } from "@/db/schema"
 import type { Palette } from "@/types"
 
 export async function GET(request: NextRequest) {
@@ -41,17 +41,14 @@ export async function GET(request: NextRequest) {
       thumbPng: r.thumbPng,
       createdAt: r.createdAt,
     })),
-    total,
-    page,
-    pageSize,
-    totalPages: Math.ceil(total / pageSize),
+    pagination: { total, page, pageSize },
   })
 }
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null)
 
-  const parsed = CreatePatternSchema.safeParse(body)
+  const parsed = PatternInsertSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues[0]?.message ?? "Invalid request" },

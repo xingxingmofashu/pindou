@@ -125,7 +125,7 @@ them at runtime.
 
 ```
 src/types/index.ts                Row types for the three tables (Brand/Color/Pattern) via $inferSelect, plus Palette = Brand & { colors: Color[] } (a brand row with colors nested — the resolved palette shape) and SeedPalette for the static files
-src/db/schema.ts                   brands + colors + patterns (uuid id defaultRandom, timestamptz created_at/updated_at)
+src/db/schema.ts                   brands + colors + patterns (uuid id defaultRandom, timestamptz created_at/updated_at) + generated drizzle-zod wire schemas
 src/db/seed.ts                     db:seed — upsert brands by code, colors by (fk_brand_id, code); read-back order check
 src/lib/palette/brand/*.ts         Static brand data (mard 291, perler 57, artkal 159, hama 53) — seed source only
 src/app/api/brands/route.ts        GET — all brands with their colors nested (the client catalog)
@@ -133,7 +133,7 @@ src/app/api/brands/[id]/route.ts   GET — one brand by uuid id with colors nest
 src/hooks/use-palette.ts           Editor store (Zustand) — active palette (pushed in by ColorPalette, no fetch of its own)
 ```
 
-- The row types in `src/types/index.ts` are `$inferSelect` types derived from the Drizzle schema — the schema is the single definition. Wire schemas `BrandSchema`/`ColorSchema` in `src/lib/validation.ts` mirror those rows (uuid ids, timestamps coerced from ISO strings). `/api/brands` (the catalog — every brand with its colors nested, `ORDER BY sort_order`) and `/api/brands/[id]` (a single brand by its uuid row id, e.g. a pattern's `brandId`) are the palette endpoints; a resolved palette is a `Palette` (`Brand & { colors: Color[] }` — a brand row with `colors` nested).
+- The row types in `src/types/index.ts` are `$inferSelect` types derived from the Drizzle schema — the schema is the single definition. Wire schemas `BrandSelectSchema`/`ColorSelectSchema` are generated from those rows by drizzle-zod in `src/db/schema.ts` (uuid ids, timestamps coerced from ISO strings). `/api/brands` (the catalog — every brand with its colors nested, `ORDER BY sort_order`) and `/api/brands/[id]` (a single brand by its uuid row id, e.g. a pattern's `brandId`) are the palette endpoints; a resolved palette is a `Palette` (`Brand & { colors: Color[] }` — a brand row with `colors` nested).
 
 - `code`/`name` are uppercase (e.g. `"A1"`); `series` is nullable — use `c.series ?? "?"`
 - Grid cells are 1‑based indices into `palette.colors`, so colors are served `ORDER BY sort_order` (the seed-time array index). **Never reorder existing color rows** — it would corrupt every published pattern.
@@ -149,7 +149,6 @@ src/app/api/patterns/route.ts          GET (paginated list) + POST (publish)
 src/app/api/patterns/[id]/route.ts     GET (single pattern)
 src/app/api/transform/route.ts         POST (image → grid), `export const runtime = "nodejs"`
 src/lib/transform.ts                   transform(buffer, { width, palette }) — Node-only (imports sharp)
-src/lib/validation.ts                  BrandSchema/ColorSchema, BrandListSchema, PaletteSchema, CreatePatternSchema, ErrorSchema
 src/db/                                Drizzle schema + Neon Postgres Pool (@neondatabase/serverless)
 ```
 
