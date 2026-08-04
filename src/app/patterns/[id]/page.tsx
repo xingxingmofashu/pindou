@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import { PatternDetailPanel } from "@/components/pattern/detail/panel"
-import { PatternDetailToolbar } from "@/components/pattern/detail/toolbar"
 import { PixiCanvas } from "@/components/pixi-canvas"
 import { PALETTES } from "@/lib/palette/registry"
 import { parseBeadStats, totalBeadCount } from "@/lib/utils"
@@ -61,9 +60,9 @@ export default function PatternDetailPage() {
 
   return (
     <div className="flex h-full flex-col p-2 gap-2 overflow-hidden">
-      <PatternDetailToolbar title={data.title} />
       <div className="flex-1 min-h-0 flex gap-2">
         <PatternDetailPanel
+          title={data.title}
           authorName={data.authorName ?? null}
           relativeDate={relativeDate}
           absoluteDate={absoluteDate}
