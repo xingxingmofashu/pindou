@@ -1,4 +1,4 @@
-import { integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
+import { integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core"
 import { z } from "zod"
 import { createSchemaFactory } from "drizzle-zod"
 import { MAX_GRID_DIMENSION } from "../lib/editor"
@@ -37,19 +37,23 @@ export const brands = pgTable("brands", {
  * array, so `sortOrder` (the array index at seed time) MUST match the order the
  * palette is served in — never reorder existing rows.
  */
-export const colors = pgTable("colors", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  fkBrandId: uuid("fk_brand_id")
-    .notNull()
-    .references(() => brands.id, { onDelete: "cascade" }),
-  code: text("code").notNull(),
-  name: text("name").notNull(),
-  hex: text("hex").notNull(),
-  series: text("series"),
-  sortOrder: integer("sort_order").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-})
+export const colors = pgTable(
+  "colors",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    fkBrandId: uuid("fk_brand_id")
+      .notNull()
+      .references(() => brands.id, { onDelete: "cascade" }),
+    code: text("code").notNull(),
+    name: text("name").notNull(),
+    hex: text("hex").notNull(),
+    series: text("series"),
+    sortOrder: integer("sort_order").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("colors_brand_code_unique").on(t.fkBrandId, t.code)],
+)
 
 /**
  * Zod mirrors of the tables plus the composite wire shapes, generated from the

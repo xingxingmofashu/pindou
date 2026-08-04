@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "colors_brand_code_unique" ON "colors" USING btree ("fk_brand_id","code");

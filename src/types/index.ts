@@ -12,19 +12,3 @@ export type Pattern = typeof patterns.$inferSelect
  * index into).
  */
 export type Palette = Brand & { colors: Color[] }
-
-/** A color as declared in the static brand source files (seed input, not a DB row). */
-export interface SeedColor {
-  id: string
-  code: string
-  name: string
-  hex: string
-  series?: string
-}
-
-/** A palette as declared in the static brand source files — seed data only. */
-export interface SeedPalette {
-  code: string
-  brand: string
-  colors: SeedColor[]
-}
