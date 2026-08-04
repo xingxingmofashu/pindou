@@ -128,7 +128,7 @@ export function ImportImageDialog({ open, onClose, onApply }: ImportImageDialogP
         formData.append("file", f)
         formData.append("width", String(w))
         formData.append("brandId", brandId)
-        const res = await fetch("/api/image-to-grid", {
+        const res = await fetch("/api/transform", {
           method: "POST",
           body: formData,
         })
