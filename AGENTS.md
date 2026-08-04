@@ -68,7 +68,7 @@ PixiJS Application (WebGL)
 
 ### LOD (Level of Detail) system
 
-The visual grid cell size adapts to zoom so each bead is always large enough to interact with:
+LOD controls the **paint-brush block size** only — grid lines and beads always render at data-cell resolution (`CELL` / `lodScale = 1`), so an imported pattern keeps its fixed cell count at any zoom.
 
 ```
 pxPerDataCell = zoom × CELL (10 world units per data cell)
@@ -76,16 +76,16 @@ lodScale = max(1, ceil(MIN_PX (10) / pxPerDataCell))
 visualCellWorldSize = lodScale × CELL
 ```
 
-- At zoom ≥ 100%: lodScale = 1 → one visual cell = one data cell (individual editing)
-- At zoom 25%: lodScale = 4 → one visual cell = 4×4 data cells (merged overview)
-- Painting at lodScale > 1 fills the entire visual-cell block
-- Grid lines are drawn at `visualCellWorldSize` spacing, filling the entire viewport (infinite extent)
+- At zoom ≥ 100%: lodScale = 1 → one brush press targets one data cell
+- At zoom 25%: lodScale = 4 → one brush press fills a 4×4 data-cell block
+- `buildBeadEntries` is always called with `lodScale = 1` and `cellSize = CELL`
+- Grid lines are drawn at `CELL` spacing (data-cell boundaries), filling the entire viewport (infinite extent)
 
 ### Rendering
 
-Two rendering paths:
-- **`rebuild`**: Full rebuild — redraws grid lines AND aggregates painted cells into visual-cell buckets with `buildBeadEntries()` (dominant colour per bucket via `dominant()`), drawing both Graphics layers. Called on zoom change, draw strokes, and resize.
-- **`redrawGrid`**: Grid-only redraw — skips bead aggregation entirely. Called during panning since beads are children of the `world` Container and move with it automatically.
+Single render path, **`rebuild`** — redraws grid lines at data-cell spacing AND draws each painted cell as its own bead via `buildBeadEntries()` (always called with `lodScale = 1`, so no merging), covering both Graphics layers. Called on zoom change, draw strokes, resize, and pan.
+
+Pan passes `{ skipLabels: true }` so beads are redrawn for the current viewport (nothing clips), while labels are left untouched — they are children of the `world` Container and pan with it automatically, avoiding per-frame text rasterization.
 
 ### Drawing tools
 
@@ -101,7 +101,7 @@ The fill and eyedropper tools were removed. `onColorPick` remains as a dead prop
 ### Zoom / pan
 
 - **Wheel zoom**: Cursor-centred. Uses the **clamped** zoom ratio (`clamped / oldZoom`) to adjust `world.x/y`, preventing cursor drift at zoom limits (0.5×–20×). State sync via rAF throttle.
-- **Pan**: Middle-button drag. Uses `redrawGrid` — beads move with the world container.
+- **Pan**: Middle-button drag. Rebuilds beads for the current viewport via `rebuild({ skipLabels: true })`, so no painted region is ever clipped.
 - **Fit**: Centres world origin at viewport centre, resets to `initialZoom`.
 
 ### Pointer event details

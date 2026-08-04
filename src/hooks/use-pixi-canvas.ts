@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react"
 import { Text } from "pixi.js"
 import {
   EMPTY,
+  CELL,
   paintBlock,
   serializeGrid,
   deserializeGrid,
@@ -98,16 +99,6 @@ export function usePixiCanvas(
     }
   }, [])
 
-  const redrawGrid = useCallback(() => {
-    const v = viewport()
-    if (!v) return
-    const ctx = pixiRef.current
-    if (!ctx) return
-    const { size } = lodParams(zoomRef.current)
-    const { rects } = computeGridLines(v, size, zoomRef.current)
-    paintGridLines(ctx.gridGfx, rects, GRID_COLOR, GRID_ALPHA)
-  }, [viewport])
-
   /** Place a label child in world-local coords (labels live inside `world`). */
   function placeLabel(e: BeadEntry): { x: number; y: number; fontSize: number } {
     return {
@@ -119,62 +110,68 @@ export function usePixiCanvas(
     }
   }
 
-  const rebuild = useCallback(() => {
-    const ctx = pixiRef.current
-    const v = viewport()
-    if (!ctx || !v) return
+  const rebuild = useCallback(
+    (opts?: { skipLabels?: boolean }) => {
+      const ctx = pixiRef.current
+      const v = viewport()
+      if (!ctx || !v) return
 
-    const z = zoomRef.current
-    const { scale, size } = lodParams(z)
+      const z = zoomRef.current
 
-    const { rects } = computeGridLines(v, size, z)
-    paintGridLines(ctx.gridGfx, rects, GRID_COLOR, GRID_ALPHA)
+      // Grid lines and beads always render at data-cell resolution (CELL /
+      // lodScale 1) so an imported pattern keeps its fixed cell count at any
+      // zoom. LOD only controls the paint-brush block size, never the display.
+      const { rects } = computeGridLines(v, CELL, z)
+      paintGridLines(ctx.gridGfx, rects, GRID_COLOR, GRID_ALPHA)
 
-    const entries = buildBeadEntries(cellsRef.current, v, scale, size, palette)
-    lastEntriesRef.current = entries
+      const entries = buildBeadEntries(cellsRef.current, v, 1, CELL, palette)
+      lastEntriesRef.current = entries
 
-    ctx.beadsGfx.clear()
-    for (const e of entries) {
-      ctx.beadsGfx.rect(e.worldX, e.worldY, e.size, e.size)
-      ctx.beadsGfx.fill({ color: hexToRgb(e.hex) })
-    }
-
-    ctx.labels.removeChildren()
-    if (showLabels) {
-      // `world` scales these labels by `zoom`, so without `resolution` the
-      // texture is rasterized at the tiny world-unit font size and upscaled —
-      // blurry. resolution = zoom makes texture pixels equal screen pixels.
-      const labelResolution = Math.max(1, z)
+      ctx.beadsGfx.clear()
       for (const e of entries) {
-        const pos = placeLabel(e)
-        const text = new Text({
-          text: e.code,
-          style: {
-            fontSize: pos.fontSize,
-            fill: "#111",
-            fontFamily: "monospace",
-            fontWeight: "bold",
-          },
-          resolution: labelResolution,
-          roundPixels: true,
-        })
-        text.anchor.set(0.5)
-        text.x = pos.x
-        text.y = pos.y
-        ctx.labels.addChild(text)
+        ctx.beadsGfx.rect(e.worldX, e.worldY, e.size, e.size)
+        ctx.beadsGfx.fill({ color: hexToRgb(e.hex) })
       }
-    }
-  }, [viewport, palette, showLabels])
 
-  // Keep the latest pixiCtx, rebuild/redraw callbacks, and the runtime opts
-// behind refs so the long-lived event handlers read fresh values. Synced in a
+      // Labels are children of `world`, so they pan with the container and
+      // don't need recreating on every pan frame.
+      if (opts?.skipLabels) return
+      ctx.labels.removeChildren()
+      if (showLabels) {
+        // `world` scales these labels by `zoom`, so without `resolution` the
+        // texture is rasterized at the tiny world-unit font size and upscaled —
+        // blurry. resolution = zoom makes texture pixels equal screen pixels.
+        const labelResolution = Math.max(1, z)
+        for (const e of entries) {
+          const pos = placeLabel(e)
+          const text = new Text({
+            text: e.code,
+            style: {
+              fontSize: pos.fontSize,
+              fill: "#111",
+              fontFamily: "monospace",
+              fontWeight: "bold",
+            },
+            resolution: labelResolution,
+            roundPixels: true,
+          })
+          text.anchor.set(0.5)
+          text.x = pos.x
+          text.y = pos.y
+          ctx.labels.addChild(text)
+        }
+      }
+    },
+    [viewport, palette, showLabels]
+  )
+
+  // Keep the latest pixiCtx, rebuild callback, and the runtime opts behind
+// refs so the long-lived event handlers read fresh values. Synced in a
 // no-deps effect (runs after every commit) — see lint rule react-hooks/refs.
 const rebuildRef = useRef(rebuild)
-  const redrawGridRef = useRef(redrawGrid)
   useEffect(() => {
     pixiRef.current = pixiCtx
     rebuildRef.current = rebuild
-    redrawGridRef.current = redrawGrid
     runtimeRef.current = { activeTool, activeColorIndex, readonly }
   })
 
@@ -330,7 +327,7 @@ const rebuildRef = useRef(rebuild)
         if (!ctx) return
         ctx.world.x = p.startWX + e.clientX - p.startX
         ctx.world.y = p.startWY + e.clientY - p.startY
-        redrawGridRef.current()
+        rebuildRef.current({ skipLabels: true })
         return
       }
 

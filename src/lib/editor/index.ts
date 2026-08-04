@@ -277,6 +277,10 @@ export interface GridRect {
  * (the PixiJS hook) is responsible for drawing them, keeping this pure
  * library free of any rendering dependency.
  *
+ * Each line is snapped to a whole screen pixel (the line width is exactly one
+ * screen pixel, so a fractional screen position would split it across two
+ * pixels and antialias it to near-invisibility at the grid's low alpha).
+ *
  * @param view     - Visible viewport rectangle in world space.
  * @param cellSize - World-unit size of each visual cell.
  * @param zoom     - Current zoom level (affects line width).
@@ -299,10 +303,12 @@ export function computeGridLines(
 
   const rects: GridRect[] = []
   for (let x = x0; x <= x1; x += cellSize) {
-    rects.push({ x, y: view.top - m, width: lineWidth, height: hSpan })
+    const sx = Math.round((x - view.left) * zoom)
+    rects.push({ x: view.left + sx / zoom, y: view.top - m, width: lineWidth, height: hSpan })
   }
   for (let y = y0; y <= y1; y += cellSize) {
-    rects.push({ x: view.left - m, y, width: wSpan, height: lineWidth })
+    const sy = Math.round((y - view.top) * zoom)
+    rects.push({ x: view.left - m, y: view.top + sy / zoom, width: wSpan, height: lineWidth })
   }
   return { rects, lineWidth }
 }
