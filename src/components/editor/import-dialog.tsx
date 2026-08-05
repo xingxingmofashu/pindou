@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import useSWRMutation from "swr/mutation"
-import { Loader2, Upload } from "lucide-react"
+import { Upload } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Spinner } from "@/components/ui/spinner"
 import { MAX_GRID_DIMENSION } from "@/lib/editor"
 import { ErrorSchema } from "@/db/schema"
 import { usePalette } from "@/hooks/use-palette"
@@ -259,7 +260,7 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
 
         {isMutating && (
           <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <Loader2 className="size-3.5 animate-spin" data-icon="inline-start" />
+            <Spinner className="size-3.5" />
             Processing…
           </p>
         )}

@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Spinner } from "@/components/ui/spinner"
 import { PatternInsertSchema, ErrorSchema } from "@/db/schema"
 
 interface PublishDialogProps {
@@ -168,7 +169,8 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
                 onClick={handleSubmit}
                 disabled={isMutating || title.trim().length === 0}
               >
-                {isMutating ? "Publishing..." : "Publish"}
+                {isMutating && <Spinner data-icon="inline-start" />}
+                Publish
               </AlertDialogAction>
             </AlertDialogFooter>
           </>

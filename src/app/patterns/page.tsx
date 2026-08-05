@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import useSWR from "swr"
 import { PatternCard } from "@/components/pattern/card"
+import { Card, CardHeader } from "@/components/ui/card"
 import {
   Pagination,
   PaginationContent,
@@ -11,6 +12,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import { Skeleton } from "@/components/ui/skeleton"
 import { cn, fetcher, parseBeadStats } from "@/lib/utils"
 import type { PatternResponseType } from "@/db/schema"
 
@@ -34,15 +36,27 @@ export default function PatternsPage() {
         <p className="mb-6 text-sm text-muted-foreground">
           {error
             ? "Failed to load patterns."
-            : isLoading
-              ? "Loading…"
-              : `${total.toLocaleString()} patterns published`}
+            : data
+              ? `${total.toLocaleString()} patterns published`
+              : ""}
         </p>
 
         {error ? (
           <p className="text-sm text-muted-foreground">
             Something went wrong. Please try again later.
           </p>
+        ) : isLoading ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Card key={i}>
+                <Skeleton className="aspect-square w-full rounded-none" />
+                <CardHeader>
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="mt-2 h-3 w-1/2" />
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
         ) : data && list.length > 0 ? (
           <>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">

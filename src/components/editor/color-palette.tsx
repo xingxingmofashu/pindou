@@ -6,6 +6,7 @@ import { ChevronDown } from "lucide-react"
 import { usePalette } from "@/hooks/use-palette"
 import { cn, fetcher } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Skeleton } from "@/components/ui/skeleton"
 import type { Palette } from "@/types"
 
 interface ColorPaletteProps {
@@ -66,8 +67,13 @@ export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProp
 
   if (!palette) {
     return (
-      <div className="flex h-full items-center justify-center border text-xs text-muted-foreground">
-        Loading palettes…
+      <div className="flex h-full flex-col border px-3 py-2">
+        <Skeleton className="h-4 w-24" />
+        <div className="grid flex-1 grid-cols-[repeat(auto-fill,minmax(1.5rem,1fr))] content-start gap-2 py-2">
+          {Array.from({ length: 24 }).map((_, i) => (
+            <Skeleton key={i} className="aspect-square w-full rounded-sm" />
+          ))}
+        </div>
       </div>
     )
   }
