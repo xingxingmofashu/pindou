@@ -45,94 +45,98 @@ export default function PatternsPage() {
     : 0
 
   return (
-    <div className="flex flex-1 flex-col overflow-y-auto px-4 py-6">
-      <div className="mx-auto w-full max-w-5xl">
-        <h1 className="mb-1 text-xl font-semibold">Patterns</h1>
-        <p className="mb-6 text-sm text-muted-foreground">
-          {error
-            ? "Failed to load patterns."
-            : data
-              ? `${total.toLocaleString()} patterns published`
-              : ""}
-        </p>
+    <div className="flex h-full flex-col p-2 gap-2 overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col border">
+        <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
+          <h1 className="text-sm font-semibold">Patterns</h1>
+          <p className="text-[10px] text-muted-foreground">
+            {error
+              ? "Failed to load patterns."
+              : data
+                ? `${total.toLocaleString()} patterns published`
+                : ""}
+          </p>
+        </div>
 
-        {isLoading ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <Card className="pt-0" key={i}>
-                <Skeleton className="aspect-square w-full rounded-none" />
-                <CardHeader>
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="mt-2 h-3 w-1/2" />
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
-        ) : data && list.length > 0 ? (
-          <>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {list.map((p) => (
-                <PatternCard
-                  key={p.id}
-                  id={p.id}
-                  title={p.title}
-                  authorName={p.authorName ?? null}
-                  beadStats={parseBeadStats(p.beadStats)}
-                  createdAt={p.createdAt}
-                  thumbPng={p.thumbPng}
-                />
+        <div className="flex-1 min-h-0 overflow-y-auto p-3">
+          {isLoading ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <Card className="pt-0" key={i}>
+                  <Skeleton className="aspect-square w-full rounded-none" />
+                  <CardHeader>
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="mt-2 h-3 w-1/2" />
+                  </CardHeader>
+                </Card>
               ))}
             </div>
+          ) : data && list.length > 0 ? (
+            <>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                {list.map((p) => (
+                  <PatternCard
+                    key={p.id}
+                    id={p.id}
+                    title={p.title}
+                    authorName={p.authorName ?? null}
+                    beadStats={parseBeadStats(p.beadStats)}
+                    createdAt={p.createdAt}
+                    thumbPng={p.thumbPng}
+                  />
+                ))}
+              </div>
 
-            {totalPages > 1 && (
-              <Pagination className="mt-8">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      href="#"
-                      aria-disabled={page <= 1}
-                      className={cn(page <= 1 && "pointer-events-none opacity-50")}
-                      onClick={(e) => {
-                        e.preventDefault()
-                        setPage(page - 1)
-                      }}
-                    />
-                  </PaginationItem>
+              {totalPages > 1 && (
+                <Pagination className="mt-4">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        aria-disabled={page <= 1}
+                        className={cn(page <= 1 && "pointer-events-none opacity-50")}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          setPage(page - 1)
+                        }}
+                      />
+                    </PaginationItem>
 
-                  <PaginationItem>
-                    <span className="px-3 text-sm text-muted-foreground">
-                      Page {page} of {totalPages}
-                    </span>
-                  </PaginationItem>
+                    <PaginationItem>
+                      <span className="px-3 text-sm text-muted-foreground">
+                        Page {page} of {totalPages}
+                      </span>
+                    </PaginationItem>
 
-                  <PaginationItem>
-                    <PaginationNext
-                      href="#"
-                      aria-disabled={page >= totalPages}
-                      className={cn(page >= totalPages && "pointer-events-none opacity-50")}
-                      onClick={(e) => {
-                        e.preventDefault()
-                        setPage(page + 1)
-                      }}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            )}
-          </>
-        ) : data ? (
-          <div className="flex flex-1 items-center justify-center text-center">
-            <div>
-              <p className="text-sm text-muted-foreground">No patterns published yet.</p>
-              <Link
-                href="/editor"
-                className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
-              >
-                Create the first one
-              </Link>
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        aria-disabled={page >= totalPages}
+                        className={cn(page >= totalPages && "pointer-events-none opacity-50")}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          setPage(page + 1)
+                        }}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
+            </>
+          ) : data ? (
+            <div className="flex h-full items-center justify-center text-center">
+              <div>
+                <p className="text-sm text-muted-foreground">No patterns published yet.</p>
+                <Link
+                  href="/editor"
+                  className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
+                >
+                  Create the first one
+                </Link>
+              </div>
             </div>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
     </div>
   )
