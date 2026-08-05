@@ -45,7 +45,7 @@ export default function PatternsPage() {
     : 0
 
   return (
-    <div className="flex h-full flex-col p-2 gap-2 overflow-hidden">
+    <div className="flex h-full flex-col overflow-hidden">
       <div className="flex-1 min-h-0 flex flex-col border">
         <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
           <h1 className="text-sm font-semibold">Patterns</h1>

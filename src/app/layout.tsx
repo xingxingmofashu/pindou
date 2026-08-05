@@ -30,9 +30,15 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="h-dvh flex flex-col">
-        <Header />
-        <TooltipProvider delay={300}>{children}</TooltipProvider>
+      <body className="h-dvh">
+        <TooltipProvider delay={300}>
+          <div className="h-full p-2">
+            <div className="flex h-full min-h-0 flex-col gap-2 border p-2">
+              <Header />
+              <main className="flex-1 min-h-0">{children}</main>
+            </div>
+          </div>
+        </TooltipProvider>
         <Toaster />
       </body>
     </html>

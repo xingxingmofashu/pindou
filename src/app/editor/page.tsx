@@ -25,7 +25,7 @@ export default function EditorPage() {
   const getCellsData = useCallback(() => canvasApiRef.current?.getCellsData() ?? null, [])
 
   return (
-    <div className="flex h-full flex-col p-2 gap-2 overflow-hidden">
+    <div className="flex h-full flex-col gap-2 overflow-hidden">
       <ToolBar
         activeTool={activeTool}
         onSelectTool={setActiveTool}

@@ -57,7 +57,7 @@ export default function PatternDetailPage() {
 
   if (!data || !brand) {
     return (
-      <div className="flex h-full flex-col p-2 gap-2 overflow-hidden">
+    <div className="flex h-full flex-col gap-2 overflow-hidden">
         <div className="flex-1 min-h-0 flex gap-2">
           <div className="w-56 shrink-0 flex flex-col gap-4 border p-3">
             <Skeleton className="h-5 w-3/4" />
