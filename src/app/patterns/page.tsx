@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import useSWR from "swr"
 import { PatternCard } from "@/components/pattern/card"
@@ -13,15 +13,30 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import { Skeleton } from "@/components/ui/skeleton"
+import { toast } from "@/components/ui/toast"
 import { cn, fetcher, parseBeadStats } from "@/lib/utils"
 import type { PatternResponseType } from "@/db/schema"
 
 export default function PatternsPage() {
   const [page, setPage] = useState(1)
-  const { data, error, isLoading } = useSWR<PatternResponseType>(
+  const { data, error, isLoading, isValidating, mutate } = useSWR<PatternResponseType>(
     `/api/patterns?page=${page}`,
     fetcher,
   )
+
+  useEffect(() => {
+    if (!error || isValidating) return
+    toast.add({
+      id: "patterns-load-failed",
+      type: "error",
+      title: "Failed to load patterns",
+      description: "Something went wrong. Please try again.",
+      actionProps: {
+        children: "Retry",
+        onClick: () => mutate(),
+      },
+    })
+  }, [error, isValidating, mutate])
 
   const list = data?.patterns ?? []
   const total = data?.pagination.total ?? 0
@@ -41,11 +56,7 @@ export default function PatternsPage() {
               : ""}
         </p>
 
-        {error ? (
-          <p className="text-sm text-muted-foreground">
-            Something went wrong. Please try again later.
-          </p>
-        ) : isLoading ? (
+        {isLoading ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (
               <Card key={i}>

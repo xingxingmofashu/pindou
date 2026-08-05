@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type RefObject } from "react"
 import { Application, Container, Graphics } from "pixi.js"
+import { toast } from "@/components/ui/toast"
 import type { PixiContext } from "@/lib/editor"
 
 /**
@@ -31,6 +32,12 @@ export function usePixiApp(
     const onContextLost = (e: Event) => {
       e.preventDefault()
       setCtx(null)
+      toast.add({
+        id: "webgl-context-lost",
+        type: "error",
+        title: "Canvas unavailable",
+        description: "The WebGL canvas was lost. Please reload the page.",
+      })
     }
     canvas.addEventListener("webglcontextlost", onContextLost)
 
@@ -45,6 +52,12 @@ export function usePixiApp(
           autoDensity: true,
         })
       } catch {
+        toast.add({
+          id: "webgl-unavailable",
+          type: "error",
+          title: "Canvas unavailable",
+          description: "Your browser could not start the WebGL canvas. Please try a different browser.",
+        })
         return /* WebGL unavailable */
       }
       if (cancelled) {

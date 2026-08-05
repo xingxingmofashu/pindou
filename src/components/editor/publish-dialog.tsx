@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Spinner } from "@/components/ui/spinner"
+import { toast } from "@/components/ui/toast"
 import { PatternInsertSchema, ErrorSchema } from "@/db/schema"
 
 interface PublishDialogProps {
@@ -30,7 +31,6 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [authorName, setAuthorName] = useState("")
-  const [error, setError] = useState<string | null>(null)
   const [patternId, setPatternId] = useState<string | null>(null)
   const { trigger, isMutating } = useSWRMutation(
     "/api/patterns",
@@ -50,11 +50,13 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
   )
 
   const handleSubmit = useCallback(async () => {
-    setError(null)
-
     const data = getCellsData()
     if (!data) {
-      setError("Canvas is empty. Draw something first.")
+      toast.add({
+        type: "error",
+        title: "Canvas is empty",
+        description: "Draw something first.",
+      })
       return
     }
 
@@ -67,7 +69,11 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
       beadStats: data.beadStats,
     })
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? "Invalid input")
+      toast.add({
+        type: "error",
+        title: "Invalid input",
+        description: parsed.error.issues[0]?.message ?? "Invalid input",
+      })
       return
     }
 
@@ -75,7 +81,11 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
       const result = await trigger(JSON.stringify(parsed.data))
       setPatternId(result.id)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Network error. Please try again.")
+      toast.add({
+        type: "error",
+        title: "Failed to publish",
+        description: e instanceof Error ? e.message : "Network error. Please try again.",
+      })
     }
   }, [title, description, authorName, getCellsData, trigger])
 
@@ -83,7 +93,6 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
     setTitle("")
     setDescription("")
     setAuthorName("")
-    setError(null)
     setPatternId(null)
     onClose()
   }, [onClose])
@@ -160,8 +169,6 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
                 />
               </div>
             </div>
-
-            {error && <p className="text-sm text-destructive">{error}</p>}
 
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>

@@ -1,10 +1,12 @@
 "use client"
 
+import { useEffect } from "react"
 import useSWR from "swr"
 import { useParams } from "next/navigation"
 import { PatternDetailPanel } from "@/components/pattern/detail/panel"
 import { PixiCanvas } from "@/components/pixi-canvas"
 import { Skeleton } from "@/components/ui/skeleton"
+import { toast } from "@/components/ui/toast"
 import { fetcher, parseBeadStats, totalBeadCount } from "@/lib/utils"
 import type { PaletteSelectType } from "@/db/schema"
 import type { Palette } from "@/types"
@@ -12,11 +14,46 @@ import { format, formatDistanceToNow, parseISO, isValid } from "date-fns"
 
 export default function PatternDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const { data } = useSWR<PaletteSelectType>(`/api/patterns/${id}`, fetcher)
-  const { data: brand } = useSWR<Palette>(
-    data ? `/api/brands/${data.brandId}` : null,
+  const { data, error, isValidating, mutate } = useSWR<PaletteSelectType>(
+    `/api/patterns/${id}`,
     fetcher,
   )
+  const {
+    data: brand,
+    error: brandError,
+    isValidating: brandValidating,
+    mutate: mutateBrand,
+  } = useSWR<Palette>(data ? `/api/brands/${data.brandId}` : null, fetcher)
+
+  useEffect(() => {
+    if (error && !isValidating) {
+      toast.add({
+        id: "pattern-load-failed",
+        type: "error",
+        title: "Failed to load pattern",
+        description: "This pattern could not be loaded.",
+        actionProps: {
+          children: "Retry",
+          onClick: () => mutate(),
+        },
+      })
+      return
+    }
+    if (brandError && !brandValidating) {
+      toast.add({
+        id: "brand-load-failed",
+        type: "error",
+        title: "Failed to load palette",
+        description: "This pattern's palette could not be loaded.",
+        actionProps: {
+          children: "Retry",
+          onClick: () => mutateBrand(),
+        },
+      })
+    }
+  }, [error, isValidating, brandError, brandValidating, mutate, mutateBrand])
+
+  if (error || brandError) return null
 
   if (!data || !brand) {
     return (

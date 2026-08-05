@@ -7,6 +7,7 @@ import { usePalette } from "@/hooks/use-palette"
 import { cn, fetcher } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
+import { toast } from "@/components/ui/toast"
 import type { Palette } from "@/types"
 
 interface ColorPaletteProps {
@@ -28,7 +29,24 @@ interface ColorPaletteProps {
  */
 export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProps) {
   const { palette, setActivePalette } = usePalette()
-  const { data: brands } = useSWR<Array<Palette>>("/api/brands", fetcher)
+  const { data: brands, error, isValidating, mutate } = useSWR<Array<Palette>>(
+    "/api/brands",
+    fetcher,
+  )
+
+  useEffect(() => {
+    if (!error || isValidating) return
+    toast.add({
+      id: "palette-load-failed",
+      type: "error",
+      title: "Failed to load palettes",
+      description: "Bead colours could not be loaded.",
+      actionProps: {
+        children: "Retry",
+        onClick: () => mutate(),
+      },
+    })
+  }, [error, isValidating, mutate])
 
   // Seed the active palette once the catalog arrives.
   useEffect(() => {
@@ -63,6 +81,14 @@ export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProp
       setActivePalette(brand)
       onColorPick(1)
     }
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-full items-center justify-center border px-3 py-2 text-xs text-muted-foreground">
+        Failed to load palettes.
+      </div>
+    )
   }
 
   if (!palette) {

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/toast";
 import { Header } from "@/components/header";
 import "./globals.css";
 
@@ -32,6 +33,7 @@ export default function RootLayout({
       <body className="h-dvh flex flex-col">
         <Header />
         <TooltipProvider delay={300}>{children}</TooltipProvider>
+        <Toaster />
       </body>
     </html>
   );

@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
+import { toast } from "@/components/ui/toast"
 import { MAX_GRID_DIMENSION } from "@/lib/editor"
 import { ErrorSchema } from "@/db/schema"
 import { usePalette } from "@/hooks/use-palette"
@@ -113,7 +114,6 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
   const { palette } = usePalette()
   const [file, setFile] = useState<File | null>(null)
   const [widthInput, setWidthInput] = useState(String(DEFAULT_WIDTH))
-  const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<TransformResult | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -141,7 +141,6 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
     const clamped = Math.min(MAX_GRID_DIMENSION, w)
     const t = setTimeout(() => {
       const id = ++reqId.current
-      setError(null)
       const formData = new FormData()
       formData.append("file", file)
       formData.append("width", String(clamped))
@@ -154,7 +153,12 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
         .catch((e) => {
           if (id !== reqId.current) return
           setResult(null)
-          setError(e instanceof Error ? e.message : "Network error. Please try again.")
+          toast.add({
+            id: "import-conversion-failed",
+            type: "error",
+            title: "Conversion failed",
+            description: e instanceof Error ? e.message : "Network error. Please try again.",
+          })
         })
     }, DEBOUNCE_MS)
     return () => clearTimeout(t)
@@ -168,14 +172,21 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
 
   const handleFile = useCallback((f: File) => {
     if (!f.type.startsWith("image/")) {
-      setError("Please choose an image file.")
+      toast.add({
+        type: "error",
+        title: "Unsupported file",
+        description: "Please choose an image file.",
+      })
       return
     }
     if (f.size > MAX_FILE_BYTES) {
-      setError("File must be 4MB or smaller.")
+      toast.add({
+        type: "error",
+        title: "File too large",
+        description: "File must be 4MB or smaller.",
+      })
       return
     }
-    setError(null)
     setResult(null)
     setFile(f)
   }, [])
@@ -184,7 +195,6 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
     reqId.current++
     setFile(null)
     setWidthInput(String(DEFAULT_WIDTH))
-    setError(null)
     setResult(null)
     onClose()
   }, [onClose])
@@ -264,8 +274,6 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
             Processing…
           </p>
         )}
-
-        {error && <p className="text-sm text-destructive">{error}</p>}
 
         {result && !isMutating && (
           <div className="flex flex-col items-center gap-2">

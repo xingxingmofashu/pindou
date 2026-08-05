@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { toast } from "@/components/ui/toast"
 import { fetcher } from "@/lib/utils"
 import { exportGridPng, exportGridSize, DEFAULT_EXPORT_SCALE } from "@/lib/export"
 import type { Palette } from "@/types"
@@ -35,7 +36,6 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
   // Independent of the toolbar Labels toggle: this controls only the exported
   // image, and the toolbar toggle only controls the canvas. Defaults to on.
   const [labelsOn, setLabelsOn] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   // Snapshot the grid once when the dialog opens — it can't change behind the
   // modal, so re-serializing on every scale keystroke would be wasted work.
@@ -54,11 +54,19 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
 
   const handleExport = useCallback(() => {
     if (!data) {
-      setError("Canvas is empty. Draw something first.")
+      toast.add({
+        type: "error",
+        title: "Canvas is empty",
+        description: "Draw something first.",
+      })
       return
     }
     if (!brand) {
-      setError("Unknown palette.")
+      toast.add({
+        type: "error",
+        title: "Unknown palette",
+        description: "This pattern's palette could not be loaded.",
+      })
       return
     }
     exportGridPng(
@@ -71,7 +79,6 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
   }, [data, brand, scale, labelsOn, onClose])
 
   const handleClose = useCallback(() => {
-    setError(null)
     onClose()
   }, [onClose])
 
@@ -117,8 +124,6 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
               : "Larger scale means a clearer image, but a bigger file."}
           </p>
         </div>
-
-        {error && <p className="text-sm text-destructive">{error}</p>}
 
         <DialogFooter>
           <Button variant="outline" onClick={handleClose}>
