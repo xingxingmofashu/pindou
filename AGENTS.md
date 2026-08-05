@@ -47,8 +47,8 @@ Base UI is used instead of Radix. Key API differences:
 ### Editor flow (`/editor`)
 
 ```
-EditorPage (src/app/editor/page.tsx — user-controlled, DO NOT MODIFY)
-├── ToolBar (pen / eraser, labels toggle, clear-canvas, import/export, publish; embeds ZoomControls: ±1.3× buttons, editable %, fit)
+EditorPage (src/app/editor/page.tsx)
+├── ToolBar (pen / eraser, labels toggle, clear-canvas, import/export, publish; embeds ZoomControls: ±1.3× buttons, read-only %, fit)
 ├── ColorPalette (left sidebar, brand switcher + swatches grouped by series + eraser)
 ├── <canvas> → usePixiCanvas hook
 ├── PublishDialog (title/desc/author → POST /api/patterns via getCellsData)
@@ -98,7 +98,7 @@ visualCellWorldSize = lodScale × CELL
 
 Single render path, **`rebuild`** — redraws grid lines at data-cell spacing AND draws each painted cell as its own bead via `buildBeadEntries()` (always called with `lodScale = 1`, so no merging), covering both Graphics layers. Called on zoom change, draw strokes, resize, and pan.
 
-Pan passes `{ skipLabels: true }` so beads are redrawn for the current viewport (nothing clips), while labels are left untouched — they are children of the `world` Container and pan with it automatically, avoiding per-frame text rasterization.
+Pan draws beads + grid lines for a **padded** region (`rebuild({ skipLabels: true, padded: true })`) — a slack of `PAN_BUFFER` (0.5×) around the viewport. While a pan stays inside that slack it skips the redraw entirely (beads and grid lines are children of the `world` Container and move with it), only rebuilding when the pan leaves the slack. Labels are never rebuilt during pan, avoiding per-frame text rasterization.
 
 ### Drawing tools
 
@@ -114,7 +114,7 @@ The fill and eyedropper tools were removed. `onColorPick` remains as a dead prop
 ### Zoom / pan
 
 - **Wheel zoom**: Cursor-centred. Uses the **clamped** zoom ratio (`clamped / oldZoom`) to adjust `world.x/y`, preventing cursor drift at zoom limits (0.5×–20×). State sync via rAF throttle.
-- **Pan**: Middle- or right-button drag (right-button drag also pans; `contextmenu` is prevented). Rebuilds beads for the current viewport via `rebuild({ skipLabels: true })`, so no painted region is ever clipped.
+- **Pan**: Middle- or right-button drag (right-button drag also pans; `contextmenu` is prevented). Padded rebuild via `rebuild({ skipLabels: true, padded: true })` only when the pan leaves the `PAN_BUFFER` slack, so no painted region is ever clipped.
 - **Fit**: Centres world origin at viewport centre, resets to `initialZoom`.
 
 ### Pointer event details
@@ -126,12 +126,13 @@ The fill and eyedropper tools were removed. `onColorPick` remains as a dead prop
 
 ### Palette system
 
-The database is the single source of palette data. All ~560 brand colors are
-loaded by migration `drizzle/0006_smiling_the_executioner.sql` (idempotent
-`ON CONFLICT DO NOTHING`); migration `0007_peaceful_silver_sable.sql` adds the
-`brands.sort_order` column and assigns brand order (mard=0 first). Neither the
-server nor the client bundles palette data — it is always fetched from the API
-at runtime.
+The database is the single source of palette data. Migration
+`drizzle/0006_smiling_the_executioner.sql` seeds the 4 brands and 560 colors
+(idempotent `ON CONFLICT DO NOTHING`); `0007_peaceful_silver_sable.sql` adds
+`brands.sort_order` (mard=0 first); `0008_first_roxanne_simpson.sql`
+**replaces** mard's palette wholesale (DELETE + re-INSERT, now 291 colors) — so
+the current mard palette comes from 0008, not 0006. Neither the server nor the
+client bundles palette data — it is always fetched from the API at runtime.
 
 ```
 src/types/index.ts                Row types for the three tables (Brand/Color/Pattern) via $inferSelect, plus Palette = Brand & { colors: Color[] } (a brand row with colors nested — the resolved palette shape)
@@ -144,7 +145,8 @@ src/hooks/use-palette.ts           Editor store (Zustand) — active palette (pu
 - The row types in `src/types/index.ts` are `$inferSelect` types derived from the Drizzle schema — the schema is the single definition. Wire schemas `BrandSelectSchema`/`ColorSelectSchema` are generated from those rows by drizzle-zod in `src/db/schema.ts` (uuid ids, timestamps coerced from ISO strings). `/api/brands` (the catalog — every brand with its colors nested, `ORDER BY sort_order`) and `/api/brands/[id]` (a single brand by its uuid row id, e.g. a pattern's `brandId`) are the palette endpoints; a resolved palette is a `Palette` (`Brand & { colors: Color[] }` — a brand row with `colors` nested).
 
 - `code`/`name` are uppercase (e.g. `"A1"`); `series` is nullable — use `c.series ?? "?"`
-- Grid cells are 1‑based indices into `palette.colors`, so colors are served `ORDER BY sort_order` (the array index assigned by the data migration). **Never reorder existing color rows** — it would corrupt every published pattern.
+- Grid cells are 1‑based indices into `palette.colors`, so colors are served `ORDER BY sort_order` (the array index assigned by the data migration). **Never reorder existing color rows** — it would corrupt every published pattern. Replacing a brand's palette (as 0008 did for mard) shifts every index, so it must be paired with a separate `gridData` remap of that brand's published patterns — the migration itself does not re-key them.
+- `/api/brands` is CDN/browser-cacheable: the catalog only changes via `db:migrate`, so the route sends `Cache-Control: public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400`. Palette changes propagate only after the cache expires.
 - Wire contract between client and server is the brand **code** (a plain string matching `brands.code`, e.g. `"mard"`); the server maps code↔brand uuid (`patterns.fk_brand_id`) internally.
 - `usePalette()` (in `use-palette.ts`) reads a module-level Zustand store and returns `{ palette, setActivePalette }`; it holds only the active palette (a `Palette` — a brand row with colors nested) and makes no network requests. ColorPalette fetches `/api/brands` via `useSWR` for its switcher and pushes the chosen brand (which already carries nested colors) into the store, seeding the first catalog brand on first load. The editor canvas (`EditablePaletteBridge`) and import dialog read the shared palette because the user-controlled EditorPage cannot wire it as a prop. Consumers that need a *specific* brand (pattern detail page, export dialog) fetch it directly with `useSWR` (a single `/api/brands/[id]` call keyed by the brand uuid — colors are nested) instead of touching the store. Consumers must guard `palette === undefined` while it loads (`EditablePaletteBridge` returns null; ColorPalette shows a placeholder). Read-only views pin a `palette` prop and bypass the store entirely. SSR snapshots are null, so hydration stays consistent.
 
