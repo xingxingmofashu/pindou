@@ -84,6 +84,7 @@ export function Logo({ className }: { className?: string }) {
   return (
     <svg
       viewBox={`0 0 ${totalCols * CELL} ${7 * CELL}`}
+      preserveAspectRatio="none"
       className={className}
       aria-label="PINDOW"
       role="img"
