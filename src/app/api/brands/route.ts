@@ -6,7 +6,7 @@ import { Palette } from "@/types"
 
 /**
  * GET /api/brands — every brand with its colors nested (the client catalog).
- * A single left join yields flat rows ordered by brand code then color
+ * A single left join yields flat rows ordered by brand sort_order then color
  * sort_order; Map.groupBy folds them per brand so the colors array index
  * matches the 1-based grid index the editor stores.
  */
@@ -15,7 +15,7 @@ export async function GET() {
     .select()
     .from(brands)
     .leftJoin(colors, eq(colors.fkBrandId, brands.id))
-    .orderBy(brands.code, colors.sortOrder)
+    .orderBy(brands.sortOrder, colors.sortOrder)
 
   const result = Array.from(
     Map.groupBy(rows, (row) => row.brands.id),

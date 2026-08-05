@@ -2,16 +2,10 @@
 
 import { useEffect, useMemo } from "react"
 import useSWR from "swr"
+import { ChevronDown } from "lucide-react"
 import { usePalette } from "@/hooks/use-palette"
 import { cn, fetcher } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import type { Palette } from "@/types"
 
 interface ColorPaletteProps {
@@ -62,10 +56,7 @@ export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProp
    * Switch the active brand and reset to the first colour.
    * The canvas is cleared on brand switch by usePixiCanvas.
    */
-  const handleBrandChange = (code: string | null) => {
-    // Ignore a no-op re-selection of the active brand — Base UI fires
-    // onValueChange even when the currently-selected item is clicked again.
-    if (!code || code === palette?.code) return
+  const handleBrandChange = (code: string) => {
     const brand = brands?.find((b) => b.code === code)
     if (brand) {
       setActivePalette(brand)
@@ -85,21 +76,21 @@ export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProp
     <div className="flex flex-col h-full border">
       <div className="flex items-center justify-between gap-2 px-3 py-2 border-b">
         {(brands?.length ?? 0) > 1 ? (
-          <Select value={palette.code} onValueChange={handleBrandChange}>
-            <SelectTrigger
+          <div className="relative min-w-0 flex-1">
+            <select
+              value={palette.code}
+              onChange={(e) => handleBrandChange(e.target.value)}
               aria-label="Bead brand"
-              className="w-full min-w-0 flex-1 cursor-pointer gap-1.5 rounded-none border-0 bg-transparent px-0 py-0 text-xs font-medium text-muted-foreground shadow-none data-[size=default]:h-auto"
+              className="w-full cursor-pointer appearance-none rounded-none border-0 bg-transparent px-0 py-0 pr-4 text-xs font-medium text-muted-foreground focus:outline-none"
             >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent align="start" sideOffset={6}>
               {brands?.map((b) => (
-                <SelectItem key={b.code} value={b.code}>
+                <option key={b.code} value={b.code}>
                   {b.name}
-                </SelectItem>
+                </option>
               ))}
-            </SelectContent>
-          </Select>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+          </div>
         ) : (
           <span className="text-xs font-medium text-muted-foreground">{palette.name}</span>
         )}

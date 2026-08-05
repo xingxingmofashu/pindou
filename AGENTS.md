@@ -128,8 +128,10 @@ The fill and eyedropper tools were removed. `onColorPick` remains as a dead prop
 
 The database is the single source of palette data. All ~560 brand colors are
 loaded by migration `drizzle/0006_smiling_the_executioner.sql` (idempotent
-`ON CONFLICT DO NOTHING`); neither the server nor the client bundles palette
-data — it is always fetched from the API at runtime.
+`ON CONFLICT DO NOTHING`); migration `0007_peaceful_silver_sable.sql` adds the
+`brands.sort_order` column and assigns brand order (mard=0 first). Neither the
+server nor the client bundles palette data — it is always fetched from the API
+at runtime.
 
 ```
 src/types/index.ts                Row types for the three tables (Brand/Color/Pattern) via $inferSelect, plus Palette = Brand & { colors: Color[] } (a brand row with colors nested — the resolved palette shape)
@@ -160,7 +162,7 @@ src/lib/export.ts                      exportGridPng — client-only canvas PNG 
 src/db/                                Drizzle schema + Neon Postgres Pool (@neondatabase/serverless)
 ```
 
-- **Tables**: `brands` (id uuid PK defaultRandom, code unique, name) · `colors` (id uuid PK defaultRandom, fk_brand_id → brands.id ON DELETE cascade, code, name, hex, series, sort_order, unique (fk_brand_id, code)) · `patterns` (id uuid PK defaultRandom, fk_brand_id → brands.id, …). All three tables share the same audit shape: uuid `id` (default `gen_random_uuid()`) and `created_at`/`updated_at` (`timestamp with time zone`, default `now()`) — the DB generates them, so routes never set them. `brands.code` is the wire brand code; `name` is the display name.
+- **Tables**: `brands` (id uuid PK defaultRandom, code unique, name, sort_order) · `colors` (id uuid PK defaultRandom, fk_brand_id → brands.id ON DELETE cascade, code, name, hex, series, sort_order, unique (fk_brand_id, code)) · `patterns` (id uuid PK defaultRandom, fk_brand_id → brands.id, …). All three tables share the same audit shape: uuid `id` (default `gen_random_uuid()`) and `created_at`/`updated_at` (`timestamp with time zone`, default `now()`) — the DB generates them, so routes never set them. `brands.code` is the wire brand code; `name` is the display name. Brands are served `ORDER BY sort_order` (mard=0 first), colors `ORDER BY sort_order` (the array index grid cells index into).
 - **Grid contract**: conversion returns `number[][]`, `grid[row][col]` = 0 (empty) or 1‑based `palette.colors` index — the same value domain as the editor's sparse map, so `ImportDialog` feeds the result straight into `loadGrid`.
 - `lib/transform.ts` and `lib/thumbnail.ts` import sharp and must never be imported from a client component — only the API routes use them. The API routes query the DB directly; palette data is never bundled into the client.
 - The editor posts multipart `file + width + brandCode` (brandCode from `usePalette()`) to `/api/transform`; publish posts `brandCode` to `/api/patterns`. Both routes query `brands` + `colors` (ORDER BY `sort_order`) directly to build the palette server-side and store the brand uuid in `patterns.fk_brand_id`. GET routes join `brands` to return the code as `brandCode` on the wire.
