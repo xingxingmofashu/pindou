@@ -30,6 +30,20 @@ export interface ViewRect {
   bottom: number
 }
 
+/**
+ * Parse a sparse-grid key (`"c,r"`) into its cell coordinates.
+ *
+ * Faster than `key.split(",").map(Number)` on the editor's hot path (every
+ * rebuild iterates all painted cells): no intermediate arrays are allocated.
+ *
+ * @param key - The sparse-map key.
+ * @returns The `[column, row]` pair.
+ */
+function parseCellKey(key: string): [number, number] {
+  const i = key.indexOf(",")
+  return [Number(key.slice(0, i)), Number(key.slice(i + 1))]
+}
+
 /** Descriptor for one visual bead rectangle to be drawn. */
 export interface BeadEntry {
   worldX: number
@@ -57,7 +71,7 @@ export function getGridBounds(cells: Map<string, number>): GridBounds | null {
   if (cells.size === 0) return null
   let minC = Infinity, maxC = -Infinity, minR = Infinity, maxR = -Infinity
   for (const key of cells.keys()) {
-    const [c, r] = key.split(",").map(Number)
+    const [c, r] = parseCellKey(key)
     if (c < minC) minC = c
     if (c > maxC) maxC = c
     if (r < minR) minR = r
@@ -134,7 +148,7 @@ export function serializeGrid(cells: Map<string, number>): number[][] | null {
 
   let minC = Infinity, maxC = -Infinity, minR = Infinity, maxR = -Infinity
   for (const key of cells.keys()) {
-    const [c, r] = key.split(",").map(Number)
+    const [c, r] = parseCellKey(key)
     if (c < minC) minC = c
     if (c > maxC) maxC = c
     if (r < minR) minR = r
@@ -147,7 +161,7 @@ export function serializeGrid(cells: Map<string, number>): number[][] | null {
 
   const grid: number[][] = Array.from({ length: h }, () => Array(w).fill(EMPTY))
   for (const [key, color] of cells) {
-    const [c, r] = key.split(",").map(Number)
+    const [c, r] = parseCellKey(key)
     grid[r - minR][c - minC] = color
   }
 
@@ -343,8 +357,7 @@ export function buildBeadEntries(
   const buckets = new Map<string, { vc: number; vr: number; counts: Map<number, number> }>()
 
   for (const [key, color] of map) {
-    const [dc, dr] = key.split(",").map(Number) as [number, number]
-    if (!Number.isFinite(dc) || !Number.isFinite(dr)) continue
+    const [dc, dr] = parseCellKey(key)
     if (dc < dc0 || dc >= dc1 || dr < dr0 || dr >= dr1) continue
 
     const vc = Math.floor(dc / lodScale)

@@ -29,6 +29,9 @@ const MAX_ZOOM = 20
 const ZOOM_FACTOR = 1.15
 const DEFAULT_ZOOM = 3
 
+/** Fraction of the viewport kept as pan slack around a padded rebuild. */
+const PAN_BUFFER = 0.5
+
 /** Grid line colour and alpha — fixed for all views. */
 const GRID_COLOR = 0x000000
 const GRID_ALPHA = 0.12
@@ -75,8 +78,9 @@ export function usePixiCanvas(
   const rafRef = useRef(0)
 
   const cellsRef = useRef<Map<string, number>>(new Map())
-  const lastEntriesRef = useRef<BeadEntry[]>([])
   const rectRef = useRef<DOMRect | null>(null)
+  /** World position of the last padded rebuild; null when nothing covers a slack region. */
+  const builtWorldRef = useRef<{ x: number; y: number } | null>(null)
 
   const pixiRef = useRef(pixiCtx)
   const runtimeRef = useRef<RuntimeOpts>({ activeTool, activeColorIndex, readonly })
@@ -111,21 +115,40 @@ export function usePixiCanvas(
   }
 
   const rebuild = useCallback(
-    (opts?: { skipLabels?: boolean }) => {
+    (opts?: { skipLabels?: boolean; padded?: boolean }) => {
       const ctx = pixiRef.current
       const v = viewport()
       if (!ctx || !v) return
 
       const z = zoomRef.current
 
+      // A padded build draws beads + grid lines for a slack region around the
+      // viewport, so short pans can skip a full redraw (beads and grid lines
+      // move with the world as children of `world`). Unpadded builds (zoom,
+      // stroke, resize, load) only cover the exact viewport, so they drop the
+      // slack and the next pan re-establishes it.
+      let buildView = v
+      if (opts?.padded) {
+        const pw = ctx.app.screen.width * PAN_BUFFER
+        const ph = ctx.app.screen.height * PAN_BUFFER
+        buildView = {
+          left: v.left - pw / z,
+          top: v.top - ph / z,
+          right: v.right + pw / z,
+          bottom: v.bottom + ph / z,
+        }
+        builtWorldRef.current = { x: ctx.world.x, y: ctx.world.y }
+      } else {
+        builtWorldRef.current = null
+      }
+
       // Grid lines and beads always render at data-cell resolution (CELL /
       // lodScale 1) so an imported pattern keeps its fixed cell count at any
       // zoom. LOD only controls the paint-brush block size, never the display.
-      const { rects } = computeGridLines(v, CELL, z)
+      const { rects } = computeGridLines(buildView, CELL, z)
       paintGridLines(ctx.gridGfx, rects, GRID_COLOR, GRID_ALPHA)
 
-      const entries = buildBeadEntries(cellsRef.current, v, 1, CELL, palette)
-      lastEntriesRef.current = entries
+      const entries = buildBeadEntries(cellsRef.current, buildView, 1, CELL, palette)
 
       ctx.beadsGfx.clear()
       for (const e of entries) {
@@ -327,7 +350,17 @@ const rebuildRef = useRef(rebuild)
         if (!ctx) return
         ctx.world.x = p.startWX + e.clientX - p.startX
         ctx.world.y = p.startWY + e.clientY - p.startY
-        rebuildRef.current({ skipLabels: true })
+        // Beads and grid lines move with the world, so a pan only needs a
+        // redraw once it leaves the slack region covered by the last padded
+        // rebuild (see `rebuild`).
+        const built = builtWorldRef.current
+        if (
+          !built ||
+          Math.abs(ctx.world.x - built.x) >= ctx.app.screen.width * PAN_BUFFER ||
+          Math.abs(ctx.world.y - built.y) >= ctx.app.screen.height * PAN_BUFFER
+        ) {
+          rebuildRef.current({ skipLabels: true, padded: true })
+        }
         return
       }
 
