@@ -1,0 +1,3 @@
+{
+  "buildCommand": "if [ \"$VERCEL_ENV\" = \"production\" ]; then pnpm db:migrate && pnpm build; else pnpm build; fi"
+}

@@ -7,3 +7,11 @@ allowBuilds:
 onlyBuiltDependencies:
   - esbuild
   - better-sqlite3
+
+supportedArchitectures:
+  os:
+    - darwin
+    - linux
+  cpu:
+    - x64
+    - arm64
