@@ -114,4 +114,4 @@ src/
 
 ## 开源协议
 
-MIT
+[Apache License 2.0](LICENSE)

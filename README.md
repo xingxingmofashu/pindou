@@ -114,4 +114,4 @@ The editor at `/editor` provides:
 
 ## License
 
-MIT
+[Apache License 2.0](LICENSE)
