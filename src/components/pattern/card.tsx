@@ -14,10 +14,10 @@ interface PatternCardProps {
   authorName: string | null
   beadStats: Record<string, number>
   createdAt: string
-  thumbPng: string
+  thumbUrl: string
 }
 
-export function PatternCard({ id, title, authorName, beadStats, createdAt, thumbPng }: PatternCardProps) {
+export function PatternCard({ id, title, authorName, beadStats, createdAt, thumbUrl }: PatternCardProps) {
   const { locale, t } = useI18n()
   const dateLocale = locale === "zh" ? zhCN : undefined
   const totalBeads = totalBeadCount(beadStats)
@@ -27,10 +27,10 @@ export function PatternCard({ id, title, authorName, beadStats, createdAt, thumb
   return (
     <Link href={localizedPath(locale, `/patterns/${id}`)} className="block">
       <Card>
-        {thumbPng ? (
+        {thumbUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={`data:image/png;base64,${thumbPng}`}
+            src={thumbUrl}
             alt={title}
             className="block w-full bg-muted"
           />

@@ -13,6 +13,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1103.0",
     "@base-ui/react": "^1.6.0",
     "@better-auth/drizzle-adapter": "^1.6.26",
     "@neondatabase/serverless": "^1.1.0",

@@ -71,6 +71,13 @@
       "when": 1785985754574,
       "tag": "0009_worthless_rogue",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1786006034964,
+      "tag": "0010_rename_thumb_png",
+      "breakpoints": true
     }
   ]
 }

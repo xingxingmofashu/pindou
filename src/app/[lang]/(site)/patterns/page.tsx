@@ -85,7 +85,7 @@ export default function PatternsPage() {
                     authorName={p.authorName ?? null}
                     beadStats={parseBeadStats(p.beadStats)}
                     createdAt={p.createdAt}
-                    thumbPng={p.thumbPng}
+                    thumbUrl={p.thumbUrl}
                   />
                 ))}
               </div>

@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from "next/server"
 import { desc, eq, sql } from "drizzle-orm"
 import { db } from "@/db"
 import { brands, colors, patterns } from "@/db/schema"
-import { generateThumbnail } from "@/lib/image/thumbnail"
+import { Thumbnail } from "@/lib/image/thumbnail"
 import { PatternInsertSchema, PaginationSchema } from "@/db/schema"
 import { auth } from "@/lib/auth/server"
 import type { Palette } from "@/types"
+
+/** Thumbnail renderer + R2 uploader for this route. */
+const thumbnail = new Thumbnail()
 
 export async function GET(request: NextRequest) {
   const { page, pageSize } = PaginationSchema.parse({
@@ -20,7 +23,7 @@ export async function GET(request: NextRequest) {
       authorName: patterns.authorName,
       brandCode: brands.code,
       beadStats: patterns.beadStats,
-      thumbPng: patterns.thumbPng,
+      thumbUrl: patterns.thumbUrl,
       createdAt: patterns.createdAt,
       total: sql<number>`count(*) over()`.as("total"),
     })
@@ -39,7 +42,7 @@ export async function GET(request: NextRequest) {
       authorName: r.authorName,
       brandCode: r.brandCode,
       beadStats: r.beadStats,
-      thumbPng: r.thumbPng,
+      thumbUrl: r.thumbUrl,
       createdAt: r.createdAt,
     })),
     pagination: { total, page, pageSize },
@@ -79,21 +82,39 @@ export async function POST(request: NextRequest) {
     .orderBy(colors.sortOrder)
 
   const palette: Palette = { ...brand, colors: colorRows }
-  const thumbPng = await generateThumbnail(gridData, palette)
 
-  const [inserted] = await db
-    .insert(patterns)
-    .values({
-      title,
-      description,
-      authorName: session.user.name,
-      fkUserId: session.user.id,
-      gridData: JSON.stringify(gridData),
-      beadStats,
-      thumbPng,
-      fkBrandId: brand.id,
-    })
-    .returning({ id: patterns.id })
+  const thumbPng = await thumbnail.generate(gridData, palette)
+  if (!thumbPng) {
+    return NextResponse.json({ error: "Empty grid" }, { status: 400 })
+  }
 
-  return NextResponse.json({ id: inserted.id }, { status: 201 })
+  const patternId = crypto.randomUUID()
+  let thumbUrl: string
+  try {
+    thumbUrl = await thumbnail.upload(thumbPng, patternId)
+  } catch {
+    return NextResponse.json({ error: "Failed to upload thumbnail" }, { status: 503 })
+  }
+
+  try {
+    const [inserted] = await db
+      .insert(patterns)
+      .values({
+        id: patternId,
+        title,
+        description,
+        authorName: session.user.name,
+        fkUserId: session.user.id,
+        gridData: JSON.stringify(gridData),
+        beadStats,
+        thumbUrl,
+        fkBrandId: brand.id,
+      })
+      .returning({ id: patterns.id })
+    return NextResponse.json({ id: inserted.id }, { status: 201 })
+  } catch {
+    // Roll back the uploaded thumbnail so a failed publish leaves no orphan.
+    await thumbnail.delete(patternId).catch(() => {})
+    return NextResponse.json({ error: "Failed to publish pattern" }, { status: 500 })
+  }
 }

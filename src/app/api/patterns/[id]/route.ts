@@ -19,7 +19,7 @@ export async function GET(
       brandId: patterns.fkBrandId,
       gridData: patterns.gridData,
       beadStats: patterns.beadStats,
-      thumbPng: patterns.thumbPng,
+      thumbUrl: patterns.thumbUrl,
       createdAt: patterns.createdAt,
       updatedAt: patterns.updatedAt,
     })
@@ -40,7 +40,7 @@ export async function GET(
     brandId: row.brandId,
     gridData: JSON.parse(row.gridData),
     beadStats: row.beadStats,
-    thumbPng: row.thumbPng,
+    thumbUrl: row.thumbUrl,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   })
