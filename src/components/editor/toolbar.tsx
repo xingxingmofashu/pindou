@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { ZoomControls } from "@/components/editor/zoom-controls"
+import { useI18n } from "@/i18n/client"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,9 +22,9 @@ import {
 /** Identifies one of the drawing tools. */
 export type ToolKind = "pen" | "eraser"
 
-const TOOLS: { value: ToolKind; label: string; icon: typeof Pencil; shortcut: string }[] = [
-  { value: "pen", label: "Pen", icon: Pencil, shortcut: "B" },
-  { value: "eraser", label: "Eraser", icon: Eraser, shortcut: "E" },
+const TOOLS: { value: ToolKind; labelKey: "pen" | "eraser"; icon: typeof Pencil; shortcut: string }[] = [
+  { value: "pen", labelKey: "pen", icon: Pencil, shortcut: "B" },
+  { value: "eraser", labelKey: "eraser", icon: Eraser, shortcut: "E" },
 ]
 
 interface ToolBarProps {
@@ -72,31 +73,35 @@ export function ToolBar({
   onSetZoom,
   onReset,
 }: ToolBarProps) {
+  const { t } = useI18n()
   const [clearOpen, setClearOpen] = useState(false)
 
   return (
     <div className="flex items-center justify-between px-3 py-2 border">
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-0.5">
-          {TOOLS.map(({ value, label, icon: Icon, shortcut }) => (
-            <Tooltip key={value}>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant={activeTool === value ? "secondary" : "outline"}
-                    size="icon-xs"
-                    aria-label={label}
-                  >
-                    <Icon data-icon="inline-start" />
-                  </Button>
-                }
-                onClick={() => onSelectTool(value)}
-              />
-              <TooltipContent side="bottom">
-                {label} ({shortcut})
-              </TooltipContent>
-            </Tooltip>
-          ))}
+          {TOOLS.map(({ value, labelKey, icon: Icon, shortcut }) => {
+            const label = t(`editor.${labelKey}`)
+            return (
+              <Tooltip key={value}>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant={activeTool === value ? "secondary" : "outline"}
+                      size="icon-xs"
+                      aria-label={label}
+                    >
+                      <Icon data-icon="inline-start" />
+                    </Button>
+                  }
+                  onClick={() => onSelectTool(value)}
+                />
+                <TooltipContent side="bottom">
+                  {label} ({shortcut})
+                </TooltipContent>
+              </Tooltip>
+            )
+          })}
           {onToggleLabels && (
             <Tooltip>
               <TooltipTrigger
@@ -104,14 +109,14 @@ export function ToolBar({
                   <Button
                     variant={showLabels ? "secondary" : "outline"}
                     size="icon-xs"
-                    aria-label="Show labels"
+                    aria-label={t("editor.showLabels")}
                   >
                     <CaseSensitive data-icon="inline-start" />
                   </Button>
                 }
                 onClick={onToggleLabels}
               />
-              <TooltipContent side="bottom">Labels</TooltipContent>
+              <TooltipContent side="bottom">{t("editor.labels")}</TooltipContent>
             </Tooltip>
           )}
           {onClearCanvas && (
@@ -123,31 +128,31 @@ export function ToolBar({
                     render={
                       <AlertDialogTrigger
                         render={
-                          <Button variant="outline" size="icon-xs" aria-label="Clear canvas">
+                          <Button variant="outline" size="icon-xs" aria-label={t("editor.clearCanvasAria")}>
                             <Trash2 data-icon="inline-start" />
                           </Button>
                         }
                       />
                     }
                   />
-                  <TooltipContent side="bottom">Clear Canvas</TooltipContent>
+                  <TooltipContent side="bottom">{t("editor.clearCanvas")}</TooltipContent>
                 </Tooltip>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Clear Canvas</AlertDialogTitle>
+                    <AlertDialogTitle>{t("editor.clearCanvas")}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will remove all beads. This action cannot be undone.
+                      {t("editor.clearCanvasDescription")}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={() => {
                         onClearCanvas()
                         setClearOpen(false)
                       }}
                     >
-                      Clear
+                      {t("editor.clear")}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -161,11 +166,11 @@ export function ToolBar({
               render={
                 <Button size="sm" variant="outline" onClick={onImportImage}>
                   <ImagePlus data-icon="inline-start" />
-                  From image
+                  {t("editor.fromImage")}
                 </Button>
               }
             />
-            <TooltipContent side="bottom">Import from image</TooltipContent>
+            <TooltipContent side="bottom">{t("editor.importFromImage")}</TooltipContent>
           </Tooltip>
         )}
         {onExportImage && (
@@ -174,15 +179,15 @@ export function ToolBar({
               render={
                 <Button size="sm" variant="outline" onClick={onExportImage}>
                   <Download data-icon="inline-start" />
-                  Export
+                  {t("editor.export")}
                 </Button>
               }
             />
-            <TooltipContent side="bottom">Export as PNG</TooltipContent>
+            <TooltipContent side="bottom">{t("editor.exportAsPng")}</TooltipContent>
           </Tooltip>
         )}
         <Button size="sm" variant="outline" onClick={onPublish}>
-          Publish
+          {t("editor.publish")}
         </Button>
       </div>
       <ZoomControls zoom={zoom} onSetZoom={onSetZoom} onReset={onReset} />

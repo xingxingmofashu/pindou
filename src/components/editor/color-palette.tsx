@@ -5,6 +5,7 @@ import useSWR from "swr"
 import { ChevronDown } from "lucide-react"
 import { usePalette } from "@/hooks/use-palette"
 import { cn, fetcher } from "@/lib/utils"
+import { useI18n } from "@/i18n/client"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "@/components/ui/toast"
@@ -29,6 +30,7 @@ interface ColorPaletteProps {
  */
 export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProps) {
   const { palette, setActivePalette } = usePalette()
+  const { t } = useI18n()
   const { data: brands, error, isValidating, mutate } = useSWR<Array<Palette>>(
     "/api/brands",
     fetcher,
@@ -39,14 +41,14 @@ export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProp
     toast.add({
       id: "palette-load-failed",
       type: "error",
-      title: "Failed to load palettes",
-      description: "Bead colours could not be loaded.",
+      title: t("editor.paletteLoadFailedTitle"),
+      description: t("editor.paletteLoadFailedDescription"),
       actionProps: {
-        children: "Retry",
+        children: t("common.retry"),
         onClick: () => mutate(),
       },
     })
-  }, [error, isValidating, mutate])
+  }, [error, isValidating, mutate, t])
 
   // Seed the active palette once the catalog arrives.
   useEffect(() => {
@@ -86,7 +88,7 @@ export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProp
   if (error) {
     return (
       <div className="flex h-full items-center justify-center border px-3 py-2 text-xs text-muted-foreground">
-        Failed to load palettes.
+        {t("editor.paletteLoadFailed")}
       </div>
     )
   }
@@ -112,7 +114,7 @@ export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProp
             <select
               value={palette.code}
               onChange={(e) => handleBrandChange(e.target.value)}
-              aria-label="Bead brand"
+              aria-label={t("editor.beadBrand")}
               className="w-full cursor-pointer appearance-none rounded-none border-0 bg-transparent px-0 py-0 pr-4 text-xs font-medium text-muted-foreground focus:outline-none"
             >
               {brands?.map((b) => (
@@ -127,7 +129,7 @@ export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProp
           <span className="text-xs font-medium text-muted-foreground">{palette.name}</span>
         )}
         <span className="shrink-0 text-[10px] text-muted-foreground">
-          {palette.colors.length} colors
+          {t("editor.colorsCount", { count: palette.colors.length })}
         </span>
       </div>
       <ScrollArea className="flex-1 overflow-hidden">
@@ -135,7 +137,7 @@ export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProp
         {/* Eraser / empty-cell swatch */}
         <div>
           <div className="text-[10px] uppercase text-muted-foreground mb-1 px-1">
-            Eraser
+            {t("editor.eraser")}
           </div>
           <button
             type="button"
@@ -150,7 +152,7 @@ export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProp
                 "repeating-linear-gradient(45deg, #ccc 0px, #ccc 2px, #fff 2px, #fff 4px)",
             }}
             onClick={() => onColorPick(0)}
-            aria-label="Eraser (empty cell)"
+            aria-label={t("editor.eraserAria")}
           />
         </div>
 
@@ -158,7 +160,7 @@ export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProp
         {seriesGroups.map((group) => (
           <div key={group.series}>
             <div className="text-[10px] uppercase text-muted-foreground mb-1 px-1">
-              {group.series === "?" ? "Colors" : `Series ${group.series}`}
+              {group.series === "?" ? t("editor.colors") : t("editor.series", { series: group.series })}
             </div>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(1.5rem,1fr))] gap-2">
               {group.colors.map(({ index, hex, code }) => (
@@ -174,7 +176,7 @@ export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProp
                   style={{ backgroundColor: hex }}
                   onClick={() => onColorPick(index)}
                   title={`${code} — ${hex}`}
-                  aria-label={`Color ${code}`}
+                  aria-label={t("editor.colorAria", { code })}
                 />
               ))}
             </div>

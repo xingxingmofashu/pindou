@@ -1,7 +1,12 @@
+"use client"
+
 import Link from "next/link"
 import { formatDistanceToNow, parseISO, isValid } from "date-fns"
+import { zhCN } from "date-fns/locale"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { totalBeadCount } from "@/lib/utils"
+import { localizedPath } from "@/i18n/config"
+import { useI18n } from "@/i18n/client"
 
 interface PatternCardProps {
   id: string
@@ -13,12 +18,14 @@ interface PatternCardProps {
 }
 
 export function PatternCard({ id, title, authorName, beadStats, createdAt, thumbPng }: PatternCardProps) {
+  const { locale, t } = useI18n()
+  const dateLocale = locale === "zh" ? zhCN : undefined
   const totalBeads = totalBeadCount(beadStats)
   const date = parseISO(createdAt)
-  const relativeDate = isValid(date) ? formatDistanceToNow(date, { addSuffix: true }) : ""
+  const relativeDate = isValid(date) ? formatDistanceToNow(date, { addSuffix: true, locale: dateLocale }) : ""
 
   return (
-    <Link href={`/patterns/${id}`} className="block">
+    <Link href={localizedPath(locale, `/patterns/${id}`)} className="block">
       <Card>
         {thumbPng ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -38,7 +45,7 @@ export function PatternCard({ id, title, authorName, beadStats, createdAt, thumb
             )}
           </CardTitle>
           <p className="text-xs text-muted-foreground truncate">
-            {totalBeads.toLocaleString()} beads
+            {t("patternCard.beads", { count: totalBeads.toLocaleString() })}
             <span aria-hidden="true"> · </span>
             {relativeDate}
           </p>

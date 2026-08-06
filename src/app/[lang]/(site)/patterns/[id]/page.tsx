@@ -8,12 +8,16 @@ import { PixiCanvas } from "@/components/pixi-canvas"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "@/components/ui/toast"
 import { fetcher, parseBeadStats, totalBeadCount } from "@/lib/utils"
+import { useI18n } from "@/i18n/client"
 import type { PaletteSelectType } from "@/db/schema"
 import type { Palette } from "@/types"
 import { format, formatDistanceToNow, parseISO, isValid } from "date-fns"
+import { zhCN } from "date-fns/locale"
 
 export default function PatternDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const { locale, t } = useI18n()
+  const dateLocale = locale === "zh" ? zhCN : undefined
   const { data, error, isValidating, mutate } = useSWR<PaletteSelectType>(
     `/api/patterns/${id}`,
     fetcher,
@@ -30,10 +34,10 @@ export default function PatternDetailPage() {
       toast.add({
         id: "pattern-load-failed",
         type: "error",
-        title: "Failed to load pattern",
-        description: "This pattern could not be loaded.",
+        title: t("patternDetail.loadFailedTitle"),
+        description: t("patternDetail.loadFailedDescription"),
         actionProps: {
-          children: "Retry",
+          children: t("common.retry"),
           onClick: () => mutate(),
         },
       })
@@ -43,15 +47,15 @@ export default function PatternDetailPage() {
       toast.add({
         id: "brand-load-failed",
         type: "error",
-        title: "Failed to load palette",
-        description: "This pattern's palette could not be loaded.",
+        title: t("patternDetail.paletteFailedTitle"),
+        description: t("patternDetail.paletteFailedDescription"),
         actionProps: {
-          children: "Retry",
+          children: t("common.retry"),
           onClick: () => mutateBrand(),
         },
       })
     }
-  }, [error, isValidating, brandError, brandValidating, mutate, mutateBrand])
+  }, [error, isValidating, brandError, brandValidating, mutate, mutateBrand, t])
 
   if (error || brandError) return null
 
@@ -89,10 +93,10 @@ export default function PatternDetailPage() {
 
   const createdAt = parseISO(data.createdAt)
   const absoluteDate = isValid(createdAt)
-    ? format(createdAt, "MMMM d, yyyy")
+    ? format(createdAt, t("patternDetail.dateFormat"), { locale: dateLocale })
     : ""
   const relativeDate = isValid(createdAt)
-    ? formatDistanceToNow(createdAt, { addSuffix: true })
+    ? formatDistanceToNow(createdAt, { addSuffix: true, locale: dateLocale })
     : ""
 
   return (

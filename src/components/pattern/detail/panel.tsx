@@ -1,3 +1,7 @@
+"use client"
+
+import { useI18n } from "@/i18n/client"
+
 interface PatternDetailPanelProps {
   title: string
   authorName: string | null
@@ -23,27 +27,29 @@ export function PatternDetailPanel({
   brand,
   sortedStats,
 }: PatternDetailPanelProps) {
+  const { t } = useI18n()
+
   return (
     <div className="w-56 shrink-0 overflow-auto flex flex-col gap-4 border p-3">
       <h1 className="text-base font-semibold tracking-tight leading-snug break-words">{title}</h1>
       <div className="space-y-1.5">
         <div>
-          <span className="text-xs text-muted-foreground">Grid</span>
+          <span className="text-xs text-muted-foreground">{t("patternDetail.grid")}</span>
           <p className="text-sm tabular-nums">
-            {cols} × {rows} · {totalBeads.toLocaleString()} beads
+            {cols} × {rows} · {t("patternCard.beads", { count: totalBeads.toLocaleString() })}
           </p>
         </div>
         <div>
-          <span className="text-xs text-muted-foreground">Brand</span>
+          <span className="text-xs text-muted-foreground">{t("patternDetail.brand")}</span>
           <p className="text-sm">{brand}</p>
         </div>
         <div>
-          <span className="text-xs text-muted-foreground">Author</span>
-          <p className="text-sm truncate">{authorName ?? "Anonymous"}</p>
+          <span className="text-xs text-muted-foreground">{t("patternDetail.author")}</span>
+          <p className="text-sm truncate">{authorName ?? t("patternDetail.anonymous")}</p>
         </div>
         {relativeDate && (
           <div>
-            <span className="text-xs text-muted-foreground">Published</span>
+            <span className="text-xs text-muted-foreground">{t("patternDetail.published")}</span>
             <p className="text-sm" title={absoluteDate}>
               {relativeDate}
             </p>
@@ -56,7 +62,7 @@ export function PatternDetailPanel({
 
       {sortedStats.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold mb-2">Beads Used</h2>
+          <h2 className="text-sm font-semibold mb-2">{t("patternDetail.beadsUsed")}</h2>
           <div className="space-y-1">
             {sortedStats.map(({ code, count, name, hex }) => (
               <div key={code} className="flex items-center gap-2 text-sm">

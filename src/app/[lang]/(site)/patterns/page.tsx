@@ -15,9 +15,12 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "@/components/ui/toast"
 import { cn, fetcher, parseBeadStats } from "@/lib/utils"
+import { localizedPath } from "@/i18n/config"
+import { useI18n } from "@/i18n/client"
 import type { PatternResponseType } from "@/db/schema"
 
 export default function PatternsPage() {
+  const { locale, t } = useI18n()
   const [page, setPage] = useState(1)
   const { data, error, isLoading, isValidating, mutate } = useSWR<PatternResponseType>(
     `/api/patterns?page=${page}`,
@@ -29,14 +32,14 @@ export default function PatternsPage() {
     toast.add({
       id: "patterns-load-failed",
       type: "error",
-      title: "Failed to load patterns",
-      description: "Something went wrong. Please try again.",
+      title: t("patterns.loadFailedTitle"),
+      description: t("patterns.loadFailedDescription"),
       actionProps: {
-        children: "Retry",
+        children: t("common.retry"),
         onClick: () => mutate(),
       },
     })
-  }, [error, isValidating, mutate])
+  }, [error, isValidating, mutate, t])
 
   const list = data?.patterns ?? []
   const total = data?.pagination.total ?? 0
@@ -48,12 +51,12 @@ export default function PatternsPage() {
     <div className="flex h-full flex-col overflow-hidden">
       <div className="flex-1 min-h-0 flex flex-col border">
         <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
-          <h1 className="text-sm font-semibold">Patterns</h1>
+          <h1 className="text-sm font-semibold">{t("patterns.title")}</h1>
           <p className="text-[10px] text-muted-foreground">
             {error
-              ? "Failed to load patterns."
+              ? t("patterns.error")
               : data
-                ? `${total.toLocaleString()} patterns published`
+                ? t("patterns.publishedCount", { count: total.toLocaleString() })
                 : ""}
           </p>
         </div>
@@ -104,7 +107,7 @@ export default function PatternsPage() {
 
                     <PaginationItem>
                       <span className="px-3 text-sm text-muted-foreground">
-                        Page {page} of {totalPages}
+                        {t("patterns.pageOf", { page, total: totalPages })}
                       </span>
                     </PaginationItem>
 
@@ -126,12 +129,12 @@ export default function PatternsPage() {
           ) : data ? (
             <div className="flex h-full items-center justify-center text-center">
               <div>
-                <p className="text-sm text-muted-foreground">No patterns published yet.</p>
+                <p className="text-sm text-muted-foreground">{t("patterns.empty")}</p>
                 <Link
-                  href="/editor"
+                  href={localizedPath(locale, "/editor")}
                   className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
                 >
-                  Create the first one
+                  {t("patterns.createFirst")}
                 </Link>
               </div>
             </div>

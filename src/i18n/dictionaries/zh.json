@@ -1,0 +1,142 @@
+{
+  "meta": {
+    "title": "拼豆 Pindou — 拼豆图案编辑器",
+    "description": "创建、分享和发现拼豆图案。免费，无需注册。"
+  },
+  "header": {
+    "homeAria": "PINDOU 首页",
+    "patterns": "图案",
+    "editor": "编辑器",
+    "github": "GitHub",
+    "githubAria": "在 GitHub 查看源码",
+    "signIn": "登录"
+  },
+  "auth": {
+    "signOut": "退出登录",
+    "continueWithGitHub": "使用 GitHub 继续",
+    "signInPrompt": "使用 GitHub 登录，你的名字会显示在图案上。",
+    "signInToPublish": "登录后发布",
+    "publishedAs": "以 {name} 发布。"
+  },
+  "common": {
+    "cancel": "取消",
+    "retry": "重试",
+    "close": "关闭"
+  },
+  "home": {
+    "title": "Pindou",
+    "tagline": "拼豆图案编辑器与社区",
+    "heroTitle": "像素级完美的拼豆图案",
+    "heroDescription": "在无限画布上用真实拼豆色板绘制，将任意图片转换为网格，并导出可打印图纸。匿名发布——无需账号。",
+    "openEditor": "打开编辑器",
+    "browsePatterns": "浏览图案",
+    "features": {
+      "import": {
+        "title": "导入任意图片",
+        "description": "上传照片，自动转换为拼豆网格——无需手动描摹。"
+      },
+      "palette": {
+        "title": "真实拼豆色板",
+        "description": "MARD、PERLER、ARTKAL 和 HAMA——560+ 种颜色与你手中的拼豆匹配。"
+      },
+      "export": {
+        "title": "可打印图纸",
+        "description": "导出带网格线和色号的高分辨率 PNG。"
+      },
+      "share": {
+        "title": "匿名发布",
+        "description": "与社区分享你的图案。无需账号，无需注册。"
+      }
+    }
+  },
+  "patterns": {
+    "title": "图案",
+    "error": "加载图案失败。",
+    "publishedCount": "已发布 {count} 个图案",
+    "loadFailedTitle": "加载图案失败",
+    "loadFailedDescription": "出错了，请重试。",
+    "pageOf": "第 {page} / {total} 页",
+    "empty": "还没有发布任何图案。",
+    "createFirst": "创建第一个图案"
+  },
+  "patternDetail": {
+    "loadFailedTitle": "加载图案失败",
+    "loadFailedDescription": "无法加载这个图案。",
+    "paletteFailedTitle": "加载色板失败",
+    "paletteFailedDescription": "无法加载这个图案的色板。",
+    "dateFormat": "yyyy年M月d日",
+    "grid": "网格",
+    "brand": "品牌",
+    "author": "作者",
+    "anonymous": "匿名",
+    "published": "发布时间",
+    "beadsUsed": "使用拼豆"
+  },
+  "patternCard": {
+    "beads": "{count} 颗拼豆"
+  },
+  "editor": {
+    "pen": "画笔",
+    "eraser": "橡皮擦",
+    "showLabels": "显示色号标签",
+    "labels": "色号标签",
+    "clearCanvas": "清空画布",
+    "clearCanvasAria": "清空画布",
+    "clearCanvasDescription": "这将移除所有拼豆。此操作无法撤销。",
+    "clear": "清空",
+    "fromImage": "从图片导入",
+    "importFromImage": "从图片导入",
+    "export": "导出",
+    "exportAsPng": "导出为 PNG",
+    "publish": "发布",
+    "zoomOut": "缩小",
+    "zoomIn": "放大",
+    "fit": "适应画布",
+    "beadBrand": "拼豆品牌",
+    "colorsCount": "{count} 种颜色",
+    "eraserAria": "橡皮擦（空白单元格）",
+    "colors": "颜色",
+    "series": "{series} 系列",
+    "colorAria": "颜色 {code}",
+    "paletteLoadFailedTitle": "加载色板失败",
+    "paletteLoadFailedDescription": "无法加载拼豆颜色。",
+    "paletteLoadFailed": "加载色板失败。",
+    "canvasEmpty": "画布为空",
+    "canvasEmptyDescription": "请先绘制内容。",
+    "invalidInput": "输入无效",
+    "publishFailedTitle": "发布失败",
+    "networkError": "网络错误，请重试。",
+    "publishSuccess": "发布成功",
+    "publishSuccessDescription": "你的图案已上线",
+    "publishTitle": "发布图案",
+    "publishDescription": "与社区分享你的图案。",
+    "title": "标题",
+    "titlePlaceholder": "我的酷炫图案",
+    "description": "描述",
+    "descriptionPlaceholder": "可选描述…",
+    "importTitle": "从图片导入",
+    "importDescription": "使用 {name} 色板将图片转换为拼豆图案。",
+    "importDescriptionNoPalette": "将图片转换为拼豆图案。",
+    "dropHint": "拖拽图片到此处，或点击选择",
+    "width": "宽度（拼豆数）",
+    "heightScaled": "高度按比例缩放。",
+    "processing": "处理中…",
+    "resultSize": "{width} × {height} · {count} 颗拼豆",
+    "apply": "应用",
+    "conversionFailed": "转换失败",
+    "unsupportedFile": "不支持的文件",
+    "unsupportedFileDescription": "请选择图片文件。",
+    "fileTooLarge": "文件过大",
+    "fileTooLargeDescription": "文件大小不能超过 4MB。",
+    "exportTitle": "导出图案",
+    "exportDescription": "将图案下载为带网格和坐标的高分辨率 PNG。",
+    "showColourCodes": "显示色号",
+    "pixelsPerBead": "每颗拼豆的像素",
+    "exportSize": "{cols} × {rows} 颗拼豆 · {width} × {height} px",
+    "scaleReduced": "比例降至每颗 {scale}px",
+    "scaleHint": "更大的比例意味着更清晰的图像，但文件也会更大。",
+    "exportPng": "导出 PNG",
+    "unknownPalette": "未知色板",
+    "unknownPaletteDescription": "无法加载这个图案的色板。"
+  }
+}

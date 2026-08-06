@@ -22,6 +22,8 @@ import { toast } from "@/components/ui/toast"
 import { PatternInsertSchema, ErrorSchema } from "@/db/schema"
 import { GithubIcon } from "@/components/icon/github"
 import { useSession } from "@/lib/auth-client"
+import { localizedPath } from "@/i18n/config"
+import { useI18n } from "@/i18n/client"
 
 interface PublishDialogProps {
   open: boolean
@@ -32,6 +34,7 @@ interface PublishDialogProps {
 }
 
 export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProps) {
+  const { locale, t } = useI18n()
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [patternId, setPatternId] = useState<string | null>(null)
@@ -47,7 +50,7 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
       const result = await res.json()
       if (!res.ok) {
         const parsed = ErrorSchema.safeParse(result)
-        throw new Error(parsed.success ? parsed.data.error : "Failed to publish")
+        throw new Error(parsed.success ? parsed.data.error : t("editor.publishFailedTitle"))
       }
       return result as { id: string }
     },
@@ -58,8 +61,8 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
     if (!data) {
       toast.add({
         type: "error",
-        title: "Canvas is empty",
-        description: "Draw something first.",
+        title: t("editor.canvasEmpty"),
+        description: t("editor.canvasEmptyDescription"),
       })
       return
     }
@@ -74,8 +77,8 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
     if (!parsed.success) {
       toast.add({
         type: "error",
-        title: "Invalid input",
-        description: parsed.error.issues[0]?.message ?? "Invalid input",
+        title: t("editor.invalidInput"),
+        description: parsed.error.issues[0]?.message ?? t("editor.invalidInput"),
       })
       return
     }
@@ -86,11 +89,11 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
     } catch (e) {
       toast.add({
         type: "error",
-        title: "Failed to publish",
-        description: e instanceof Error ? e.message : "Network error. Please try again.",
+        title: t("editor.publishFailedTitle"),
+        description: e instanceof Error ? e.message : t("editor.networkError"),
       })
     }
-  }, [title, description, getCellsData, trigger])
+  }, [title, description, getCellsData, trigger, t])
 
   const handleClose = useCallback(() => {
     setTitle("")
@@ -110,24 +113,24 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
         {patternId ? (
           <>
             <AlertDialogHeader>
-              <AlertDialogTitle>Published</AlertDialogTitle>
+              <AlertDialogTitle>{t("editor.publishSuccess")}</AlertDialogTitle>
               <AlertDialogDescription>
-                Your pattern is live at{" "}
+                {t("editor.publishSuccessDescription")}{" "}
                 <code className="rounded bg-muted px-1 text-xs">
-                  /patterns/{patternId}
+                  {localizedPath(locale, `/patterns/${patternId}`)}
                 </code>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogAction onClick={handleClose}>Close</AlertDialogAction>
+              <AlertDialogAction onClick={handleClose}>{t("common.close")}</AlertDialogAction>
             </AlertDialogFooter>
           </>
         ) : (
           <>
             <AlertDialogHeader>
-              <AlertDialogTitle>Publish Pattern</AlertDialogTitle>
+              <AlertDialogTitle>{t("editor.publishTitle")}</AlertDialogTitle>
               <AlertDialogDescription>
-                Share your pattern with the community.
+                {t("editor.publishDescription")}
               </AlertDialogDescription>
             </AlertDialogHeader>
 
@@ -138,41 +141,47 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
             ) : !session?.user ? (
               <div className="grid gap-3 py-2">
                 <p className="text-sm text-muted-foreground">
-                  Sign in with GitHub so your name appears on the pattern.
+                  {t("auth.signInPrompt")}
                 </p>
                 <Button
                   variant="outline"
                   className="justify-center"
                   nativeButton={false}
-                  render={<Link href="/sign-in?callback=%2Feditor" />}
+                  render={
+                    <Link
+                      href={`${localizedPath(locale, "/sign-in")}?callback=${encodeURIComponent(
+                        localizedPath(locale, "/editor"),
+                      )}`}
+                    />
+                  }
                 >
                   <GithubIcon />
-                  Sign in to publish
+                  {t("auth.signInToPublish")}
                 </Button>
               </div>
             ) : (
               <div className="grid gap-3">
                 <div className="grid gap-1.5">
                   <Label htmlFor="publish-title">
-                    Title <span className="text-destructive">*</span>
+                    {t("editor.title")} <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="publish-title"
                     type="text"
                     maxLength={100}
-                    placeholder="My cool pattern"
+                    placeholder={t("editor.titlePlaceholder")}
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                   />
                 </div>
 
                 <div className="grid gap-1.5">
-                  <Label htmlFor="publish-description">Description</Label>
+                  <Label htmlFor="publish-description">{t("editor.description")}</Label>
                   <Textarea
                     id="publish-description"
                     maxLength={280}
                     rows={2}
-                    placeholder="Optional description..."
+                    placeholder={t("editor.descriptionPlaceholder")}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     className="resize-none"
@@ -180,20 +189,20 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
                 </div>
 
                 <p className="text-xs text-muted-foreground">
-                  Published as <span className="font-medium text-foreground">{session.user.name}</span>.
+                  {t("auth.publishedAs", { name: session.user.name })}
                 </p>
               </div>
             )}
 
             {session?.user && !isPending && (
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleSubmit}
                   disabled={isMutating || title.trim().length === 0}
                 >
                   {isMutating && <Spinner data-icon="inline-start" />}
-                  Publish
+                  {t("editor.publish")}
                 </AlertDialogAction>
               </AlertDialogFooter>
             )}

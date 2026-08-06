@@ -5,16 +5,20 @@ import { Separator } from "@/components/ui/separator"
 import { Logo } from "@/components/logo"
 import { UserMenu } from "@/components/auth/user-menu"
 import { auth } from "@/lib/auth"
+import { localizedPath } from "@/i18n/config"
+import { getDictionary, getLocale } from "@/i18n/server"
 
 const GITHUB_URL = "https://github.com/xingxingmofashu/pindou"
 
 export async function Header() {
   const session = await auth.api.getSession({ headers: await headers() })
+  const locale = await getLocale()
+  const dict = await getDictionary()
 
   return (
     <header className="flex items-center justify-between px-3 py-2 border">
       <div className="flex items-center gap-4">
-        <Link href="/" className="flex items-center" aria-label="PINDOU home">
+        <Link href={`/${locale}`} className="flex items-center" aria-label={dict.header.homeAria}>
           <Logo className="h-5 w-24" />
         </Link>
         <Separator orientation="vertical" className="mx-1 h-8" />
@@ -22,16 +26,16 @@ export async function Header() {
           <Button
             variant="link"
             nativeButton={false}
-            render={<Link href="/patterns" />}
+            render={<Link href={localizedPath(locale, "/patterns")} />}
           >
-            Patterns
+            {dict.header.patterns}
           </Button>
           <Button
             variant="link"
             nativeButton={false}
-            render={<Link href="/editor" />}
+            render={<Link href={localizedPath(locale, "/editor")} />}
           >
-            Editor
+            {dict.header.editor}
           </Button>
         </nav>
       </div>
@@ -39,12 +43,12 @@ export async function Header() {
       <div className="flex items-center gap-2">
         <Button
           render={
-            <a href={GITHUB_URL} target="_blank" rel="noreferrer" aria-label="View source on GitHub" />
+            <a href={GITHUB_URL} target="_blank" rel="noreferrer" aria-label={dict.header.githubAria} />
           }
           nativeButton={false}
           variant="link"
         >
-          GitHub
+          {dict.header.github}
         </Button>
         {session ? (
           <UserMenu name={session.user.name} />
@@ -52,9 +56,9 @@ export async function Header() {
           <Button
             variant="link"
             nativeButton={false}
-            render={<Link href="/sign-in" />}
+            render={<Link href={localizedPath(locale, "/sign-in")} />}
           >
-            Sign in
+            {dict.header.signIn}
           </Button>
         )}
       </div>

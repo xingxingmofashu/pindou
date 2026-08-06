@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "@/components/ui/toast"
 import { fetcher } from "@/lib/utils"
+import { useI18n } from "@/i18n/client"
 import { exportGridPng, exportGridSize, DEFAULT_EXPORT_SCALE } from "@/lib/export"
 import type { Palette } from "@/types"
 
@@ -32,6 +33,7 @@ interface ExportDialogProps {
  * the pattern as a PNG chart (grid + coordinates in the header bands).
  */
 export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps) {
+  const { t } = useI18n()
   const [scaleInput, setScaleInput] = useState(String(DEFAULT_EXPORT_SCALE))
   // Independent of the toolbar Labels toggle: this controls only the exported
   // image, and the toolbar toggle only controls the canvas. Defaults to on.
@@ -56,16 +58,16 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
     if (!data) {
       toast.add({
         type: "error",
-        title: "Canvas is empty",
-        description: "Draw something first.",
+        title: t("editor.canvasEmpty"),
+        description: t("editor.canvasEmptyDescription"),
       })
       return
     }
     if (!brand) {
       toast.add({
         type: "error",
-        title: "Unknown palette",
-        description: "This pattern's palette could not be loaded.",
+        title: t("editor.unknownPalette"),
+        description: t("editor.unknownPaletteDescription"),
       })
       return
     }
@@ -76,7 +78,7 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
       { showLabels: labelsOn },
     )
     onClose()
-  }, [data, brand, scale, labelsOn, onClose])
+  }, [data, brand, scale, labelsOn, onClose, t])
 
   const handleClose = useCallback(() => {
     onClose()
@@ -91,14 +93,14 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Export Pattern</DialogTitle>
+          <DialogTitle>{t("editor.exportTitle")}</DialogTitle>
           <DialogDescription>
-            Download the pattern as a high-resolution PNG with grid and coordinates.
+            {t("editor.exportDescription")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex items-center justify-between gap-2">
-          <Label htmlFor="export-labels">Show colour codes</Label>
+          <Label htmlFor="export-labels">{t("editor.showColourCodes")}</Label>
           <Switch
             id="export-labels"
             checked={labelsOn}
@@ -107,7 +109,7 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
         </div>
 
         <div className="grid gap-1.5">
-          <Label htmlFor="export-scale">Pixels per bead</Label>
+          <Label htmlFor="export-scale">{t("editor.pixelsPerBead")}</Label>
           <Input
             id="export-scale"
             type="number"
@@ -118,19 +120,29 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
           />
           <p className="text-xs text-muted-foreground">
             {rows > 0 && size
-              ? `${cols} × ${rows} beads · ${size.width} × ${size.height} px${
-                  size.scale < scale ? ` · scale reduced to ${size.scale}px/bead` : ""
-                }`
-              : "Larger scale means a clearer image, but a bigger file."}
+              ? [
+                  t("editor.exportSize", {
+                    cols,
+                    rows,
+                    width: size.width,
+                    height: size.height,
+                  }),
+                  size.scale < scale
+                    ? t("editor.scaleReduced", { scale: size.scale })
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
+              : t("editor.scaleHint")}
           </p>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={handleClose}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button onClick={handleExport} disabled={rows === 0}>
-            Export PNG
+            {t("editor.exportPng")}
           </Button>
         </DialogFooter>
       </DialogContent>
