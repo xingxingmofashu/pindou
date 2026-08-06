@@ -37,7 +37,7 @@ export function PatternCard({ id, title, authorName, beadStats, createdAt, thumb
               <span className="ml-2 text-xs font-normal text-muted-foreground">{authorName}</span>
             )}
           </CardTitle>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground truncate">
             {totalBeads.toLocaleString()} beads
             <span aria-hidden="true"> · </span>
             {relativeDate}
