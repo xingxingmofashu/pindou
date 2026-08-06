@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useState } from "react"
+import Link from "next/link"
 import useSWRMutation from "swr/mutation"
 import {
   AlertDialog,
@@ -12,13 +13,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Spinner } from "@/components/ui/spinner"
 import { toast } from "@/components/ui/toast"
 import { PatternInsertSchema, ErrorSchema } from "@/db/schema"
-import { GitHubButton } from "@/components/auth/github-button"
+import { GithubIcon } from "@/components/icon/github"
 import { useSession } from "@/lib/auth-client"
 
 interface PublishDialogProps {
@@ -138,7 +140,15 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
                 <p className="text-sm text-muted-foreground">
                   Sign in with GitHub so your name appears on the pattern.
                 </p>
-                <GitHubButton callbackURL={typeof window !== "undefined" ? window.location.href : "/editor"} />
+                <Button
+                  variant="outline"
+                  className="justify-center"
+                  nativeButton={false}
+                  render={<Link href="/sign-in?callback=%2Feditor" />}
+                >
+                  <GithubIcon />
+                  Sign in to publish
+                </Button>
               </div>
             ) : (
               <div className="grid gap-3">

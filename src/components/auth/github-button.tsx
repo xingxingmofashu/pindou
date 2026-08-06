@@ -4,7 +4,7 @@ import { useCallback, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { signIn } from "@/lib/auth-client"
-import { GithubIcon } from "@/components/auth/github-icon"
+import { GithubIcon } from "@/components/icon/github"
 
 interface GitHubButtonProps {
   label?: string

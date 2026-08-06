@@ -3,8 +3,6 @@ import { headers } from "next/headers"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Logo } from "@/components/logo"
-import { GithubIcon } from "@/components/auth/github-icon"
-import { GitHubButton } from "@/components/auth/github-button"
 import { UserMenu } from "@/components/auth/user-menu"
 import { auth } from "@/lib/auth"
 
@@ -39,21 +37,26 @@ export async function Header() {
       </div>
 
       <div className="flex items-center gap-2">
-        {session ? (
-          <UserMenu name={session.user.name} image={session.user.image} />
-        ) : (
-          <GitHubButton label="Sign in" />
-        )}
         <Button
           render={
             <a href={GITHUB_URL} target="_blank" rel="noreferrer" aria-label="View source on GitHub" />
           }
           nativeButton={false}
-          variant="outline"
-          size="icon"
+          variant="link"
         >
-          <GithubIcon />
+          GitHub
         </Button>
+        {session ? (
+          <UserMenu name={session.user.name} image={session.user.image} />
+        ) : (
+          <Button
+            variant="link"
+            nativeButton={false}
+            render={<Link href="/sign-in" />}
+          >
+            Sign in
+          </Button>
+        )}
       </div>
     </header>
   )
