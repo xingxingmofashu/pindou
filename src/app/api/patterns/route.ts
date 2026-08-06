@@ -4,6 +4,7 @@ import { db } from "@/db"
 import { brands, colors, patterns } from "@/db/schema"
 import { generateThumbnail } from "@/lib/thumbnail"
 import { PatternInsertSchema, PaginationSchema } from "@/db/schema"
+import { auth } from "@/lib/auth"
 import type { Palette } from "@/types"
 
 export async function GET(request: NextRequest) {
@@ -46,6 +47,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await auth.api.getSession({ headers: request.headers })
+  if (!session) {
+    return NextResponse.json({ error: "Sign in to publish" }, { status: 401 })
+  }
+
   const body = await request.json().catch(() => null)
 
   const parsed = PatternInsertSchema.safeParse(body)
@@ -56,7 +62,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { title, description, authorName, gridData, brandCode, beadStats } = parsed.data
+  const { title, description, gridData, brandCode, beadStats } = parsed.data
   const [brand] = await db
     .select()
     .from(brands)
@@ -80,7 +86,8 @@ export async function POST(request: NextRequest) {
     .values({
       title,
       description,
-      authorName,
+      authorName: session.user.name,
+      fkUserId: session.user.id,
       gridData: JSON.stringify(gridData),
       beadStats,
       thumbPng,

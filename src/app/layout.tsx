@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toast";
-import { Header } from "@/components/header";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -31,14 +29,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="h-dvh">
-        <TooltipProvider delay={300}>
-          <div className="h-full p-2">
-            <div className="flex h-full min-h-0 flex-col gap-2 border p-2">
-              <Header />
-              <main className="flex-1 min-h-0">{children}</main>
-            </div>
-          </div>
-        </TooltipProvider>
+        {children}
         <Toaster />
       </body>
     </html>

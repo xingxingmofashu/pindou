@@ -2,6 +2,7 @@ import { integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-or
 import { z } from "zod"
 import { createSchemaFactory } from "drizzle-zod"
 import { MAX_GRID_DIMENSION } from "../lib/editor"
+import { users } from "./auth-schema"
 
 export const patterns = pgTable("patterns", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -12,6 +13,8 @@ export const patterns = pgTable("patterns", {
   gridData: text("grid_data").notNull(),
   /** Brand UUID referencing brands.id; code→uuid mapping lives in the app layer. */
   fkBrandId: uuid("fk_brand_id").notNull().references(() => brands.id),
+  /** Owning Better Auth user (set server-side on publish); NULL if the account is deleted. */
+  fkUserId: text("fk_user_id").references(() => users.id, { onDelete: "set null" }),
   beadStats: text("bead_stats").notNull().default("{}"),
   /** PNG thumbnail (base64) generated server-side on publish. */
   thumbPng: text("thumb_png").notNull().default(""),
@@ -93,7 +96,7 @@ export const PatternSelectSchema = createSelectSchema(patterns, {
   updatedAt: z.string(),
 })
   .extend({ brandCode: z.string(), brandId: z.uuid() })
-  .omit({ fkBrandId: true })
+  .omit({ fkBrandId: true, fkUserId: true })
 
 /**
  * Client-supplied fields for POST /api/patterns. `beadStats` is computed
@@ -114,7 +117,15 @@ export const PatternInsertSchema = createInsertSchema(patterns, {
     }),
   beadStats: z.string(),
 })
-  .omit({ id: true, fkBrandId: true, thumbPng: true, createdAt: true, updatedAt: true })
+  .omit({
+    id: true,
+    fkBrandId: true,
+    fkUserId: true,
+    authorName: true,
+    thumbPng: true,
+    createdAt: true,
+    updatedAt: true,
+  })
   .extend({ brandCode: z.string() })
 
 /** Query-parameter pagination for GET /api/patterns. */
@@ -137,3 +148,5 @@ export const ErrorSchema = z.object({ error: z.string() })
 
 export type PaletteSelectType = z.infer<typeof PatternSelectSchema>
 export type PatternResponseType = z.infer<typeof PatternsResponseSchema>
+
+export * from "./auth-schema"
