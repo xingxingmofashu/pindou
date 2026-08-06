@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from "next/server"
 import { desc, eq, sql } from "drizzle-orm"
 import { db } from "@/db"
 import { brands, colors, patterns } from "@/db/schema"
-import { generate, upload } from "@/lib/image/thumbnail"
+import { Thumbnail } from "@/lib/image/thumbnail"
 import { PatternInsertSchema, PaginationSchema } from "@/db/schema"
 import { auth } from "@/lib/auth/server"
 import type { Palette } from "@/types"
+
+/** Thumbnail renderer + R2 uploader for this route. */
+const thumbnail = new Thumbnail()
 
 export async function GET(request: NextRequest) {
   const { page, pageSize } = PaginationSchema.parse({
@@ -80,7 +83,7 @@ export async function POST(request: NextRequest) {
 
   const palette: Palette = { ...brand, colors: colorRows }
 
-  const thumbPng = await generate(gridData, palette)
+  const thumbPng = await thumbnail.generate(gridData, palette)
   if (!thumbPng) {
     return NextResponse.json({ error: "Empty grid" }, { status: 400 })
   }
@@ -88,7 +91,7 @@ export async function POST(request: NextRequest) {
   const patternId = crypto.randomUUID()
   let thumbUrl: string
   try {
-    thumbUrl = await upload(thumbPng, patternId)
+    thumbUrl = await thumbnail.upload(thumbPng, patternId)
   } catch {
     return NextResponse.json({ error: "Failed to upload thumbnail" }, { status: 503 })
   }
