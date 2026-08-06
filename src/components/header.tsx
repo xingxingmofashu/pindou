@@ -47,7 +47,7 @@ export async function Header() {
           GitHub
         </Button>
         {session ? (
-          <UserMenu name={session.user.name} image={session.user.image} />
+          <UserMenu name={session.user.name} />
         ) : (
           <Button
             variant="link"
