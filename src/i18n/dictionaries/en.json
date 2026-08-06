@@ -1,0 +1,142 @@
+{
+  "meta": {
+    "title": "拼豆 Pindou — Fuse Bead Pattern Editor",
+    "description": "Create, share, and discover Perler bead patterns. Sign in with GitHub to publish your own patterns."
+  },
+  "header": {
+    "homeAria": "PINDOU home",
+    "patterns": "Patterns",
+    "editor": "Editor",
+    "github": "GitHub",
+    "githubAria": "View source on GitHub",
+    "signIn": "Sign in"
+  },
+  "auth": {
+    "signOut": "Sign out",
+    "continueWithGitHub": "Continue with GitHub",
+    "signInPrompt": "Sign in with GitHub so your name appears on the pattern.",
+    "signInToPublish": "Sign in to publish",
+    "publishedAs": "Published as {name}."
+  },
+  "common": {
+    "cancel": "Cancel",
+    "retry": "Retry",
+    "close": "Close"
+  },
+  "home": {
+    "title": "Pindou",
+    "tagline": "Fuse bead pattern editor & community",
+    "heroTitle": "Fuse bead patterns, made pixel-perfect",
+    "heroDescription": "Draw on an infinite canvas with real bead palettes, convert any image into a grid, and export a printable chart. Sign in with GitHub to publish and share.",
+    "openEditor": "Open Editor",
+    "browsePatterns": "Browse Patterns",
+    "features": {
+      "import": {
+        "title": "Import any image",
+        "description": "Upload a photo and auto-convert it into a bead grid — no hand tracing."
+      },
+      "palette": {
+        "title": "Real bead palettes",
+        "description": "MARD, PERLER, ARTKAL & HAMA — 560+ colours matched to the beads you own."
+      },
+      "export": {
+        "title": "Printable chart",
+        "description": "Export a high-resolution PNG with grid lines and colour codes."
+      },
+      "share": {
+        "title": "Publish with GitHub",
+        "description": "Sign in with GitHub and share your pattern with the community."
+      }
+    }
+  },
+  "patterns": {
+    "title": "Patterns",
+    "error": "Failed to load patterns.",
+    "publishedCount": "{count} patterns published",
+    "loadFailedTitle": "Failed to load patterns",
+    "loadFailedDescription": "Something went wrong. Please try again.",
+    "pageOf": "Page {page} of {total}",
+    "empty": "No patterns published yet.",
+    "createFirst": "Create the first one"
+  },
+  "patternDetail": {
+    "loadFailedTitle": "Failed to load pattern",
+    "loadFailedDescription": "This pattern could not be loaded.",
+    "paletteFailedTitle": "Failed to load palette",
+    "paletteFailedDescription": "This pattern's palette could not be loaded.",
+    "dateFormat": "MMMM d, yyyy",
+    "grid": "Grid",
+    "brand": "Brand",
+    "author": "Author",
+    "anonymous": "Anonymous",
+    "published": "Published",
+    "beadsUsed": "Beads Used"
+  },
+  "patternCard": {
+    "beads": "{count} beads"
+  },
+  "editor": {
+    "pen": "Pen",
+    "eraser": "Eraser",
+    "showLabels": "Show labels",
+    "labels": "Labels",
+    "clearCanvas": "Clear Canvas",
+    "clearCanvasAria": "Clear canvas",
+    "clearCanvasDescription": "This will remove all beads. This action cannot be undone.",
+    "clear": "Clear",
+    "fromImage": "From image",
+    "importFromImage": "Import from image",
+    "export": "Export",
+    "exportAsPng": "Export as PNG",
+    "publish": "Publish",
+    "zoomOut": "Zoom Out",
+    "zoomIn": "Zoom In",
+    "fit": "Fit",
+    "beadBrand": "Bead brand",
+    "colorsCount": "{count} colors",
+    "eraserAria": "Eraser (empty cell)",
+    "colors": "Colors",
+    "series": "Series {series}",
+    "colorAria": "Color {code}",
+    "paletteLoadFailedTitle": "Failed to load palettes",
+    "paletteLoadFailedDescription": "Bead colours could not be loaded.",
+    "paletteLoadFailed": "Failed to load palettes.",
+    "canvasEmpty": "Canvas is empty",
+    "canvasEmptyDescription": "Draw something first.",
+    "invalidInput": "Invalid input",
+    "publishFailedTitle": "Failed to publish",
+    "networkError": "Network error. Please try again.",
+    "publishSuccess": "Published",
+    "publishSuccessDescription": "Your pattern is live at",
+    "publishTitle": "Publish Pattern",
+    "publishDescription": "Share your pattern with the community.",
+    "title": "Title",
+    "titlePlaceholder": "My cool pattern",
+    "description": "Description",
+    "descriptionPlaceholder": "Optional description...",
+    "importTitle": "Import from Image",
+    "importDescription": "Convert an image into a bead pattern using the {name} palette.",
+    "importDescriptionNoPalette": "Convert an image into a bead pattern.",
+    "dropHint": "Drag & drop an image, or click to browse",
+    "width": "Width (beads)",
+    "heightScaled": "Height is scaled proportionally.",
+    "processing": "Processing…",
+    "resultSize": "{width} × {height} · {count} beads",
+    "apply": "Apply",
+    "conversionFailed": "Conversion failed",
+    "unsupportedFile": "Unsupported file",
+    "unsupportedFileDescription": "Please choose an image file.",
+    "fileTooLarge": "File too large",
+    "fileTooLargeDescription": "File must be 4MB or smaller.",
+    "exportTitle": "Export Pattern",
+    "exportDescription": "Download the pattern as a high-resolution PNG with grid and coordinates.",
+    "showColourCodes": "Show colour codes",
+    "pixelsPerBead": "Pixels per bead",
+    "exportSize": "{cols} × {rows} beads · {width} × {height} px",
+    "scaleReduced": "scale reduced to {scale}px/bead",
+    "scaleHint": "Larger scale means a clearer image, but a bigger file.",
+    "exportPng": "Export PNG",
+    "unknownPalette": "Unknown palette",
+    "unknownPaletteDescription": "This pattern's palette could not be loaded."
+  }
+}

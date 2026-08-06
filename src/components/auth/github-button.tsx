@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { signIn } from "@/lib/auth-client"
 import { GithubIcon } from "@/components/icon/github"
+import { useI18n } from "@/i18n/client"
 
 interface GitHubButtonProps {
   label?: string
@@ -14,10 +15,11 @@ interface GitHubButtonProps {
 }
 
 export function GitHubButton({
-  label = "Continue with GitHub",
+  label,
   className,
   callbackURL,
 }: GitHubButtonProps) {
+  const { t } = useI18n()
   const [pending, setPending] = useState(false)
 
   const handleSignIn = useCallback(async () => {
@@ -38,7 +40,7 @@ export function GitHubButton({
     >
       {pending && <Spinner data-icon="inline-start" />}
       <GithubIcon />
-      {label}
+      {label ?? t("auth.continueWithGitHub")}
     </Button>
   )
 }

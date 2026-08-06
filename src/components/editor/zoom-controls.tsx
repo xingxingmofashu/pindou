@@ -3,6 +3,7 @@
 import { ZoomIn, ZoomOut, Maximize } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { useI18n } from "@/i18n/client"
 
 /** Multiplicative step for the zoom-in / zoom-out buttons. */
 const ZOOM_STEP = 1.3
@@ -23,6 +24,7 @@ interface ZoomControlsProps {
  * Zoom-in / zoom-out / fit buttons with a read-only percentage readout.
  */
 export function ZoomControls({ zoom, onSetZoom, onReset: onFit }: ZoomControlsProps) {
+  const { t } = useI18n()
   return (
     <div className="flex items-center gap-0.5">
       <Tooltip>
@@ -34,7 +36,7 @@ export function ZoomControls({ zoom, onSetZoom, onReset: onFit }: ZoomControlsPr
           }
           onClick={() => onSetZoom((prev) => prev / ZOOM_STEP)}
         />
-        <TooltipContent side="bottom">Zoom Out</TooltipContent>
+        <TooltipContent side="bottom">{t("editor.zoomOut")}</TooltipContent>
       </Tooltip>
       <span className="w-12 text-center text-xs tabular-nums text-muted-foreground">
         {Math.round(zoom * 100)}%
@@ -48,7 +50,7 @@ export function ZoomControls({ zoom, onSetZoom, onReset: onFit }: ZoomControlsPr
           }
           onClick={() => onSetZoom((prev) => prev * ZOOM_STEP)}
         />
-        <TooltipContent side="bottom">Zoom In</TooltipContent>
+        <TooltipContent side="bottom">{t("editor.zoomIn")}</TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger
@@ -59,7 +61,7 @@ export function ZoomControls({ zoom, onSetZoom, onReset: onFit }: ZoomControlsPr
           }
           onClick={onFit}
         />
-        <TooltipContent side="bottom">Fit</TooltipContent>
+        <TooltipContent side="bottom">{t("editor.fit")}</TooltipContent>
       </Tooltip>
     </div>
   )

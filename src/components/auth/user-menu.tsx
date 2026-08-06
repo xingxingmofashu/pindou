@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { signOut } from "@/lib/auth-client"
+import { useI18n } from "@/i18n/client"
 
 interface UserMenuProps {
   name: string
@@ -18,6 +19,7 @@ interface UserMenuProps {
 
 export function UserMenu({ name }: UserMenuProps) {
   const router = useRouter()
+  const { t } = useI18n()
 
   const handleSignOut = useCallback(async () => {
     await signOut()
@@ -36,7 +38,7 @@ export function UserMenu({ name }: UserMenuProps) {
       />
       <DropdownMenuContent align="end" className="w-40">
         <DropdownMenuItem variant="destructive" onClick={handleSignOut}>
-          Sign out
+          {t("auth.signOut")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -19,6 +19,7 @@ import { toast } from "@/components/ui/toast"
 import { MAX_GRID_DIMENSION } from "@/lib/editor"
 import { ErrorSchema } from "@/db/schema"
 import { usePalette } from "@/hooks/use-palette"
+import { useI18n } from "@/i18n/client"
 import type { TransformResult } from "@/lib/transform"
 import type { Palette } from "@/types"
 
@@ -112,6 +113,7 @@ function drawGridToCanvas(
 
 export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
   const { palette } = usePalette()
+  const { t } = useI18n()
   const [file, setFile] = useState<File | null>(null)
   const [widthInput, setWidthInput] = useState(String(DEFAULT_WIDTH))
   const [result, setResult] = useState<TransformResult | null>(null)
@@ -125,7 +127,7 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
       const data: unknown = await res.json()
       if (!res.ok) {
         const parsed = ErrorSchema.safeParse(data)
-        throw new Error(parsed.success ? parsed.data.error : "Failed to convert image")
+        throw new Error(parsed.success ? parsed.data.error : t("editor.conversionFailed"))
       }
       return data as TransformResult
     },
@@ -139,7 +141,7 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
     const w = Math.round(Number(widthInput))
     if (!Number.isFinite(w) || w <= 0) return
     const clamped = Math.min(MAX_GRID_DIMENSION, w)
-    const t = setTimeout(() => {
+    const timeout = setTimeout(() => {
       const id = ++reqId.current
       const formData = new FormData()
       formData.append("file", file)
@@ -156,13 +158,13 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
           toast.add({
             id: "import-conversion-failed",
             type: "error",
-            title: "Conversion failed",
-            description: e instanceof Error ? e.message : "Network error. Please try again.",
+            title: t("editor.conversionFailed"),
+            description: e instanceof Error ? e.message : t("editor.networkError"),
           })
         })
     }, DEBOUNCE_MS)
-    return () => clearTimeout(t)
-  }, [file, widthInput, palette, trigger])
+    return () => clearTimeout(timeout)
+  }, [file, widthInput, palette, trigger, t])
 
   // Render the preview whenever a result arrives.
   useEffect(() => {
@@ -174,22 +176,22 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
     if (!f.type.startsWith("image/")) {
       toast.add({
         type: "error",
-        title: "Unsupported file",
-        description: "Please choose an image file.",
+        title: t("editor.unsupportedFile"),
+        description: t("editor.unsupportedFileDescription"),
       })
       return
     }
     if (f.size > MAX_FILE_BYTES) {
       toast.add({
         type: "error",
-        title: "File too large",
-        description: "File must be 4MB or smaller.",
+        title: t("editor.fileTooLarge"),
+        description: t("editor.fileTooLargeDescription"),
       })
       return
     }
     setResult(null)
     setFile(f)
-  }, [])
+  }, [t])
 
   const handleClose = useCallback(() => {
     reqId.current++
@@ -214,10 +216,11 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Import from Image</DialogTitle>
+          <DialogTitle>{t("editor.importTitle")}</DialogTitle>
           <DialogDescription>
-            Convert an image into a bead pattern
-            {palette ? ` using the ${palette.name} palette` : ""}.
+            {palette
+              ? t("editor.importDescription", { name: palette.name })
+              : t("editor.importDescriptionNoPalette")}
           </DialogDescription>
         </DialogHeader>
 
@@ -238,7 +241,7 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
         >
           <Upload data-icon="inline-start" className="text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            {file ? file.name : "Drag & drop an image, or click to browse"}
+            {file ? file.name : t("editor.dropHint")}
           </p>
           <input
             ref={inputRef}
@@ -254,7 +257,7 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
         </div>
 
         <div className="grid gap-1.5">
-          <Label htmlFor="import-width">Width (beads)</Label>
+          <Label htmlFor="import-width">{t("editor.width")}</Label>
           <Input
             id="import-width"
             type="number"
@@ -264,14 +267,14 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
             onChange={(e) => setWidthInput(e.target.value)}
           />
           <p className="text-xs text-muted-foreground">
-            Height is scaled proportionally.
+            {t("editor.heightScaled")}
           </p>
         </div>
 
         {isMutating && (
           <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Spinner className="size-3.5" />
-            Processing…
+            {t("editor.processing")}
           </p>
         )}
 
@@ -285,17 +288,21 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              {result.width} × {result.height} · {result.beadCount.toLocaleString()} beads
+              {t("editor.resultSize", {
+                width: result.width,
+                height: result.height,
+                count: result.beadCount.toLocaleString(),
+              })}
             </p>
           </div>
         )}
 
         <DialogFooter>
           <Button variant="outline" onClick={handleClose}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button onClick={handleApply} disabled={!result || isMutating}>
-            Apply
+            {t("editor.apply")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -4,7 +4,7 @@ Guidance for agent sessions (e.g. Claude Code, OpenCode, Codex) working in this 
 
 ## Project
 
-拼豆 (Pindou) — fuse beads / Perler beads pattern editor and community. Anonymous publishing, no user accounts.
+拼豆 (Pindou) — fuse beads / Perler beads pattern editor and community. Browse anonymously; publishing requires a GitHub sign-in (Better Auth).
 
 ## Commands
 
@@ -47,7 +47,7 @@ Base UI is used instead of Radix. Key API differences:
 ### Editor flow (`/editor`)
 
 ```
-EditorPage (src/app/editor/page.tsx)
+EditorPage (src/app/[lang]/(site)/editor/page.tsx)
 ├── ToolBar (pen / eraser, labels toggle, clear-canvas, import/export, publish; embeds ZoomControls: ±1.3× buttons, read-only %, fit)
 ├── ColorPalette (left sidebar, brand switcher + swatches grouped by series + eraser)
 ├── <canvas> → usePixiCanvas hook
@@ -73,6 +73,25 @@ PixiJS Application (WebGL)
         ├── Graphics "grid" (grid lines on top of beads)
         └── Container "labels" (moved inside world so it pans/zooms with the grid automatically)
 ```
+
+### Internationalization (`/en`, `/zh`)
+
+Native Next.js i18n (no next-intl): every route lives under `app/[lang]/` and `src/proxy.ts` (Next 16 middleware) prefixes requests with a locale detected from `Accept-Language` (`/` → `/en` or `/zh`; `/api/*` and static assets are excluded). `next.config.ts` enables `experimental.rootParams` so server components read the segment via `next/root-params` `lang()`.
+
+```
+src/i18n/config.ts        locales (["en","zh"]), defaultLocale, isLocale, localizedPath(locale, path), detectLocale
+src/i18n/dictionaries/    en.json + zh.json (structurally identical; en.json is the Messages type source)
+src/i18n/server.ts        server-only; getDictionary()/getLocale() via lang(); root layout must use params instead
+src/i18n/client.tsx       I18nProvider + useI18n() → { locale, t(path, vars) } for client components
+src/app/[lang]/layout.tsx root layout: html lang, generateStaticParams, localized metadata, I18nProvider
+src/proxy.ts              locale detection + redirect; matcher excludes _next|api|favicon.ico|.*\..*
+```
+
+- **Server components** call `getDictionary()` (no args — locale resolved from the segment). The root layout `[lang]/layout.tsx` cannot use `lang()` (it owns the segment) and reads `params` instead.
+- **Client components** read `useI18n()`; the dictionary is passed down by the root layout via `I18nProvider`.
+- **Links/routes**: use `localizedPath(locale, path)` (e.g. `/editor` → `/en/editor`); SWR/API calls stay locale-agnostic absolute paths (`/api/...`).
+- **Dates**: date-fns locale `zhCN` (`date-fns/locale`) for `zh`; localized format strings live in the dictionary (`patternDetail.dateFormat`).
+- Better Auth OAuth callback `/api/auth/callback/github` is under `/api`, so the proxy never touches it.
 
 ### Data model
 
