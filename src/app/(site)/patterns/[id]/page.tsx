@@ -96,7 +96,7 @@ export default function PatternDetailPage() {
     : ""
 
   return (
-    <div className="flex h-full flex-col p-2 gap-2 overflow-hidden">
+    <div className="flex h-full flex-col gap-2 overflow-hidden">
       <div className="flex-1 min-h-0 flex gap-2">
         <PatternDetailPanel
           title={data.title}
