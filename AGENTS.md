@@ -53,7 +53,7 @@ EditorPage (src/app/[lang]/(site)/editor/page.tsx)
 ├── <canvas> → usePixiCanvas hook
 ├── PublishDialog (title/desc/author → POST /api/patterns via getCellsData)
 ├── ImportDialog (upload → POST /api/transform → Apply → loadGrid(grid))
-└── ExportDialog (reads grid via getCellsData → client-side PNG chart, downloads via src/lib/export.ts)
+└── ExportDialog (reads grid via getCellsData → client-side PNG chart, downloads via src/lib/image/export.ts)
 ```
 
 **`usePixiCanvas` hook** (`src/hooks/use-pixi-canvas.ts`) is a thin coordinator for the PixiJS lifecycle; the logic lives in pure, React-free library modules:
@@ -177,15 +177,15 @@ src/app/api/brands/[id]/route.ts       GET — one brand by uuid id + colors
 src/app/api/patterns/route.ts          GET (paginated list) + POST (publish)
 src/app/api/patterns/[id]/route.ts     GET (single pattern)
 src/app/api/transform/route.ts         POST (image → grid), `export const runtime = "nodejs"`
-src/lib/transform.ts                   transform(buffer, { width, palette }) — Node-only (imports sharp)
-src/lib/thumbnail.ts                   generateThumbnail(grid, palette) → base64 PNG, run on publish — Node-only (imports sharp)
-src/lib/export.ts                      exportGridPng — client-only canvas PNG chart download (used by ExportDialog; must not run on the server)
+src/lib/image/transform.ts             transform(buffer, { width, palette }) — Node-only (imports sharp)
+src/lib/image/thumbnail.ts             generateThumbnail(grid, palette) → base64 PNG, run on publish — Node-only (imports sharp)
+src/lib/image/export.ts                exportGridPng — client-only canvas PNG chart download (used by ExportDialog; must not run on the server)
 src/db/                                Drizzle schema + Neon Postgres Pool (@neondatabase/serverless)
 ```
 
 - **Tables**: `brands` (id uuid PK defaultRandom, code unique, name, sort_order) · `colors` (id uuid PK defaultRandom, fk_brand_id → brands.id ON DELETE cascade, code, name, hex, series, sort_order, unique (fk_brand_id, code)) · `patterns` (id uuid PK defaultRandom, fk_brand_id → brands.id, …). All three tables share the same audit shape: uuid `id` (default `gen_random_uuid()`) and `created_at`/`updated_at` (`timestamp with time zone`, default `now()`) — the DB generates them, so routes never set them. `brands.code` is the wire brand code; `name` is the display name. Brands are served `ORDER BY sort_order` (mard=0 first), colors `ORDER BY sort_order` (the array index grid cells index into).
 - **Grid contract**: conversion returns `number[][]`, `grid[row][col]` = 0 (empty) or 1‑based `palette.colors` index — the same value domain as the editor's sparse map, so `ImportDialog` feeds the result straight into `loadGrid`.
-- `lib/transform.ts` and `lib/thumbnail.ts` import sharp and must never be imported from a client component — only the API routes use them. The API routes query the DB directly; palette data is never bundled into the client.
+- `lib/image/transform.ts` and `lib/image/thumbnail.ts` import sharp and must never be imported from a client component — only the API routes use them. The API routes query the DB directly; palette data is never bundled into the client.
 - The editor posts multipart `file + width + brandCode` (brandCode from `usePalette()`) to `/api/transform`; publish posts `brandCode` to `/api/patterns`. Both routes query `brands` + `colors` (ORDER BY `sort_order`) directly to build the palette server-side and store the brand uuid in `patterns.fk_brand_id`. GET routes join `brands` to return the code as `brandCode` on the wire.
 - Migration order matters: `brands`/`colors` must be migrated before `patterns.fk_brand_id` (uuid FK) can be added, and the old `brand_id` text codes are backfilled to uuids in migration 0002. Palette data is loaded by the idempotent data migration 0006 (brands matched by `code`, colors by the unique `(fk_brand_id, code)` pair) — there is no `db:seed` script; `db:migrate` initializes schema **and** data. When changing the schema, run `db:generate` → `db:migrate`.
 - Database is PostgreSQL on Neon (not the earlier better‑sqlite3/SQLite setup) — don't reintroduce SQLite.

@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
-import { signIn } from "@/lib/auth-client"
+import { signIn } from "@/lib/auth/client"
 import { GithubIcon } from "@/components/icon/github"
 import { useI18n } from "@/i18n/client"
 

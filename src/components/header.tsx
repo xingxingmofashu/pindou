@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Logo } from "@/components/logo"
 import { UserMenu } from "@/components/auth/user-menu"
-import { auth } from "@/lib/auth"
+import { auth } from "@/lib/auth/server"
 import { localizedPath } from "@/i18n/config"
 import { getDictionary, getLocale } from "@/i18n/server"
 

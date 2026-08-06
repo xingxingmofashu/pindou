@@ -22,7 +22,7 @@ import { toast } from "@/components/ui/toast"
 import { PatternInsertSchema } from "@/db/schema"
 import { postJson } from "@/lib/utils"
 import { GithubIcon } from "@/components/icon/github"
-import { useSession } from "@/lib/auth-client"
+import { useSession } from "@/lib/auth/client"
 import { localizedPath } from "@/i18n/config"
 import { useI18n } from "@/i18n/client"
 

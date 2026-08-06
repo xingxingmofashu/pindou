@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { desc, eq, sql } from "drizzle-orm"
 import { db } from "@/db"
 import { brands, colors, patterns } from "@/db/schema"
-import { generateThumbnail } from "@/lib/thumbnail"
+import { generateThumbnail } from "@/lib/image/thumbnail"
 import { PatternInsertSchema, PaginationSchema } from "@/db/schema"
-import { auth } from "@/lib/auth"
+import { auth } from "@/lib/auth/server"
 import type { Palette } from "@/types"
 
 export async function GET(request: NextRequest) {
