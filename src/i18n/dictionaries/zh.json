@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "拼豆 Pindou — 拼豆图案编辑器",
-    "description": "创建、分享和发现拼豆图案。免费，无需注册。"
+    "description": "创建、分享和发现拼豆图案。使用 GitHub 登录即可发布自己的作品。"
   },
   "header": {
     "homeAria": "PINDOU 首页",
@@ -27,7 +27,7 @@
     "title": "Pindou",
     "tagline": "拼豆图案编辑器与社区",
     "heroTitle": "像素级完美的拼豆图案",
-    "heroDescription": "在无限画布上用真实拼豆色板绘制，将任意图片转换为网格，并导出可打印图纸。匿名发布——无需账号。",
+    "heroDescription": "在无限画布上用真实拼豆色板绘制，将任意图片转换为网格，并导出可打印图纸。使用 GitHub 登录即可发布分享。",
     "openEditor": "打开编辑器",
     "browsePatterns": "浏览图案",
     "features": {
@@ -44,8 +44,8 @@
         "description": "导出带网格线和色号的高分辨率 PNG。"
       },
       "share": {
-        "title": "匿名发布",
-        "description": "与社区分享你的图案。无需账号，无需注册。"
+        "title": "GitHub 登录发布",
+        "description": "使用 GitHub 登录，与社区分享你的图案。"
       }
     }
   },

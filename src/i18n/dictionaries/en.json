@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "拼豆 Pindou — Fuse Bead Pattern Editor",
-    "description": "Create, share, and discover Perler bead patterns. Free, no account needed."
+    "description": "Create, share, and discover Perler bead patterns. Sign in with GitHub to publish your own patterns."
   },
   "header": {
     "homeAria": "PINDOU home",
@@ -27,7 +27,7 @@
     "title": "Pindou",
     "tagline": "Fuse bead pattern editor & community",
     "heroTitle": "Fuse bead patterns, made pixel-perfect",
-    "heroDescription": "Draw on an infinite canvas with real bead palettes, convert any image into a grid, and export a printable chart. Publish anonymously — no account needed.",
+    "heroDescription": "Draw on an infinite canvas with real bead palettes, convert any image into a grid, and export a printable chart. Sign in with GitHub to publish and share.",
     "openEditor": "Open Editor",
     "browsePatterns": "Browse Patterns",
     "features": {
@@ -44,8 +44,8 @@
         "description": "Export a high-resolution PNG with grid lines and colour codes."
       },
       "share": {
-        "title": "Publish anonymously",
-        "description": "Share your pattern with the community. No account, no signup."
+        "title": "Publish with GitHub",
+        "description": "Sign in with GitHub and share your pattern with the community."
       }
     }
   },

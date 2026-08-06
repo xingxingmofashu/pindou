@@ -4,7 +4,7 @@ Guidance for agent sessions (e.g. Claude Code, OpenCode, Codex) working in this 
 
 ## Project
 
-拼豆 (Pindou) — fuse beads / Perler beads pattern editor and community. Anonymous publishing, no user accounts.
+拼豆 (Pindou) — fuse beads / Perler beads pattern editor and community. Browse anonymously; publishing requires a GitHub sign-in (Better Auth).
 
 ## Commands
 
