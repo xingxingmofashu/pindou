@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { ErrorSchema } from "@/db/schema"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -13,6 +14,37 @@ export async function fetcher<T = unknown>(url: string): Promise<T> {
   const res = await fetch(url)
   if (!res.ok) throw new Error(`Request failed (${res.status})`)
   return (await res.json()) as T
+}
+
+/**
+ * POST a JSON string or `FormData` body and parse the JSON response.
+ *
+ * Non-OK responses are unwrapped via the shared `{ error }` envelope and
+ * thrown as `Error`s, so callers catch a single exception type. FormData
+ * bodies are sent as-is (the browser sets `multipart/form-data`); string
+ * bodies are sent as `application/json`.
+ *
+ * @param url          - The endpoint to POST to.
+ * @param body         - A JSON string, or a FormData payload.
+ * @param fallbackText - Error message used when the response body isn't a
+ *                       valid `{ error }` envelope.
+ */
+export async function postJson<T>(
+  url: string,
+  body: string | FormData,
+  fallbackText = `Request failed`,
+): Promise<T> {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: typeof body === "string" ? { "Content-Type": "application/json" } : undefined,
+    body,
+  })
+  const data: unknown = await res.json()
+  if (!res.ok) {
+    const parsed = ErrorSchema.safeParse(data)
+    throw new Error(parsed.success ? parsed.data.error : fallbackText)
+  }
+  return data as T
 }
 
 export function hexToRgb(hex: string): number {

@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { signOut } from "@/lib/auth-client"
+import { signOut } from "@/lib/auth/client"
 import { useI18n } from "@/i18n/client"
 
 interface UserMenuProps {

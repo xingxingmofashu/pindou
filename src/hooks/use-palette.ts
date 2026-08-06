@@ -16,13 +16,6 @@ const usePaletteStore = create<PaletteStore>((set) => ({
     set((state) => (palette.code === state.palette?.code ? state : { palette })),
 }))
 
-export interface PaletteState {
-  /** The active palette; undefined until ColorPalette seeds one. */
-  palette: Palette | undefined
-  /** Switch the active palette (built from the `/api/brands` catalog). */
-  setActivePalette: (palette: Palette) => void
-}
-
 /**
  * React binding for the shared palette state.
  *
@@ -37,7 +30,7 @@ export interface PaletteState {
  *
  * @returns The active palette and a setter.
  */
-export function usePalette(): PaletteState {
+export function usePalette(): PaletteStore {
   const palette = usePaletteStore((s) => s.palette)
   const setActivePalette = usePaletteStore((s) => s.setActivePalette)
   return { palette, setActivePalette }

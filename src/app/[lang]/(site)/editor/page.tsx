@@ -2,11 +2,12 @@
 
 import { useCallback, useRef, useState } from "react"
 import { PixiCanvas, type PixiCanvasApi } from "@/components/pixi-canvas"
-import { ToolBar, type ToolKind } from "@/components/editor/toolbar"
+import { ToolBar } from "@/components/editor/toolbar"
 import { ColorPalette } from "@/components/editor/color-palette"
 import { PublishDialog } from "@/components/editor/publish-dialog"
 import { ImportDialog } from "@/components/editor/import-dialog"
 import { ExportDialog } from "@/components/editor/export-dialog"
+import type { ToolKind } from "@/lib/editor"
 
 const DEFAULT_ZOOM = 3
 
@@ -50,7 +51,6 @@ export default function EditorPage() {
           className="flex-1 min-w-0 border p-2"
           activeTool={activeTool}
           activeColorIndex={activeColorIndex}
-          onColorPick={setActiveColorIndex}
           label={toggleLabels}
           apiRef={canvasApiRef}
           onZoomChange={setZoom}

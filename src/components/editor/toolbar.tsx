@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { ZoomControls } from "@/components/editor/zoom-controls"
 import { useI18n } from "@/i18n/client"
+import type { ToolKind } from "@/lib/editor"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,12 +20,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
-/** Identifies one of the drawing tools. */
-export type ToolKind = "pen" | "eraser"
-
-const TOOLS: { value: ToolKind; labelKey: "pen" | "eraser"; icon: typeof Pencil; shortcut: string }[] = [
-  { value: "pen", labelKey: "pen", icon: Pencil, shortcut: "B" },
-  { value: "eraser", labelKey: "eraser", icon: Eraser, shortcut: "E" },
+const TOOLS: { value: ToolKind; icon: typeof Pencil; shortcut: string }[] = [
+  { value: "pen", icon: Pencil, shortcut: "B" },
+  { value: "eraser", icon: Eraser, shortcut: "E" },
 ]
 
 interface ToolBarProps {
@@ -80,8 +78,8 @@ export function ToolBar({
     <div className="flex items-center justify-between px-3 py-2 border">
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-0.5">
-          {TOOLS.map(({ value, labelKey, icon: Icon, shortcut }) => {
-            const label = t(`editor.${labelKey}`)
+          {TOOLS.map(({ value, icon: Icon, shortcut }) => {
+            const label = t(`editor.${value}`)
             return (
               <Tooltip key={value}>
                 <TooltipTrigger

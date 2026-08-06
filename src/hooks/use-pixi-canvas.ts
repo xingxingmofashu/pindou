@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, useCallback } from "react"
-import { Text } from "pixi.js"
+import { Text, type Graphics } from "pixi.js"
 import {
   EMPTY,
   CELL,
@@ -15,13 +15,13 @@ import {
   buildBeadEntries,
   getGridBounds,
   centerViewport,
+  type ToolKind,
   type ViewRect,
   type BeadEntry,
   type PixiContext,
   type GridRect,
 } from "@/lib/editor"
 import { hexToRgb } from "@/lib/utils"
-import type { ToolKind } from "@/components/editor/toolbar"
 import type { Palette } from "@/types"
 
 const MIN_ZOOM = 0.5
@@ -54,7 +54,7 @@ interface RuntimeOpts {
 }
 
 /** Paint a batch of grid-line rectangles onto a Graphics and fill them. */
-function paintGridLines(poly: import("pixi.js").Graphics, rects: GridRect[], color: number, alpha: number) {
+function paintGridLines(poly: Graphics, rects: GridRect[], color: number, alpha: number) {
   poly.clear()
   for (const r of rects) poly.rect(r.x, r.y, r.width, r.height)
   poly.fill({ color, alpha })
@@ -189,9 +189,9 @@ export function usePixiCanvas(
   )
 
   // Keep the latest pixiCtx, rebuild callback, and the runtime opts behind
-// refs so the long-lived event handlers read fresh values. Synced in a
-// no-deps effect (runs after every commit) — see lint rule react-hooks/refs.
-const rebuildRef = useRef(rebuild)
+  // refs so the long-lived event handlers read fresh values. Synced in a
+  // no-deps effect (runs after every commit) — see lint rule react-hooks/refs.
+  const rebuildRef = useRef(rebuild)
   useEffect(() => {
     pixiRef.current = pixiCtx
     rebuildRef.current = rebuild

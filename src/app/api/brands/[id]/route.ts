@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { eq } from "drizzle-orm"
 import { db } from "@/db"
 import { brands, colors } from "@/db/schema"
-import { Palette } from "@/types"
+import type { Palette } from "@/types"
 
 /**
  * GET /api/brands/[id] — one brand with its colors nested.

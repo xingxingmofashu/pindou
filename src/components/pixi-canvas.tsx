@@ -4,7 +4,7 @@ import { useEffect, useRef, useImperativeHandle, type RefObject } from "react"
 import { usePixiApp } from "@/hooks/use-pixi-app"
 import { usePixiCanvas } from "@/hooks/use-pixi-canvas"
 import { usePalette } from "@/hooks/use-palette"
-import type { ToolKind } from "@/components/editor/toolbar"
+import type { ToolKind } from "@/lib/editor"
 import type { Palette } from "@/types"
 
 export interface PixiCanvasApi {
@@ -22,12 +22,6 @@ export interface PixiCanvasApi {
 export interface PixiCanvasProps {
   activeTool?: ToolKind
   activeColorIndex?: number
-  /**
-   * Dead prop, kept only for type compatibility with the user-controlled
-   * EditorPage which still passes it (`onColorPick={handleColorPick}`). Nothing
-   * inside PixiCanvas fires it — the eyedropper/fill tools were removed.
-   */
-  onColorPick?: (colorIndex: number) => void
   label?: boolean
   readonly?: boolean
   palette?: Palette
@@ -37,17 +31,10 @@ export interface PixiCanvasProps {
   className?: string
 }
 
-interface InnerProps {
+/** Props for the resolved renderer: `PixiCanvasProps` minus presentation-only fields, plus a required canvas ref and resolved palette. */
+type InnerProps = Omit<PixiCanvasProps, "className" | "palette"> & {
   canvasRef: RefObject<HTMLCanvasElement | null>
   palette: Palette
-  activeTool?: ToolKind
-  activeColorIndex?: number
-  onColorPick?: (colorIndex: number) => void
-  label?: boolean
-  readonly?: boolean
-  grid?: number[][]
-  apiRef?: RefObject<PixiCanvasApi | null>
-  onZoomChange?: (zoom: number) => void
 }
 
 /**
