@@ -70,7 +70,15 @@
     "author": "作者",
     "anonymous": "匿名",
     "published": "发布时间",
-    "beadsUsed": "使用拼豆"
+    "beadsUsed": "使用拼豆",
+    "edit": "编辑",
+    "editTitle": "编辑图案",
+    "editHint": "在画布上编辑图案，然后保存。",
+    "backToPattern": "返回",
+    "save": "保存",
+    "saveSuccess": "图案已更新",
+    "saveFailedTitle": "保存失败",
+    "notOwnerDescription": "只有作者可以编辑这个图案。"
   },
   "patternCard": {
     "beads": "{count} 颗拼豆"
@@ -104,6 +112,7 @@
     "canvasEmpty": "画布为空",
     "canvasEmptyDescription": "请先绘制内容。",
     "invalidInput": "输入无效",
+    "titleRequired": "请输入标题。",
     "publishFailedTitle": "发布失败",
     "networkError": "网络错误，请重试。",
     "publishSuccess": "发布成功",

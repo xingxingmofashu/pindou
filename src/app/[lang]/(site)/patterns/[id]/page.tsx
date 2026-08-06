@@ -1,24 +1,32 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef, useState } from "react"
 import useSWR from "swr"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { PatternDetailPanel } from "@/components/pattern/detail/panel"
-import { PixiCanvas } from "@/components/pixi-canvas"
+import { PixiCanvas, type PixiCanvasApi } from "@/components/pixi-canvas"
+import { ZoomControls } from "@/components/editor/zoom-controls"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "@/components/ui/toast"
 import { fetcher, parseBeadStats, totalBeadCount } from "@/lib/utils"
+import { localizedPath } from "@/i18n/config"
 import { useI18n } from "@/i18n/client"
-import type { PaletteSelectType } from "@/db/schema"
+import type { PatternDetailType } from "@/db/schema"
 import type { Palette } from "@/types"
 import { format, formatDistanceToNow, parseISO, isValid } from "date-fns"
 import { zhCN } from "date-fns/locale"
 
+const DEFAULT_ZOOM = 3
+
 export default function PatternDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const router = useRouter()
   const { locale, t } = useI18n()
   const dateLocale = locale === "zh" ? zhCN : undefined
-  const { data, error, isValidating, mutate } = useSWR<PaletteSelectType>(
+  const canvasApiRef = useRef<PixiCanvasApi>(null)
+  const [zoom, setZoom] = useState(DEFAULT_ZOOM)
+  const { data, error, isValidating, mutate } = useSWR<PatternDetailType>(
     `/api/patterns/${id}`,
     fetcher,
   )
@@ -62,6 +70,10 @@ export default function PatternDetailPage() {
   if (!data || !brand) {
     return (
       <div className="flex h-full flex-col gap-2 overflow-hidden">
+        <div className="flex items-center justify-between px-3 py-2 border">
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-8 w-24" />
+        </div>
         <div className="flex-1 min-h-0 flex gap-2">
           <div className="w-56 shrink-0 flex flex-col gap-4 border p-3">
             <Skeleton className="h-5 w-3/4" />
@@ -101,9 +113,27 @@ export default function PatternDetailPage() {
 
   return (
     <div className="flex h-full flex-col gap-2 overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-3 py-2 border">
+        <h1 className="text-sm font-semibold truncate">{data.title}</h1>
+        <div className="flex shrink-0 items-center gap-2">
+          {data.canEdit && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => router.push(localizedPath(locale, `/patterns/${id}/edit`))}
+            >
+              {t("patternDetail.edit")}
+            </Button>
+          )}
+          <ZoomControls
+            zoom={zoom}
+            onSetZoom={(z) => canvasApiRef.current?.setZoom(z)}
+            onReset={() => canvasApiRef.current?.onReset()}
+          />
+        </div>
+      </div>
       <div className="flex-1 min-h-0 flex gap-2">
         <PatternDetailPanel
-          title={data.title}
           authorName={data.authorName ?? null}
           relativeDate={relativeDate}
           absoluteDate={absoluteDate}
@@ -118,6 +148,8 @@ export default function PatternDetailPage() {
           grid={grid}
           palette={brand}
           readonly
+          apiRef={canvasApiRef}
+          onZoomChange={setZoom}
           className="flex-1 min-w-0 border"
         />
       </div>
