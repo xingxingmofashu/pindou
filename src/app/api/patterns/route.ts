@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { desc, eq, sql } from "drizzle-orm"
 import { db } from "@/db"
 import { brands, colors, patterns } from "@/db/schema"
-import { generateThumbnail } from "@/lib/image/thumbnail"
+import { generate, upload } from "@/lib/image/thumbnail"
 import { PatternInsertSchema, PaginationSchema } from "@/db/schema"
 import { auth } from "@/lib/auth/server"
 import type { Palette } from "@/types"
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       authorName: patterns.authorName,
       brandCode: brands.code,
       beadStats: patterns.beadStats,
-      thumbPng: patterns.thumbPng,
+      thumbUrl: patterns.thumbUrl,
       createdAt: patterns.createdAt,
       total: sql<number>`count(*) over()`.as("total"),
     })
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       authorName: r.authorName,
       brandCode: r.brandCode,
       beadStats: r.beadStats,
-      thumbPng: r.thumbPng,
+      thumbUrl: r.thumbUrl,
       createdAt: r.createdAt,
     })),
     pagination: { total, page, pageSize },
@@ -79,18 +79,31 @@ export async function POST(request: NextRequest) {
     .orderBy(colors.sortOrder)
 
   const palette: Palette = { ...brand, colors: colorRows }
-  const thumbPng = await generateThumbnail(gridData, palette)
+
+  const thumbPng = await generate(gridData, palette)
+  if (!thumbPng) {
+    return NextResponse.json({ error: "Empty grid" }, { status: 400 })
+  }
+
+  const patternId = crypto.randomUUID()
+  let thumbUrl: string
+  try {
+    thumbUrl = await upload(thumbPng, patternId)
+  } catch {
+    return NextResponse.json({ error: "Failed to upload thumbnail" }, { status: 503 })
+  }
 
   const [inserted] = await db
     .insert(patterns)
     .values({
+      id: patternId,
       title,
       description,
       authorName: session.user.name,
       fkUserId: session.user.id,
       gridData: JSON.stringify(gridData),
       beadStats,
-      thumbPng,
+      thumbUrl,
       fkBrandId: brand.id,
     })
     .returning({ id: patterns.id })

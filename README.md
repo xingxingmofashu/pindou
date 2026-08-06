@@ -80,11 +80,10 @@ src/
     use-pixi-app.ts     # PixiJS Application lifecycle (WebGL context management)
     use-pixi-canvas.ts  # Zoom/pan/draw pointer events, fixed-resolution rebuild
   lib/
-    auth.ts             # Better Auth server configuration (GitHub OAuth)
-    auth-client.ts      # Better Auth client
+    auth/               # Better Auth: server.ts (config) + client.ts
     editor/index.ts     # Pure functions: grid math, LOD, bounds, serialization
-    transform.ts        # Image → grid conversion (Node-only)
-    thumbnail.ts        # Server-side PNG thumbnail generation (sharp)
+    image/              # Node-only: transform.ts, thumbnail.ts; client-only: export.ts
+    r2.ts               # Cloudflare R2 thumbnail upload (Node-only)
     utils.ts            # Shared helpers
   db/                   # Drizzle schema (auth + app tables) + Neon connection
 ```

@@ -80,11 +80,10 @@ src/
     use-pixi-app.ts     # PixiJS Application 生命周期（WebGL 上下文管理）
     use-pixi-canvas.ts  # 缩放/平移/绘制指针事件、固定分辨率重建
   lib/
-    auth.ts             # Better Auth 服务端配置（GitHub OAuth）
-    auth-client.ts      # Better Auth 客户端
+    auth/               # Better Auth：server.ts（配置）+ client.ts
     editor/index.ts     # 纯函数：网格计算、LOD、边界、序列化
-    transform.ts        # 图片 → 图纸转换（仅 Node）
-    thumbnail.ts        # 服务端 PNG 缩略图生成（sharp）
+    image/              # 仅 Node：transform.ts、thumbnail.ts；仅客户端：export.ts
+    r2.ts               # Cloudflare R2 缩略图上传（仅 Node）
     utils.ts            # 通用工具函数
   db/                   # Drizzle schema（认证 + 应用表）+ Neon 连接
 ```

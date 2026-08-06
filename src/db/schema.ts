@@ -16,8 +16,8 @@ export const patterns = pgTable("patterns", {
   /** Owning Better Auth user (set server-side on publish); NULL if the account is deleted. */
   fkUserId: text("fk_user_id").references(() => users.id, { onDelete: "set null" }),
   beadStats: text("bead_stats").notNull().default("{}"),
-  /** PNG thumbnail (base64) generated server-side on publish. */
-  thumbPng: text("thumb_png").notNull().default(""),
+  /** Public thumbnail URL (Cloudflare R2), generated server-side on publish. */
+  thumbUrl: text("thumb_url").notNull().default(""),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 })
@@ -106,7 +106,7 @@ export const PatternSelectSchema = createSelectSchema(patterns, {
 
 /**
  * Client-supplied fields for POST /api/patterns. `beadStats` is computed
- * client-side at publish time; server-generated fields (thumbPng, timestamps)
+  * client-side at publish time; server-generated fields (thumbUrl, timestamps)
  * are added on the route.
  */
 export const PatternInsertSchema = createInsertSchema(patterns, {
@@ -118,7 +118,7 @@ export const PatternInsertSchema = createInsertSchema(patterns, {
     fkBrandId: true,
     fkUserId: true,
     authorName: true,
-    thumbPng: true,
+    thumbUrl: true,
     createdAt: true,
     updatedAt: true,
   })
