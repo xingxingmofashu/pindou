@@ -1,8 +1,6 @@
-/**
- * Pixel font for A–Z (5×7 grid). `true` = filled cell.
- */
 import { formatHex, interpolate } from "culori"
 
+/** Pixel font for A–Z (5×7 grid). `true` = filled cell. */
 const GLYPHS: Record<string, boolean[][]> = {
   P: [
     [true, true, true, false],

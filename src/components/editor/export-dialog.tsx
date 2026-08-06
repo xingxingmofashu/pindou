@@ -80,15 +80,11 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
     onClose()
   }, [data, brand, scale, labelsOn, onClose, t])
 
-  const handleClose = useCallback(() => {
-    onClose()
-  }, [onClose])
-
   return (
     <Dialog
       open={open}
       onOpenChange={(isOpen) => {
-        if (!isOpen) handleClose()
+        if (!isOpen) onClose()
       }}
     >
       <DialogContent>
@@ -138,7 +134,7 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>
+          <Button variant="outline" onClick={onClose}>
             {t("common.cancel")}
           </Button>
           <Button onClick={handleExport} disabled={rows === 0}>

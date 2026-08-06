@@ -74,6 +74,22 @@ export const BrandSelectSchema = createSelectSchema(brands)
 /** A `colors` row as served over JSON. */
 export const ColorSelectSchema = createSelectSchema(colors)
 
+/**
+ * Shared `gridData` wire schema (used by both the select and insert schemas):
+ * a rectangular `number[][]` whose rows/columns stay within
+ * {@link MAX_GRID_DIMENSION}, 0 = empty.
+ */
+const gridDataSchema = z
+  .array(z.array(z.number().int().min(0)))
+  .min(1, `Grid rows must be 1–${MAX_GRID_DIMENSION}`)
+  .max(MAX_GRID_DIMENSION, `Grid rows must be 1–${MAX_GRID_DIMENSION}`)
+  .refine(
+    (rows) => rows[0].length > 0 && rows[0].length <= MAX_GRID_DIMENSION,
+    { message: `Grid columns must be 1–${MAX_GRID_DIMENSION}` },
+  )
+  .refine((rows) => rows.every((row) => row.length === rows[0].length), {
+    message: "Grid must be rectangular",
+  })
 
 /**
  * Wire shape of a published pattern (GET /api/patterns/[id]): the `patterns`
@@ -81,17 +97,7 @@ export const ColorSelectSchema = createSelectSchema(colors)
  * brand FK surfaced as `brandId` alongside the wire `brandCode`.
  */
 export const PatternSelectSchema = createSelectSchema(patterns, {
-  gridData: z
-    .array(z.array(z.number().int().min(0)))
-    .min(1, `Grid rows must be 1–${MAX_GRID_DIMENSION}`)
-    .max(MAX_GRID_DIMENSION, `Grid rows must be 1–${MAX_GRID_DIMENSION}`)
-    .refine(
-      (rows) => rows[0].length > 0 && rows[0].length <= MAX_GRID_DIMENSION,
-      { message: `Grid columns must be 1–${MAX_GRID_DIMENSION}` },
-    )
-    .refine((rows) => rows.every((row) => row.length === rows[0].length), {
-      message: "Grid must be rectangular",
-    }),
+  gridData: gridDataSchema,
   createdAt: z.string(),
   updatedAt: z.string(),
 })
@@ -104,17 +110,7 @@ export const PatternSelectSchema = createSelectSchema(patterns, {
  * are added on the route.
  */
 export const PatternInsertSchema = createInsertSchema(patterns, {
-  gridData: z
-    .array(z.array(z.number().int().min(0)))
-    .min(1, `Grid rows must be 1–${MAX_GRID_DIMENSION}`)
-    .max(MAX_GRID_DIMENSION, `Grid rows must be 1–${MAX_GRID_DIMENSION}`)
-    .refine(
-      (rows) => rows[0].length > 0 && rows[0].length <= MAX_GRID_DIMENSION,
-      { message: `Grid columns must be 1–${MAX_GRID_DIMENSION}` },
-    )
-    .refine((rows) => rows.every((row) => row.length === rows[0].length), {
-      message: "Grid must be rectangular",
-    }),
+  gridData: gridDataSchema,
   beadStats: z.string(),
 })
   .omit({
@@ -140,8 +136,6 @@ export const PatternsResponseSchema = z.object({
   patterns: z.array(PatternSelectSchema),
   pagination: PaginationSchema,
 })
-
-
 
 /** Every API error response shares this `{ error }` envelope. */
 export const ErrorSchema = z.object({ error: z.string() })

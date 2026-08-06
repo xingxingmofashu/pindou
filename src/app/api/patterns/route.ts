@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     patterns: rows.map((r) => ({
       id: r.id,
       title: r.title,
-      authorName: r.authorName ?? undefined,
+      authorName: r.authorName,
       brandCode: r.brandCode,
       beadStats: r.beadStats,
       thumbPng: r.thumbPng,

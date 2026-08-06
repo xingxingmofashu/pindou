@@ -19,7 +19,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Spinner } from "@/components/ui/spinner"
 import { toast } from "@/components/ui/toast"
-import { PatternInsertSchema, ErrorSchema } from "@/db/schema"
+import { PatternInsertSchema } from "@/db/schema"
+import { postJson } from "@/lib/utils"
 import { GithubIcon } from "@/components/icon/github"
 import { useSession } from "@/lib/auth-client"
 import { localizedPath } from "@/i18n/config"
@@ -41,19 +42,8 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
   const { data: session, isPending } = useSession()
   const { trigger, isMutating } = useSWRMutation(
     "/api/patterns",
-    async (url, { arg }: { arg: string }) => {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: arg,
-      })
-      const result = await res.json()
-      if (!res.ok) {
-        const parsed = ErrorSchema.safeParse(result)
-        throw new Error(parsed.success ? parsed.data.error : t("editor.publishFailedTitle"))
-      }
-      return result as { id: string }
-    },
+    (url, { arg }: { arg: string }) =>
+      postJson<{ id: string }>(url, arg, t("editor.publishFailedTitle")),
   )
 
   const handleSubmit = useCallback(async () => {

@@ -79,10 +79,6 @@ export function usePixiApp(
       world.addChild(labels)
       app.stage.addChild(world)
 
-      // Labels live inside `world` so they pan/zoom with the grid
-      // automatically; the canvas layer no longer needs to reposition them
-      // during panning.
-
       setCtx({ app, world, beadsGfx, gridGfx, labels })
     })
 

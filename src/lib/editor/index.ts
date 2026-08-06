@@ -4,6 +4,9 @@ import type { Palette } from "@/types"
 /** Sentinel for an unpainted cell. */
 export const EMPTY = 0
 
+/** Identifies one of the drawing tools. */
+export type ToolKind = "pen" | "eraser"
+
 /** Grid dimensions are limited only to prevent memory abuse. */
 export const MAX_GRID_DIMENSION = 4096
 
@@ -136,33 +139,26 @@ export function paintBlock(
 /**
  * Convert the sparse cell map into a compact 2D array suitable for storage.
  *
- * Iterates the painted cells once, tracking the bounding box inline, and
- * produces a `number[][]` where 0 = empty.
+ * Iterates the painted cells once to fill the grid, reusing
+ * {@link getGridBounds} for the bounding box, and produces a `number[][]`
+ * where 0 = empty.
  *
  * @param cells - The sparse cell map.
  * @returns A rectangular `number[][]`, or `null` if the canvas is empty or
  *          the bounding box exceeds {@link MAX_GRID_DIMENSION} in either axis.
  */
 export function serializeGrid(cells: Map<string, number>): number[][] | null {
-  if (cells.size === 0) return null
+  const bounds = getGridBounds(cells)
+  if (!bounds) return null
 
-  let minC = Infinity, maxC = -Infinity, minR = Infinity, maxR = -Infinity
-  for (const key of cells.keys()) {
-    const [c, r] = parseCellKey(key)
-    if (c < minC) minC = c
-    if (c > maxC) maxC = c
-    if (r < minR) minR = r
-    if (r > maxR) maxR = r
-  }
-
-  const w = maxC - minC + 1
-  const h = maxR - minR + 1
+  const w = bounds.maxC - bounds.minC + 1
+  const h = bounds.maxR - bounds.minR + 1
   if (w > MAX_GRID_DIMENSION || h > MAX_GRID_DIMENSION) return null
 
   const grid: number[][] = Array.from({ length: h }, () => Array(w).fill(EMPTY))
   for (const [key, color] of cells) {
     const [c, r] = parseCellKey(key)
-    grid[r - minR][c - minC] = color
+    grid[r - bounds.minR][c - bounds.minC] = color
   }
 
   return grid

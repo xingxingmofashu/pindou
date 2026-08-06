@@ -128,7 +128,7 @@ Both tools are implemented in the pointer interaction effect:
 | **Pen** | Paints the active colour into the visual-cell block via `paintBlock()`. Drag uses Bresenham interpolation (`walkLine`) between visual-cell coords (stored in `drawRef` as `vc/vr`, rederived from `toPaintTarget` each move at the current LOD — survives zoom changes mid-stroke). |
 | **Eraser** | Same as pen but writes `EMPTY` (deletes from the sparse map). |
 
-The fill and eyedropper tools were removed. `onColorPick` remains as a dead prop on `PixiCanvas` only because the user-controlled EditorPage still passes it (`onColorPick={handleColorPick}`) — the prop is silently dropped and nothing fires it.
+The fill and eyedropper tools were removed; only pen and eraser remain (`ToolKind` lives in `src/lib/editor`).
 
 ### Zoom / pan
 

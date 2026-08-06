@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
 import { toast } from "@/components/ui/toast"
 import { MAX_GRID_DIMENSION } from "@/lib/editor"
-import { ErrorSchema } from "@/db/schema"
+import { postJson } from "@/lib/utils"
 import { usePalette } from "@/hooks/use-palette"
 import { useI18n } from "@/i18n/client"
 import type { TransformResult } from "@/lib/transform"
@@ -122,15 +122,8 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
   const reqId = useRef(0)
   const { trigger, isMutating } = useSWRMutation(
     "/api/transform",
-    async (url, { arg }: { arg: FormData }) => {
-      const res = await fetch(url, { method: "POST", body: arg })
-      const data: unknown = await res.json()
-      if (!res.ok) {
-        const parsed = ErrorSchema.safeParse(data)
-        throw new Error(parsed.success ? parsed.data.error : t("editor.conversionFailed"))
-      }
-      return data as TransformResult
-    },
+    (url, { arg }: { arg: FormData }) =>
+      postJson<TransformResult>(url, arg, t("editor.conversionFailed")),
   )
 
   // Convert when a file is chosen or the width changes (debounced). Each
