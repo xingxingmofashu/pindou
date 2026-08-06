@@ -137,10 +137,25 @@ export const PatternsResponseSchema = z.object({
   pagination: PaginationSchema,
 })
 
+/**
+ * Wire shape of GET /api/patterns/[id]: {@link PatternSelectSchema} plus a
+ * server-computed `canEdit` flag (whether the requester owns the pattern).
+ */
+export const PatternDetailSchema = PatternSelectSchema.extend({
+  canEdit: z.boolean(),
+})
+
+/**
+ * Client-supplied fields for PATCH /api/patterns/[id]. Same shape as the
+ * publish body minus the brand code — the pattern's brand is preserved.
+ */
+export const PatternUpdateSchema = PatternInsertSchema.omit({ brandCode: true })
+
 /** Every API error response shares this `{ error }` envelope. */
 export const ErrorSchema = z.object({ error: z.string() })
 
 export type PaletteSelectType = z.infer<typeof PatternSelectSchema>
+export type PatternDetailType = z.infer<typeof PatternDetailSchema>
 export type PatternResponseType = z.infer<typeof PatternsResponseSchema>
 
 export * from "./auth-schema"

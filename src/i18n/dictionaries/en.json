@@ -70,7 +70,15 @@
     "author": "Author",
     "anonymous": "Anonymous",
     "published": "Published",
-    "beadsUsed": "Beads Used"
+    "beadsUsed": "Beads Used",
+    "edit": "Edit",
+    "editTitle": "Edit Pattern",
+    "editHint": "Edit the pattern on the canvas, then save.",
+    "backToPattern": "Back",
+    "save": "Save",
+    "saveSuccess": "Pattern updated",
+    "saveFailedTitle": "Failed to save",
+    "notOwnerDescription": "Only the author can edit this pattern."
   },
   "patternCard": {
     "beads": "{count} beads"
@@ -104,6 +112,7 @@
     "canvasEmpty": "Canvas is empty",
     "canvasEmptyDescription": "Draw something first.",
     "invalidInput": "Invalid input",
+    "titleRequired": "Please enter a title.",
     "publishFailedTitle": "Failed to publish",
     "networkError": "Network error. Please try again.",
     "publishSuccess": "Published",

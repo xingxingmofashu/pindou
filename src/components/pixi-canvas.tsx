@@ -86,22 +86,18 @@ function PixiCanvasInner({
 export function PixiCanvas({ className, palette, readonly, ...props }: PixiCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  // When a palette is pinned (read-only detail page), render a bare branch
-  // that never subscribes to the active-palette store. Otherwise, resolve the
-  // store eagerly so the editor re-renders on brand switch. Two sibling
-  // subtrees keep the hook count stable per branch (rules of hooks).
+  // When a palette is pinned (read-only detail page, or the pattern editor),
+  // render a bare branch that never subscribes to the active-palette store.
+  // Otherwise, resolve the store eagerly so the editor re-renders on brand
+  // switch. Two sibling subtrees keep the hook count stable per branch (rules
+  // of hooks).
   return (
     <div className={className}>
       <canvas ref={canvasRef} className="block h-full w-full" />
-      {readonly && palette ? (
-        <PixiCanvasInner canvasRef={canvasRef} palette={palette} readonly {...props} />
+      {palette ? (
+        <PixiCanvasInner canvasRef={canvasRef} palette={palette} readonly={readonly} {...props} />
       ) : (
-        <EditablePaletteBridge
-          canvasRef={canvasRef}
-          pinnedPalette={palette}
-          readonly={readonly ?? false}
-          {...props}
-        />
+        <EditablePaletteBridge canvasRef={canvasRef} readonly={readonly ?? false} {...props} />
       )}
     </div>
   )
@@ -110,14 +106,11 @@ export function PixiCanvas({ className, palette, readonly, ...props }: PixiCanva
 /** For the editor (no pinned palette): subscribe to the active-brand store. */
 function EditablePaletteBridge({
   canvasRef,
-  pinnedPalette,
   ...props
 }: {
   canvasRef: RefObject<HTMLCanvasElement | null>
-  pinnedPalette?: Palette
 } & Omit<InnerProps, "canvasRef" | "palette">) {
-  const { palette: activePalette } = usePalette()
-  const palette = pinnedPalette ?? activePalette
+  const { palette } = usePalette()
   if (!palette) return null
   return <PixiCanvasInner canvasRef={canvasRef} palette={palette} {...props} />
 }

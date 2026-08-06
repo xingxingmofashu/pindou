@@ -3,7 +3,6 @@
 import { useI18n } from "@/i18n/client"
 
 interface PatternDetailPanelProps {
-  title: string
   authorName: string | null
   relativeDate: string
   absoluteDate: string
@@ -16,7 +15,6 @@ interface PatternDetailPanelProps {
 }
 
 export function PatternDetailPanel({
-  title,
   authorName,
   relativeDate,
   absoluteDate,
@@ -31,7 +29,6 @@ export function PatternDetailPanel({
 
   return (
     <div className="w-56 shrink-0 overflow-auto flex flex-col gap-4 border p-3">
-      <h1 className="text-base font-semibold tracking-tight leading-snug break-words">{title}</h1>
       <div className="space-y-1.5">
         <div>
           <span className="text-xs text-muted-foreground">{t("patternDetail.grid")}</span>

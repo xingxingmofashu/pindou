@@ -92,11 +92,13 @@ export class Thumbnail {
   /**
    * Upload a thumbnail PNG to Cloudflare R2 and return its public URL.
    *
-   * The object is stored at `thumbnails/{patternId}.png`.
+   * The object key is fixed at `thumbnails/{patternId}.png`, so re-rendering
+   * overwrites it in place. A `?v=` query param busts browser/CDN caches of
+   * the immutable thumbnail whenever the pattern is re-rendered.
    *
    * @param png       - The encoded PNG bytes to upload.
    * @param patternId - The pattern's uuid, used as the object key.
-   * @returns The public URL: `{NEXT_R2_PUBLIC_URL}/thumbnails/{patternId}.png`.
+   * @returns The public URL: `{NEXT_R2_PUBLIC_URL}/thumbnails/{patternId}.png?v={timestamp}`.
    * @throws If the public URL is not configured (caught by the caller as a
    *         failed publish).
    */
@@ -105,15 +107,21 @@ export class Thumbnail {
     if (!publicUrl) throw new Error("NEXT_R2_PUBLIC_URL is not configured")
     const key = `${KEY_PREFIX}/${patternId}.png`
     await this.r2.upload(key, png, "image/png")
-    return `${publicUrl}/${key}`
+    return `${publicUrl}/${key}?v=${Date.now()}`
   }
 
   /**
-   * Delete a thumbnail object (rollback when a publish fails after upload).
+   * Delete a previously uploaded thumbnail object by its public URL.
    *
-   * @param patternId - The pattern's uuid (same object key used by {@link upload}).
+   * Used to roll back an upload whose DB write failed. Fails silently if the
+   * URL isn't one of ours (e.g. not configured).
+   *
+   * @param url - The public URL returned by {@link upload}.
    */
-  async delete(patternId: string): Promise<void> {
-    await this.r2.delete(`${KEY_PREFIX}/${patternId}.png`)
+  async delete(url: string): Promise<void> {
+    const prefix = `${process.env.NEXT_R2_PUBLIC_URL}/`
+    if (url.startsWith(prefix)) {
+      await this.r2.delete(url.slice(prefix.length).split("?")[0])
+    }
   }
 }

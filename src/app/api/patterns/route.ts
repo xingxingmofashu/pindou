@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ id: inserted.id }, { status: 201 })
   } catch {
     // Roll back the uploaded thumbnail so a failed publish leaves no orphan.
-    await thumbnail.delete(patternId).catch(() => {})
+    await thumbnail.delete(thumbUrl).catch(() => {})
     return NextResponse.json({ error: "Failed to publish pattern" }, { status: 500 })
   }
 }
