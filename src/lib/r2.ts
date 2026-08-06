@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3"
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3"
 
 /**
  * Minimal Cloudflare R2 client over the S3-compatible API.
@@ -35,6 +35,20 @@ export class R2 {
         Key: key,
         Body: body,
         ContentType: contentType,
+      }),
+    )
+  }
+
+  /**
+   * Delete an object from the configured bucket.
+   *
+   * @param key - The object key (e.g. `thumbnails/{id}.png`).
+   */
+  async delete(key: string): Promise<void> {
+    await this.client.send(
+      new DeleteObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME,
+        Key: key,
       }),
     )
   }

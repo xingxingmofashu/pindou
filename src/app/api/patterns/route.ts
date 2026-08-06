@@ -96,20 +96,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Failed to upload thumbnail" }, { status: 503 })
   }
 
-  const [inserted] = await db
-    .insert(patterns)
-    .values({
-      id: patternId,
-      title,
-      description,
-      authorName: session.user.name,
-      fkUserId: session.user.id,
-      gridData: JSON.stringify(gridData),
-      beadStats,
-      thumbUrl,
-      fkBrandId: brand.id,
-    })
-    .returning({ id: patterns.id })
-
-  return NextResponse.json({ id: inserted.id }, { status: 201 })
+  try {
+    const [inserted] = await db
+      .insert(patterns)
+      .values({
+        id: patternId,
+        title,
+        description,
+        authorName: session.user.name,
+        fkUserId: session.user.id,
+        gridData: JSON.stringify(gridData),
+        beadStats,
+        thumbUrl,
+        fkBrandId: brand.id,
+      })
+      .returning({ id: patterns.id })
+    return NextResponse.json({ id: inserted.id }, { status: 201 })
+  } catch {
+    // Roll back the uploaded thumbnail so a failed publish leaves no orphan.
+    await thumbnail.delete(patternId).catch(() => {})
+    return NextResponse.json({ error: "Failed to publish pattern" }, { status: 500 })
+  }
 }

@@ -97,10 +97,23 @@ export class Thumbnail {
    * @param png       - The encoded PNG bytes to upload.
    * @param patternId - The pattern's uuid, used as the object key.
    * @returns The public URL: `{NEXT_R2_PUBLIC_URL}/thumbnails/{patternId}.png`.
+   * @throws If the public URL is not configured (caught by the caller as a
+   *         failed publish).
    */
   async upload(png: Buffer, patternId: string): Promise<string> {
+    const publicUrl = process.env.NEXT_R2_PUBLIC_URL
+    if (!publicUrl) throw new Error("NEXT_R2_PUBLIC_URL is not configured")
     const key = `${KEY_PREFIX}/${patternId}.png`
     await this.r2.upload(key, png, "image/png")
-    return `${process.env.NEXT_R2_PUBLIC_URL}/${key}`
+    return `${publicUrl}/${key}`
+  }
+
+  /**
+   * Delete a thumbnail object (rollback when a publish fails after upload).
+   *
+   * @param patternId - The pattern's uuid (same object key used by {@link upload}).
+   */
+  async delete(patternId: string): Promise<void> {
+    await this.r2.delete(`${KEY_PREFIX}/${patternId}.png`)
   }
 }
