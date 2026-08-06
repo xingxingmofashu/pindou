@@ -14,7 +14,7 @@ export async function Header() {
   return (
     <header className="flex items-center justify-between px-3 py-2 border">
       <div className="flex items-center gap-4">
-        <Link href="/" className="flex items-center" aria-label="PINDOW home">
+        <Link href="/" className="flex items-center" aria-label="PINDOU home">
           <Logo className="h-5 w-24" />
         </Link>
         <Separator orientation="vertical" className="mx-1 h-8" />

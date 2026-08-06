@@ -49,18 +49,18 @@ const GLYPHS: Record<string, boolean[][]> = {
     [true, false, false, false, true],
     [false, true, true, true, false],
   ],
-  W: [
+  U: [
     [true, false, false, false, true],
     [true, false, false, false, true],
     [true, false, false, false, true],
     [true, false, false, false, true],
-    [true, false, true, false, true],
-    [true, true, false, true, true],
     [true, false, false, false, true],
+    [true, false, false, false, true],
+    [false, true, true, true, false],
   ],
 }
 
-const CHAR_W = { P: 4, I: 3, N: 4, D: 4, O: 5, W: 5 } as Record<string, number>
+const CHAR_W = { P: 4, I: 3, N: 4, D: 4, O: 5, U: 5 } as Record<string, number>
 const CELL = 10
 const GAP = 1
 
@@ -70,7 +70,7 @@ function lerpColor(a: string, b: string, t: number): string {
 }
 
 export function Logo({ className }: { className?: string }) {
-  const word = ["P", "I", "N", "D", "O", "W"]
+  const word = ["P", "I", "N", "D", "O", "U"]
 
   // build a flat list of all columns across all letters to compute the gradient
   let totalCols = 0
@@ -86,7 +86,7 @@ export function Logo({ className }: { className?: string }) {
       viewBox={`0 0 ${totalCols * CELL} ${7 * CELL}`}
       preserveAspectRatio="none"
       className={className}
-      aria-label="PINDOW"
+      aria-label="PINDOU"
       role="img"
     >
       {word.map((ch, li) => {
