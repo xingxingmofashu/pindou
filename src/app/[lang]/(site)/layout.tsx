@@ -1,11 +1,7 @@
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Header } from "@/components/layout/header";
 
-export default function SiteLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function SiteLayout({ children }: LayoutProps<"/[lang]">) {
   return (
     <TooltipProvider delay={300}>
       <div className="h-full p-2">
