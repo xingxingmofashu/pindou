@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react"
 import useSWR from "swr"
-import { useParams, useRouter } from "next/navigation"
+import { useParams } from "next/navigation"
+import Link from "next/link"
 import { PatternDetailPanel } from "@/components/pattern/detail/panel"
 import { PixiCanvas, type PixiCanvasApi } from "@/components/editor/pixi-canvas"
 import { ZoomControls } from "@/components/editor/zoom-controls"
@@ -21,7 +22,6 @@ const DEFAULT_ZOOM = 3
 
 export default function PatternDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const router = useRouter()
   const { locale, t } = useI18n()
   const dateLocale = locale === "zh" ? zhCN : undefined
   const canvasApiRef = useRef<PixiCanvasApi>(null)
@@ -120,7 +120,8 @@ export default function PatternDetailPage() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => router.push(localizedPath(locale, `/patterns/${id}/edit`))}
+              nativeButton={false}
+              render={<Link href={localizedPath(locale, `/patterns/${id}/edit`)} />}
             >
               {t("patternDetail.edit")}
             </Button>

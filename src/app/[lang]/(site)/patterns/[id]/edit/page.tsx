@@ -138,7 +138,12 @@ function EditForm({
   return (
     <div className="flex h-full flex-col gap-2 overflow-hidden">
       <div className="flex items-center justify-between gap-2 px-3 py-2 border">
-        <Button variant="outline" size="sm" onClick={backToPattern}>
+        <Button
+          variant="outline"
+          size="sm"
+          nativeButton={false}
+          render={<Link href={localizedPath(locale, `/patterns/${id}`)} />}
+        >
           <ArrowLeft data-icon="inline-start" />
           {t("patternDetail.backToPattern")}
         </Button>

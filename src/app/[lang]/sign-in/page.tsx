@@ -11,15 +11,14 @@ function sanitizeCallback(value: string | undefined, locale: string): string {
   return `/${locale}`
 }
 
-export default async function SignInPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ callback?: string }>
-}) {
+export default async function SignInPage(props: PageProps<"/[lang]/sign-in">) {
   const session = await auth.api.getSession({ headers: await headers() })
   const locale = await getLocale()
-  const { callback } = await searchParams
-  const callbackURL = sanitizeCallback(callback, locale)
+  const { callback } = await props.searchParams
+  const callbackURL = sanitizeCallback(
+    typeof callback === "string" ? callback : undefined,
+    locale,
+  )
 
   if (session) redirect(callbackURL)
 
