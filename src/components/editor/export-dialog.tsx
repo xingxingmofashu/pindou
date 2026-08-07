@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useMemo, useState } from "react"
-import useSWR from "swr"
 import {
   Dialog,
   DialogContent,
@@ -15,10 +14,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "@/components/ui/toast"
-import { fetcher } from "@/lib/utils"
+import { usePalette } from "@/hooks/use-palette"
 import { useI18n } from "@/i18n/client"
 import { exportGridPng, exportGridSize, DEFAULT_EXPORT_SCALE } from "@/lib/image/export"
-import type { Palette } from "@/types"
 
 interface ExportDialogProps {
   open: boolean
@@ -44,12 +42,11 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
   // Snapshot the grid once when the dialog opens — it can't change behind the
   // modal, so re-serializing on every scale keystroke would be wasted work.
   const data = useMemo(() => (open ? getCellsData() : null), [open, getCellsData])
-  // Prefetch the pattern's brand palette as soon as the dialog opens so the
-  // Export click is instant; the key stays null while closed, so no request.
-  const { data: brand } = useSWR<Palette>(
-    data ? `/api/brands/${data.brandId}` : null,
-    fetcher,
-  )
+  // Use the same palette instance the canvas draws with (the active-brand
+  // store), so grid indices — 1-based positions in that palette — render
+  // identically on export. Fetching a fresh brand here could serve a cached
+  // palette whose colour order differs from the canvas's, shifting every bead.
+  const { palette } = usePalette()
   const grid = data?.grid ?? null
   const rows = grid?.length ?? 0
   const cols = grid?.[0]?.length ?? 0
@@ -65,7 +62,7 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
       })
       return
     }
-    if (!brand) {
+    if (!palette) {
       toast.add({
         type: "error",
         title: t("editor.unknownPalette"),
@@ -75,7 +72,7 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
     }
     exportGridPng(
       data.grid,
-      brand,
+      palette,
       scale,
       {
         showLabels: labelsOn,
@@ -84,7 +81,7 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
       },
     )
     onClose()
-  }, [data, brand, scale, labelsOn, beadStatsOn, onClose, t])
+  }, [data, palette, scale, labelsOn, beadStatsOn, onClose, t])
 
   return (
     <Dialog

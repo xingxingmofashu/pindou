@@ -55,7 +55,11 @@ export async function GET(
     },
     {
       headers: {
-        "Cache-Control": "public, max-age=604800, s-maxage=604800, immutable",
+        // Mirrors the catalog route: the palette only changes via db:migrate,
+        // but it *does* change (e.g. a reorder), so an immutable year-long
+        // cache would pin old data in browsers after a migrate. Let CDNs and
+        // browsers revalidate hourly and fall back to stale while they do.
+        "Cache-Control": "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400",
       },
     },
   )
