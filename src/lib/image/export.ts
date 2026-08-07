@@ -87,14 +87,14 @@ function computeLayout(cols: number, rows: number, scale: number): ExportLayout 
 /**
  * Full exported image size for a grid and scale, plus the effective scale.
  *
- * @param grid  - The serialized grid (`grid[row][col]`, 0 = empty).
+ * @param grid  - The serialized code grid (`grid[row][col]`, "" = empty).
  * @param scale - Pixels per bead (clamped so the full canvas fits the limit).
  * @param opts  - Optional export options (a bead-usage list grows the height).
  * @returns The canvas width/height and the effective (clamped) pixels-per-bead,
  *          or null for an empty grid.
  */
 export function exportGridSize(
-  grid: number[][],
+  grid: string[][],
   scale: number,
   opts: ExportGridOptions = {},
 ): { width: number; height: number; scale: number } | null {
@@ -111,14 +111,14 @@ export function exportGridSize(
  * The distinct number of painted colours in a grid — the bead-usage list has
  * one row per colour.
  *
- * @param grid - The serialized grid (`grid[row][col]`, 0 = empty).
- * @returns The count of distinct non-zero values.
+ * @param grid - The serialized code grid (`grid[row][col]`, "" = empty).
+ * @returns The count of distinct non-empty codes.
  */
-function usedColorCount(grid: number[][]): number {
-  const seen = new Set<number>()
+function usedColorCount(grid: string[][]): number {
+  const seen = new Set<string>()
   for (const row of grid) {
     for (const val of row) {
-      if (val > 0) seen.add(val)
+      if (val !== "") seen.add(val)
     }
   }
   return seen.size
@@ -126,30 +126,32 @@ function usedColorCount(grid: number[][]): number {
 
 /**
  * Each colour actually used in the grid, with its swatch hex and bead count,
- * ordered by palette index (the palette's colour-code order).
+ * ordered by the palette's colour-code order.
  *
- * @param grid    - The serialized grid (`grid[row][col]`, 0 = empty).
- * @param palette - Palette used to resolve index → colour.
+ * @param grid    - The serialized code grid (`grid[row][col]`, "" = empty).
+ * @param palette - Palette used to resolve code → colour.
  * @returns The used colours as `{ code, hex, count }`.
  */
 export function usedColorStats(
-  grid: number[][],
+  grid: string[][],
   palette: Palette,
 ): { code: string; hex: string; count: number }[] {
-  const counts = new Map<number, number>()
+  const order = new Map<string, number>()
+  const hexByCode = new Map<string, string>()
+  palette.colors.forEach((color, i) => {
+    order.set(color.code, i)
+    hexByCode.set(color.code, color.hex)
+  })
+  const counts = new Map<string, number>()
   for (const row of grid) {
-    for (const val of row) {
-      if (val <= 0 || val > palette.colors.length) continue
-      counts.set(val, (counts.get(val) ?? 0) + 1)
+    for (const code of row) {
+      if (code === "") continue
+      counts.set(code, (counts.get(code) ?? 0) + 1)
     }
   }
   return Array.from(counts.entries())
-    .sort(([a], [b]) => a - b)
-    .map(([idx, count]) => ({
-      code: palette.colors[idx - 1].code,
-      hex: palette.colors[idx - 1].hex,
-      count,
-    }))
+    .sort(([a], [b]) => (order.get(a) ?? Infinity) - (order.get(b) ?? Infinity))
+    .map(([code, count]) => ({ code, hex: hexByCode.get(code) ?? "#000000", count }))
 }
 
 /**
@@ -185,13 +187,13 @@ function beadStatsSize(count: number, baseWidth: number): { width: number; heigh
  * centred on it. The effective scale is clamped so the full canvas never exceeds
  * {@link MAX_EXPORT_DIM} on either side (coordinate bands and padding counted).
  *
- * @param grid    - The serialized grid (`grid[row][col]`, 0 = empty).
- * @param palette - Palette used to resolve index → colour hex.
+ * @param grid    - The serialized code grid (`grid[row][col]`, "" = empty).
+ * @param palette - Palette used to resolve code → colour hex.
  * @param scale   - Pixels per bead (integer; clamped to fit the canvas limit).
  * @param opts    - Optional export options.
  */
 export function exportGridPng(
-  grid: number[][],
+  grid: string[][],
   palette: Palette,
   scale = DEFAULT_EXPORT_SCALE,
   opts: ExportGridOptions = {},
@@ -202,6 +204,9 @@ export function exportGridPng(
 
   const layout = computeLayout(cols, rows, scale)
   const { s, numFont, headerW, headerH } = layout
+
+  const hexByCode = new Map<string, string>()
+  for (const color of palette.colors) hexByCode.set(color.code, color.hex)
 
   const used = opts.showBeadStats ? usedColorStats(grid, palette) : []
   const detail = opts.showBeadStats ? beadStatsSize(used.length, layout.width) : null
@@ -224,11 +229,11 @@ export function exportGridPng(
   for (let r = 0; r < rows; r++) {
     const row = grid[r]
     for (let c = 0; c < cols; c++) {
-      const val = row[c]
-      if (val <= 0) continue
-      const color = palette.colors[val - 1]
-      if (!color) continue
-      ctx.fillStyle = color.hex
+      const code = row[c]
+      if (code === "") continue
+      const hex = hexByCode.get(code)
+      if (!hex) continue
+      ctx.fillStyle = hex
       ctx.fillRect(headerW + c * s, headerH + r * s, s, s)
     }
   }
@@ -271,11 +276,9 @@ export function exportGridPng(
     for (let r = 0; r < rows; r++) {
       const row = grid[r]
       for (let c = 0; c < cols; c++) {
-        const val = row[c]
-        if (val <= 0) continue
-        const color = palette.colors[val - 1]
-        if (!color) continue
-        const label = color.code
+        const code = row[c]
+        if (code === "") continue
+        const label = code
         let width = labelWidths.get(label)
         if (width === undefined) {
           width = ctx.measureText(label).width

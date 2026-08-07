@@ -196,17 +196,23 @@ export function floodFill(
 }
 
 /**
- * Convert the sparse cell map into a compact 2D array suitable for storage.
+ * Convert the sparse cell map into a compact 2D code grid suitable for
+ * storage: `""` = empty, any other value is a brand colour code (e.g. "A1").
+ * Colour codes are the stable identity of a palette colour, so a reordered
+ * palette never reinterprets stored grids — unlike 1‑based index positions.
  *
  * Iterates the painted cells once to fill the grid, reusing
- * {@link getGridBounds} for the bounding box, and produces a `number[][]`
- * where 0 = empty.
+ * {@link getGridBounds} for the bounding box.
  *
- * @param cells - The sparse cell map.
- * @returns A rectangular `number[][]`, or `null` if the canvas is empty or
+ * @param cells   - The sparse cell map.
+ * @param palette - Palette used to resolve index → colour code.
+ * @returns A rectangular `string[][]`, or `null` if the canvas is empty or
  *          the bounding box exceeds {@link MAX_GRID_DIMENSION} in either axis.
  */
-export function serializeGrid(cells: Map<string, number>): number[][] | null {
+export function serializeGrid(
+  cells: Map<string, number>,
+  palette: Palette,
+): string[][] | null {
   const bounds = getGridBounds(cells)
   if (!bounds) return null
 
@@ -214,31 +220,27 @@ export function serializeGrid(cells: Map<string, number>): number[][] | null {
   const h = bounds.maxR - bounds.minR + 1
   if (w > MAX_GRID_DIMENSION || h > MAX_GRID_DIMENSION) return null
 
-  const grid: number[][] = Array.from({ length: h }, () => Array(w).fill(EMPTY))
+  const grid: string[][] = Array.from({ length: h }, () => Array(w).fill(""))
   for (const [key, color] of cells) {
     const [c, r] = parseCellKey(key)
-    grid[r - bounds.minR][c - bounds.minC] = color
+    const code = palette.colors[color - 1]?.code
+    if (code) grid[r - bounds.minR][c - bounds.minC] = code
   }
 
   return grid
 }
 
 /**
- * Count beads per colour code for a serialized grid.
+ * Count beads per colour code for a serialized code grid.
  *
- * Grid values are 1‑based indices into `palette.colors` (0 = empty); cells
- * with an out-of-range index are skipped.
- *
- * @param grid    - The rectangular `number[][]` to count.
- * @param palette - Palette used to resolve index → colour code.
+ * @param grid - The rectangular `string[][]` to count ("" = empty).
  * @returns A JSON string mapping colour code → bead count, e.g. `{"A1":12}`.
  */
-export function computeBeadStats(grid: number[][], palette: Palette): string {
+export function computeBeadStats(grid: string[][]): string {
   const counts = new Map<string, number>()
   for (const row of grid) {
-    for (const val of row) {
-      if (val <= 0 || val > palette.colors.length) continue
-      const code = palette.colors[val - 1].code
+    for (const code of row) {
+      if (code === "") continue
       counts.set(code, (counts.get(code) ?? 0) + 1)
     }
   }
@@ -247,18 +249,30 @@ export function computeBeadStats(grid: number[][], palette: Palette): string {
 
 /**
  * The inverse of {@link serializeGrid} — rebuild a sparse cell map from a
- * compact 2D array. Co-located with {@link serializeGrid} so the sparse-grid
- * key format (`"c,r"`) is owned in one place.
+ * compact 2D code grid. Colour codes are resolved to the palette's 1‑based
+ * index (codes absent from the palette are skipped). Co-located with
+ * {@link serializeGrid} so the sparse-grid key format (`"c,r"`) is owned in
+ * one place.
  *
- * @param grid - The rectangular `number[][]` (0 = empty) to load.
+ * @param grid    - The rectangular `string[][]` ("" = empty) to load.
+ * @param palette - Palette used to resolve colour code → index.
  * @returns A new sparse cell map.
  */
-export function deserializeGrid(grid: number[][]): Map<string, number> {
+export function deserializeGrid(
+  grid: string[][],
+  palette: Palette,
+): Map<string, number> {
   const map = new Map<string, number>()
+  const indexByCode = new Map<string, number>()
+  palette.colors.forEach((color, i) => indexByCode.set(color.code, i + 1))
   for (let r = 0; r < grid.length; r++) {
     const row = grid[r]
     for (let c = 0; c < row.length; c++) {
-      if (row[c] !== EMPTY) map.set(`${c},${r}`, row[c])
+      const code = row[c]
+      if (code === "") continue
+      const idx = indexByCode.get(code)
+      if (idx === undefined) continue
+      map.set(`${c},${r}`, idx)
     }
   }
   return map

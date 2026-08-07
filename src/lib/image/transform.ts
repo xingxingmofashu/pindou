@@ -25,8 +25,8 @@ export interface TransformOptions {
 }
 
 export interface TransformResult {
-  /** grid[row][col], 0 = empty, 1..N = palette index + 1. */
-  grid: number[][]
+  /** grid[row][col], "" = empty, otherwise a brand colour code (e.g. "A1"). */
+  grid: string[][]
   /** Number of columns. */
   width: number
   /** Number of rows. */
@@ -119,7 +119,7 @@ function nearestColorIndex(
  *
  * @param image - Encoded image bytes (PNG/JPEG/WebP/GIF/AVIF/TIFF).
  * @param opts - Target width in beads and the palette to match against.
- * @returns The dense grid plus dimensions and bead count.
+ * @returns The dense code grid plus dimensions and bead count.
  */
 export async function transform(
   image: Buffer,
@@ -157,10 +157,10 @@ export async function transform(
   const samples = buildPaletteSamples(opts.palette)
   const ciede = differenceCiede2000()
 
-  const grid: number[][] = []
+  const grid: string[][] = []
   let beadCount = 0
   for (let r = 0; r < height; r++) {
-    const row: number[] = new Array<number>(width).fill(0)
+    const row: string[] = new Array<string>(width).fill("")
     const y0 = Math.floor((r * srcHeight) / height)
     const y1 = Math.min(
       srcHeight,
@@ -190,7 +190,7 @@ export async function transform(
             bestIdx = idx
           }
         }
-        row[c] = bestIdx + 1
+        row[c] = opts.palette.colors[bestIdx].code
         beadCount++
       }
     }
