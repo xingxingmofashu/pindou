@@ -86,6 +86,7 @@
   "editor": {
     "pen": "Pen",
     "eraser": "Eraser",
+    "fill": "Fill",
     "showLabels": "Show labels",
     "labels": "Labels",
     "clearCanvas": "Clear Canvas",

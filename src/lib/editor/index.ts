@@ -5,7 +5,7 @@ import type { Palette } from "@/types"
 export const EMPTY = 0
 
 /** Identifies one of the drawing tools. */
-export type ToolKind = "pen" | "eraser"
+export type ToolKind = "pen" | "eraser" | "fill"
 
 /** Grid dimensions are limited only to prevent memory abuse. */
 export const MAX_GRID_DIMENSION = 4096
@@ -132,6 +132,65 @@ export function paintBlock(
       const k = `${c},${r}`
       if (colorIdx === EMPTY) map.delete(k)
       else map.set(k, colorIdx)
+    }
+  }
+}
+
+/**
+ * Flood-fill a connected region of the sparse grid.
+ *
+ * Starting from the cell at `(c, r)`, every 4‑connected neighbour whose
+ * current colour equals the start cell's colour is recoloured to `colorIdx`.
+ * Empty start regions (colour {@link EMPTY}) are bounded by the painted
+ * bounding box padded by one cell, so filling background can't escape to
+ * infinity on the unbounded sparse grid; non‑empty regions are already closed
+ * off by neighbouring colours. Passing {@link EMPTY} as `colorIdx` removes the
+ * filled cells (erase a connected region).
+ *
+ * @param map      - The sparse cell map to write into.
+ * @param c        - Start column.
+ * @param r        - Start row.
+ * @param colorIdx - 1‑based palette index, or {@link EMPTY} to erase.
+ */
+export function floodFill(
+  map: Map<string, number>,
+  c: number,
+  r: number,
+  colorIdx: number
+): void {
+  const startKey = `${c},${r}`
+  const startColor = map.get(startKey) ?? EMPTY
+  if (startColor === colorIdx) return
+
+  let minC = -Infinity
+  let minR = -Infinity
+  let maxC = Infinity
+  let maxR = Infinity
+  if (startColor === EMPTY) {
+    const b = getGridBounds(map)
+    if (b) {
+      minC = b.minC - 1
+      minR = b.minR - 1
+      maxC = b.maxC + 1
+      maxR = b.maxR + 1
+    }
+  }
+
+  const queue: [number, number][] = [[c, r]]
+  const seen = new Set<string>([startKey])
+  while (queue.length > 0) {
+    const [qc, qr] = queue.pop()!
+    if (colorIdx === EMPTY) map.delete(`${qc},${qr}`)
+    else map.set(`${qc},${qr}`, colorIdx)
+
+    const neighbours: [number, number][] = [[qc + 1, qr], [qc - 1, qr], [qc, qr + 1], [qc, qr - 1]]
+    for (const [nc, nr] of neighbours) {
+      if (nc < minC || nc > maxC || nr < minR || nr > maxR) continue
+      const k = `${nc},${nr}`
+      if (seen.has(k)) continue
+      if ((map.get(k) ?? EMPTY) !== startColor) continue
+      seen.add(k)
+      queue.push([nc, nr])
     }
   }
 }

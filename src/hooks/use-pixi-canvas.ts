@@ -6,6 +6,7 @@ import {
   EMPTY,
   CELL,
   paintBlock,
+  floodFill,
   serializeGrid,
   deserializeGrid,
   computeBeadStats,
@@ -332,6 +333,14 @@ export function usePixiCanvas(
 
       const rt = runtimeRef.current
       if (rt.readonly) return
+      if (rt.activeTool === "fill") {
+        e.preventDefault()
+        const w = toWorld(e.clientX, e.clientY, rectRef.current)
+        if (!w) return
+        floodFill(cellsRef.current, Math.floor(w.wx / CELL), Math.floor(w.wy / CELL), rt.activeColorIndex)
+        rebuildRef.current()
+        return
+      }
       if (!isDraw(rt.activeTool)) return
 
       e.preventDefault()

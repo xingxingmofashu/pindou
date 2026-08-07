@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Pencil, Eraser, Trash2, CaseSensitive, ImagePlus, Download } from "lucide-react"
+import { Pencil, Eraser, PaintBucket, Trash2, CaseSensitive, ImagePlus, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -23,6 +23,7 @@ import {
 const TOOLS: { value: ToolKind; icon: typeof Pencil; shortcut: string }[] = [
   { value: "pen", icon: Pencil, shortcut: "B" },
   { value: "eraser", icon: Eraser, shortcut: "E" },
+  { value: "fill", icon: PaintBucket, shortcut: "G" },
 ]
 
 interface ToolBarProps {

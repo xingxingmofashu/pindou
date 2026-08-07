@@ -86,6 +86,7 @@
   "editor": {
     "pen": "画笔",
     "eraser": "橡皮擦",
+    "fill": "油漆桶",
     "showLabels": "显示色号标签",
     "labels": "色号标签",
     "clearCanvas": "清空画布",
