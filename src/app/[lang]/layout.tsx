@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { I18nProvider } from "@/i18n/client";
 import { getDictionary } from "@/i18n/server";
 import { isLocale, locales } from "@/i18n/config";
+import { SWRProvider } from "@/components/swr-provider";
 import { Toaster } from "@/components/ui/toast";
 import "../globals.css";
 
@@ -53,7 +54,7 @@ export default async function RootLayout({
     >
       <body className="h-dvh">
         <I18nProvider locale={lang} messages={messages}>
-          {children}
+          <SWRProvider>{children}</SWRProvider>
           <Toaster />
         </I18nProvider>
       </body>

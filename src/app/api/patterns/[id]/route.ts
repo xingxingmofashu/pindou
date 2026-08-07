@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { eq } from "drizzle-orm"
+import { revalidateTag, unstable_cache } from "next/cache"
 import { db } from "@/db"
 import { brands, colors, patterns } from "@/db/schema"
 import { PatternUpdateSchema } from "@/db/schema"
@@ -10,30 +11,49 @@ import type { Palette } from "@/types"
 /** Thumbnail renderer + R2 uploader for this route. */
 const thumbnail = new Thumbnail()
 
+/**
+ * Public pattern data (excluding the session-derived `canEdit`) cached via the
+ * data cache — the large `gridData` blob is the expensive part of this query,
+ * so it's worth caching across requests. The response itself stays dynamic
+ * (`force-dynamic` + `private, no-store`) because `canEdit` depends on the
+ * requester's session; edits invalidate every pattern entry via
+ * {@link revalidateTag} on PATCH, with a 30s time-based fallback.
+ */
+const getPattern = unstable_cache(
+  async (id: string) => {
+    const [row] = await db
+      .select({
+        id: patterns.id,
+        title: patterns.title,
+        description: patterns.description,
+        authorName: patterns.authorName,
+        brandCode: brands.code,
+        brandId: patterns.fkBrandId,
+        gridData: patterns.gridData,
+        beadStats: patterns.beadStats,
+        thumbUrl: patterns.thumbUrl,
+        fkUserId: patterns.fkUserId,
+        createdAt: patterns.createdAt,
+        updatedAt: patterns.updatedAt,
+      })
+      .from(patterns)
+      .innerJoin(brands, eq(patterns.fkBrandId, brands.id))
+      .where(eq(patterns.id, id))
+    return row ?? null
+  },
+  ["pattern"],
+  { revalidate: 30, tags: ["pattern"] },
+)
+
+export const dynamic = "force-dynamic"
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params
 
-  const [row] = await db
-    .select({
-      id: patterns.id,
-      title: patterns.title,
-      description: patterns.description,
-      authorName: patterns.authorName,
-      brandCode: brands.code,
-      brandId: patterns.fkBrandId,
-      gridData: patterns.gridData,
-      beadStats: patterns.beadStats,
-      thumbUrl: patterns.thumbUrl,
-      fkUserId: patterns.fkUserId,
-      createdAt: patterns.createdAt,
-      updatedAt: patterns.updatedAt,
-    })
-    .from(patterns)
-    .innerJoin(brands, eq(patterns.fkBrandId, brands.id))
-    .where(eq(patterns.id, id))
+  const row = await getPattern(id)
 
   if (!row) {
     return NextResponse.json({ error: "Pattern not found" }, { status: 404 })
@@ -41,20 +61,27 @@ export async function GET(
 
   const session = await auth.api.getSession({ headers: request.headers })
 
-  return NextResponse.json({
-    id: row.id,
-    title: row.title,
-    description: row.description,
-    authorName: row.authorName,
-    brandCode: row.brandCode,
-    brandId: row.brandId,
-    gridData: JSON.parse(row.gridData),
-    beadStats: row.beadStats,
-    thumbUrl: row.thumbUrl,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-    canEdit: Boolean(session && session.user.id === row.fkUserId),
-  })
+  return NextResponse.json(
+    {
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      authorName: row.authorName,
+      brandCode: row.brandCode,
+      brandId: row.brandId,
+      gridData: JSON.parse(row.gridData),
+      beadStats: row.beadStats,
+      thumbUrl: row.thumbUrl,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      canEdit: Boolean(session && session.user.id === row.fkUserId),
+    },
+    {
+      headers: {
+        "Cache-Control": "private, no-store",
+      },
+    },
+  )
 }
 
 export async function PATCH(
@@ -137,6 +164,9 @@ export async function PATCH(
     await thumbnail.delete(thumbUrl).catch(() => {})
     return NextResponse.json({ error: "Failed to update pattern" }, { status: 500 })
   }
+
+  await revalidateTag("pattern", "max")
+  await revalidateTag("patterns", "max")
 
   return NextResponse.json({ id })
 }
