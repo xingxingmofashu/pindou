@@ -3,11 +3,16 @@ import { nextCookies } from "better-auth/next-js"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { db } from "@/db"
 
+const baseURL = process.env.BETTER_AUTH_URL
+const secret = process.env.BETTER_AUTH_SECRET
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
     usePlural: true,
   }),
+  baseURL,
+  secret,
   emailAndPassword: {
     enabled: false,
   },
@@ -17,7 +22,7 @@ export const auth = betterAuth({
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
     },
   },
-  trustedOrigins: [process.env.BETTER_AUTH_URL ?? "http://localhost:3000"],
+  trustedOrigins: [baseURL ?? "http://localhost:3000"],
   plugins: [nextCookies()],
 })
 
