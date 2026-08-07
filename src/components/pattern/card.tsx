@@ -32,7 +32,7 @@ export function PatternCard({ id, title, authorName, beadStats, createdAt, thumb
           <img
             src={thumbUrl}
             alt={title}
-            className="block w-full bg-muted"
+            className="block aspect-square w-full bg-muted object-cover"
           />
         ) : (
           <div className="aspect-square w-full bg-muted" />
