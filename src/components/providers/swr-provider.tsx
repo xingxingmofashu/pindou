@@ -6,15 +6,19 @@ import { SWRConfig, type Cache, type State } from "swr"
 /**
  * localStorage key holding all persisted SWR entries. Fixed name — the
  * persisted *shape* version lives per-entry as {@link STORAGE_VERSION}, so
- * data changes (e.g. a `db:migrate` that reorders the palette) need no manual
- * bump: SWR's stale-while-revalidate refreshes the entry on the next mount and
- * `persist()` overwrites it. Only bump {@link STORAGE_VERSION} when the
- * `StoredEntry` shape itself changes.
+ * neither bug fixes nor data changes (e.g. a `db:migrate` that reorders the
+ * palette) need a manual bump: `STORAGE_VERSION` is a build-time timestamp
+ * that changes with every deployment, and SWR's stale-while-revalidate
+ * refreshes the entry on the next mount and `persist()` overwrites it.
  */
 const STORAGE_KEY = "pindou-swr-cache"
 
-/** Version of the `StoredEntry` shape; mismatches are discarded on read. */
-const STORAGE_VERSION = 2
+/**
+ * Build-time epoch injected by `next.config.ts` (see `NEXT_PUBLIC_BUILD_TIME`).
+ * Entries written by an older deployment carry a different value and are
+ * discarded on read, so a fresh build never renders stale persisted data.
+ */
+const STORAGE_VERSION = process.env.NEXT_PUBLIC_BUILD_TIME ?? ""
 
 /** A cache-key prefix pinned to localStorage for {@link PersistRule.ttlMs}. */
 interface PersistRule {
@@ -31,8 +35,8 @@ const PERSIST_RULES: PersistRule[] = [
 ]
 
 interface StoredEntry {
-  /** Shape version, matched against {@link STORAGE_VERSION} on read. */
-  version: number
+  /** Build-time deployment stamp, matched against {@link STORAGE_VERSION} on read. */
+  version: string
   /** ms epoch when the entry was written to storage. */
   timestamp: number
   value: State
@@ -111,13 +115,13 @@ function parseRows(raw: string | null): Array<unknown> | null {
   }
 }
 
-/** Parse a persisted row, returning null when it's malformed or from another schema version. */
+/** Parse a persisted row, returning null when it's malformed or from another deployment. */
 function parseEntry(value: unknown): ParsedEntry | null {
   if (!Array.isArray(value) || value.length !== 2) return null
   const [key, entry] = value as [unknown, unknown]
   if (typeof key !== "string" || typeof entry !== "object" || entry === null) return null
   const { version, timestamp, value: data } = entry as { version?: unknown; timestamp: unknown; value?: unknown }
-  if (typeof version !== "number" || version !== STORAGE_VERSION) return null
+  if (typeof version !== "string" || version !== STORAGE_VERSION) return null
   if (typeof timestamp !== "number" || data === undefined) return null
   return { key, version, timestamp, value: data as State }
 }
