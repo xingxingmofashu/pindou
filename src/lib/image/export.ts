@@ -25,13 +25,43 @@ const HEADER_BG = "#f4f4f5"
 /** Divider between the coordinate bands and the bead area. */
 const HEADER_DIVIDER = "#a1a1aa"
 
-/** Fixed geometry of the bead-usage grid drawn beneath the pattern. */
-const BEAD_STATS_TITLE_FONT = 18
-const BEAD_STATS_FONT = 16
-const BEAD_STATS_ROW_H = 32
-const BEAD_STATS_SWATCH = 20
-const BEAD_STATS_GAP = 8
-const BEAD_STATS_PAD = 12
+/**
+ * Base geometry of the bead-usage section, defined at a 20px swatch. The real
+ * geometry is derived from the pattern's bead size, so the list scales up with
+ * the grid — at the default 128px-per-bead export the swatches are bead-sized.
+ */
+const BEAD_STATS_BASE_SWATCH = 20
+const BEAD_STATS_BASE_TITLE_FONT = 18
+const BEAD_STATS_BASE_FONT = 16
+const BEAD_STATS_BASE_ROW_H = 32
+const BEAD_STATS_BASE_GAP = 8
+const BEAD_STATS_BASE_PAD = 12
+
+/** Scaled bead-usage section geometry, derived from the pattern's bead size. */
+interface BeadStatsGeometry {
+  titleFont: number
+  font: number
+  rowH: number
+  swatch: number
+  gap: number
+  pad: number
+}
+
+/**
+ * Scale the base bead-usage geometry to a bead size `s`. Every dimension is
+ * proportional, so the section reads like part of the pattern at any scale.
+ */
+function beadStatsGeometry(s: number): BeadStatsGeometry {
+  const k = s / BEAD_STATS_BASE_SWATCH
+  return {
+    titleFont: Math.max(4, Math.round(BEAD_STATS_BASE_TITLE_FONT * k)),
+    font: Math.max(4, Math.round(BEAD_STATS_BASE_FONT * k)),
+    rowH: Math.max(8, Math.round(BEAD_STATS_BASE_ROW_H * k)),
+    swatch: Math.max(2, Math.round(BEAD_STATS_BASE_SWATCH * k)),
+    gap: Math.max(1, Math.round(BEAD_STATS_BASE_GAP * k)),
+    pad: Math.max(2, Math.round(BEAD_STATS_BASE_PAD * k)),
+  }
+}
 
 /** Export options. */
 export interface ExportGridOptions {
@@ -59,19 +89,32 @@ export interface ExportLayout {
   height: number
 }
 
-function computeLayout(cols: number, rows: number, scale: number): ExportLayout {
+function computeLayout(
+  cols: number,
+  rows: number,
+  scale: number,
+  statsCount = 0,
+): ExportLayout {
   const upper = Math.max(1, Math.min(scale, Math.floor(MAX_EXPORT_DIM / Math.max(cols, rows))))
 
   // Coordinate numbers are sized to fit a bead-sized header cell; the top band
   // is one bead tall so the header tiles with the grid. The left band is as
   // wide as the row numbers need. width/height grow monotonically with s, so
-  // binary-search the largest s whose full canvas (bands + padding included)
-  // fits the limit — clamping only the bead area would overflow the canvas.
+  // binary-search the largest s whose full canvas (bands, padding, and the
+  // bead-usage section when present) fits the limit — clamping only the bead
+  // area would overflow the canvas.
   const dims = (s: number) => {
     const numFont = Math.max(4, Math.round(s * 0.6))
     const headerW = Math.ceil(String(rows).length * numFont * 0.7) + s
     const headerH = s
-    return { numFont, headerW, headerH, width: headerW + cols * s + s, height: headerH + rows * s + s }
+    let width = headerW + cols * s + s
+    let height = headerH + rows * s + s
+    if (statsCount > 0) {
+      const stats = beadStatsSize(beadStatsGeometry(s), statsCount, width, headerW)
+      width = Math.max(width, stats.width)
+      height += stats.height
+    }
+    return { numFont, headerW, headerH, width, height }
   }
   let lo = 1
   let hi = upper
@@ -91,8 +134,7 @@ function computeLayout(cols: number, rows: number, scale: number): ExportLayout 
  * @param scale - Pixels per bead (clamped so the full canvas fits the limit).
  * @param opts  - Optional export options (a bead-usage list grows the height).
  * @returns The canvas width/height and the effective (clamped) pixels-per-bead,
- *          or null for an empty grid.
- */
+ *          or null for an empty grid. */
 export function exportGridSize(
   grid: string[][],
   scale: number,
@@ -101,10 +143,9 @@ export function exportGridSize(
   const rows = grid.length
   const cols = grid[0]?.length ?? 0
   if (rows === 0 || cols === 0) return null
-  const { s, width, height, headerW } = computeLayout(cols, rows, scale)
-  if (!opts.showBeadStats) return { width, height, scale: s }
-  const detail = beadStatsSize(usedColorCount(grid), width, headerW)
-  return { width: detail.width, height: height + detail.height, scale: s }
+  const count = opts.showBeadStats ? usedColorCount(grid) : 0
+  const { s, width, height } = computeLayout(cols, rows, scale, count)
+  return { width, height, scale: s }
 }
 
 /**
@@ -160,18 +201,17 @@ export function usedColorStats(
  * canvas. The drawn string is `code + 2 spaces + × + count`: code ≤ 4 chars,
  * count ≤ 6 digits → ≈13 characters.
  */
-function beadStatsItemWidth(): number {
-  const textW = Math.ceil(BEAD_STATS_FONT * 0.6 * 13)
-  return BEAD_STATS_PAD + BEAD_STATS_SWATCH + BEAD_STATS_GAP + textW + BEAD_STATS_PAD
+function beadStatsItemWidth(g: BeadStatsGeometry): number {
+  const textW = Math.ceil(g.font * 0.6 * 13)
+  return g.pad + g.swatch + g.gap + textW + g.pad
 }
 
 /**
  * How many bead-usage entries fit per row given the width available to the
  * section (the pattern width minus the left coordinate band).
  */
-function beadStatsColumns(availableWidth: number): number {
-  const itemW = beadStatsItemWidth()
-  return Math.max(1, Math.floor((availableWidth - BEAD_STATS_PAD) / itemW))
+function beadStatsColumns(g: BeadStatsGeometry, availableWidth: number): number {
+  return Math.max(1, Math.floor((availableWidth - g.pad) / beadStatsItemWidth(g)))
 }
 
 /**
@@ -181,6 +221,7 @@ function beadStatsColumns(availableWidth: number): number {
  * entries occupy. The `cols` value is shared by the size preview and the render
  * so they always agree.
  *
+ * @param g           - Scaled section geometry.
  * @param count       - Number of used colours.
  * @param canvasWidth - The pattern's full canvas width.
  * @param headerW     - Left coordinate-band width (the section's left anchor).
@@ -188,18 +229,19 @@ function beadStatsColumns(availableWidth: number): number {
  *          the number of columns the entries are laid out in.
  */
 function beadStatsSize(
+  g: BeadStatsGeometry,
   count: number,
   canvasWidth: number,
   headerW: number,
 ): { width: number; height: number; cols: number } {
-  const titleH = BEAD_STATS_TITLE_FONT + 4
-  const itemW = beadStatsItemWidth()
-  const cols = beadStatsColumns(canvasWidth - headerW)
+  const titleH = g.titleFont + 4
+  const itemW = beadStatsItemWidth(g)
+  const cols = beadStatsColumns(g, canvasWidth - headerW)
   const rows = Math.ceil(count / cols)
   return {
     cols,
-    width: Math.max(canvasWidth, headerW + BEAD_STATS_PAD + cols * itemW + BEAD_STATS_PAD),
-    height: BEAD_STATS_PAD + titleH + rows * BEAD_STATS_ROW_H + BEAD_STATS_PAD,
+    width: Math.max(canvasWidth, headerW + g.pad + cols * itemW + g.pad),
+    height: g.pad + titleH + rows * g.rowH + g.pad,
   }
 }
 
@@ -214,7 +256,10 @@ function beadStatsSize(
  * with no canvas scaling, so the beads stay pixel-perfect (no antialiasing).
  * With {@link ExportGridOptions.showLabels}, each bead also gets its colour code
  * centred on it. The effective scale is clamped so the full canvas never exceeds
- * {@link MAX_EXPORT_DIM} on either side (coordinate bands and padding counted).
+ * {@link MAX_EXPORT_DIM} on either side (coordinate bands, padding, and the
+ * bead-usage section counted). The bead-usage section (see
+ * {@link ExportGridOptions.showBeadStats}) scales with the bead size, so its
+ * swatches match the pattern's beads at any scale.
  *
  * @param grid    - The serialized code grid (`grid[row][col]`, "" = empty).
  * @param palette - Palette used to resolve code → colour hex.
@@ -231,18 +276,18 @@ export function exportGridPng(
   const cols = grid[0]?.length ?? 0
   if (rows === 0 || cols === 0) return
 
-  const layout = computeLayout(cols, rows, scale)
-  const { s, numFont, headerW, headerH } = layout
-
   const hexByCode = new Map<string, string>()
   for (const color of palette.colors) hexByCode.set(color.code, color.hex)
 
   const used = opts.showBeadStats ? usedColorStats(grid, palette) : []
-  const detail = opts.showBeadStats ? beadStatsSize(used.length, layout.width, headerW) : null
+  const layout = computeLayout(cols, rows, scale, used.length)
+  const { s, numFont, headerW, headerH, width, height } = layout
+  const geo = beadStatsGeometry(s)
+  const detail = opts.showBeadStats ? beadStatsSize(geo, used.length, width, headerW) : null
 
   const canvas = document.createElement("canvas")
-  canvas.width = detail ? detail.width : layout.width
-  canvas.height = layout.height + (detail ? detail.height : 0)
+  canvas.width = width
+  canvas.height = height
   const ctx = canvas.getContext("2d")
   if (!ctx) return
 
@@ -340,26 +385,26 @@ export function exportGridPng(
   if (detail) {
     ctx.textAlign = "left"
     ctx.textBaseline = "middle"
-    const titleY = layout.height + BEAD_STATS_PAD
+    const titleY = headerH + rows * s + geo.pad
     ctx.fillStyle = LABEL_COLOR
-    ctx.font = `600 ${BEAD_STATS_TITLE_FONT}px ui-monospace, monospace`
-    ctx.fillText(opts.beadStatsTitle ?? "Beads used", headerW + BEAD_STATS_PAD, titleY + BEAD_STATS_TITLE_FONT / 2)
-    const bodyY = titleY + BEAD_STATS_TITLE_FONT + 4
+    ctx.font = `600 ${geo.titleFont}px ui-monospace, monospace`
+    ctx.fillText(opts.beadStatsTitle ?? "Beads used", headerW + geo.pad, titleY + geo.titleFont / 2)
+    const bodyY = titleY + geo.titleFont + 4
 
-    ctx.font = `${BEAD_STATS_FONT}px ui-monospace, monospace`
-    const itemW = beadStatsItemWidth()
+    ctx.font = `${geo.font}px ui-monospace, monospace`
+    const itemW = beadStatsItemWidth(geo)
     used.forEach(({ hex, code, count }, i) => {
       const col = i % detail.cols
       const row = Math.floor(i / detail.cols)
-      const x = headerW + BEAD_STATS_PAD + col * itemW
-      const y = bodyY + row * BEAD_STATS_ROW_H
+      const x = headerW + geo.pad + col * itemW
+      const y = bodyY + row * geo.rowH
       ctx.fillStyle = hex
-      ctx.fillRect(x, y, BEAD_STATS_SWATCH, BEAD_STATS_SWATCH)
+      ctx.fillRect(x, y, geo.swatch, geo.swatch)
       ctx.fillStyle = "#111"
       ctx.fillText(
         `${code}  ×${count}`,
-        x + BEAD_STATS_PAD + BEAD_STATS_SWATCH + BEAD_STATS_GAP,
-        y + BEAD_STATS_SWATCH / 2,
+        x + geo.pad + geo.swatch + geo.gap,
+        y + geo.swatch / 2,
       )
     })
   }
