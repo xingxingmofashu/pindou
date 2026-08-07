@@ -141,6 +141,8 @@
     "exportTitle": "Export Pattern",
     "exportDescription": "Download the pattern as a high-resolution PNG with grid and coordinates.",
     "showColourCodes": "Show colour codes",
+    "showBeadStats": "Include bead usage",
+    "beadStatsTitle": "Beads used",
     "pixelsPerBead": "Pixels per bead",
     "exportSize": "{cols} × {rows} beads · {width} × {height} px",
     "scaleReduced": "scale reduced to {scale}px/bead",

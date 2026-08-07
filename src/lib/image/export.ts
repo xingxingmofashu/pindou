@@ -25,10 +25,22 @@ const HEADER_BG = "#f4f4f5"
 /** Divider between the coordinate bands and the bead area. */
 const HEADER_DIVIDER = "#a1a1aa"
 
+/** Fixed geometry of the bead-usage list drawn beneath the pattern. */
+const BEAD_STATS_TITLE_FONT = 12
+const BEAD_STATS_FONT = 12
+const BEAD_STATS_ROW_H = 18
+const BEAD_STATS_SWATCH = 14
+const BEAD_STATS_GAP = 6
+const BEAD_STATS_PAD = 8
+
 /** Export options. */
 export interface ExportGridOptions {
   /** Draw each bead's colour code (e.g. "A1") centred in the cell. */
   showLabels?: boolean
+  /** Append a bead-usage list (swatch, code, count) below the pattern. */
+  showBeadStats?: boolean
+  /** Title of the bead-usage list; falls back to "Beads used". */
+  beadStatsTitle?: string
 }
 
 /** Bead-area geometry shared by rendering and size previews. */
@@ -77,18 +89,87 @@ function computeLayout(cols: number, rows: number, scale: number): ExportLayout 
  *
  * @param grid  - The serialized grid (`grid[row][col]`, 0 = empty).
  * @param scale - Pixels per bead (clamped so the full canvas fits the limit).
+ * @param opts  - Optional export options (a bead-usage list grows the height).
  * @returns The canvas width/height and the effective (clamped) pixels-per-bead,
  *          or null for an empty grid.
  */
 export function exportGridSize(
   grid: number[][],
   scale: number,
+  opts: ExportGridOptions = {},
 ): { width: number; height: number; scale: number } | null {
   const rows = grid.length
   const cols = grid[0]?.length ?? 0
   if (rows === 0 || cols === 0) return null
   const { s, width, height } = computeLayout(cols, rows, scale)
-  return { width, height, scale: s }
+  if (!opts.showBeadStats) return { width, height, scale: s }
+  const detail = beadStatsSize(usedColorCount(grid), width)
+  return { width: detail.width, height: height + detail.height, scale: s }
+}
+
+/**
+ * The distinct number of painted colours in a grid — the bead-usage list has
+ * one row per colour.
+ *
+ * @param grid - The serialized grid (`grid[row][col]`, 0 = empty).
+ * @returns The count of distinct non-zero values.
+ */
+function usedColorCount(grid: number[][]): number {
+  const seen = new Set<number>()
+  for (const row of grid) {
+    for (const val of row) {
+      if (val > 0) seen.add(val)
+    }
+  }
+  return seen.size
+}
+
+/**
+ * Each colour actually used in the grid, with its swatch hex and bead count,
+ * ordered by palette index (the palette's colour-code order).
+ *
+ * @param grid    - The serialized grid (`grid[row][col]`, 0 = empty).
+ * @param palette - Palette used to resolve index → colour.
+ * @returns The used colours as `{ code, hex, count }`.
+ */
+export function usedColorStats(
+  grid: number[][],
+  palette: Palette,
+): { code: string; hex: string; count: number }[] {
+  const counts = new Map<number, number>()
+  for (const row of grid) {
+    for (const val of row) {
+      if (val <= 0 || val > palette.colors.length) continue
+      counts.set(val, (counts.get(val) ?? 0) + 1)
+    }
+  }
+  return Array.from(counts.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([idx, count]) => ({
+      code: palette.colors[idx - 1].code,
+      hex: palette.colors[idx - 1].hex,
+      count,
+    }))
+}
+
+/**
+ * Size of the bead-usage list. Width is at least the pattern's width, grown to
+ * fit the widest row (estimated with a fixed character advance so the size
+ * preview and the render agree without a canvas).
+ *
+ * @param count     - Number of used colours (one row each).
+ * @param baseWidth - The pattern's canvas width.
+ * @returns The `{ width, height }` the list occupies below the pattern.
+ */
+function beadStatsSize(count: number, baseWidth: number): { width: number; height: number } {
+  const titleH = BEAD_STATS_TITLE_FONT + 4
+  // Monospace advance ≈ 0.6em; code ≤ 4 chars, count ≤ 5 digits.
+  const rowTextW = Math.ceil(BEAD_STATS_FONT * 0.6 * 9)
+  const rowW = BEAD_STATS_PAD + BEAD_STATS_SWATCH + BEAD_STATS_GAP + rowTextW + BEAD_STATS_PAD
+  return {
+    width: Math.max(baseWidth, rowW),
+    height: BEAD_STATS_PAD + titleH + count * BEAD_STATS_ROW_H + BEAD_STATS_PAD,
+  }
 }
 
 /**
@@ -122,9 +203,12 @@ export function exportGridPng(
   const layout = computeLayout(cols, rows, scale)
   const { s, numFont, headerW, headerH } = layout
 
+  const used = opts.showBeadStats ? usedColorStats(grid, palette) : []
+  const detail = opts.showBeadStats ? beadStatsSize(used.length, layout.width) : null
+
   const canvas = document.createElement("canvas")
-  canvas.width = layout.width
-  canvas.height = layout.height
+  canvas.width = detail ? detail.width : layout.width
+  canvas.height = layout.height + (detail ? detail.height : 0)
   const ctx = canvas.getContext("2d")
   if (!ctx) return
 
@@ -217,6 +301,28 @@ export function exportGridPng(
   }
   for (let r = 0; r < rows; r++) {
     ctx.fillText(String(r + 1), headerW / 2, headerH + (r + 0.5) * s)
+  }
+
+  // Bead-usage list below the pattern: a title line, then one row per used
+  // colour (swatch, code, count). Text style is reset from the centred labels.
+  if (detail) {
+    ctx.textAlign = "left"
+    ctx.textBaseline = "middle"
+    let y = layout.height + BEAD_STATS_PAD
+    ctx.fillStyle = LABEL_COLOR
+    ctx.font = `600 ${BEAD_STATS_TITLE_FONT}px ui-monospace, monospace`
+    ctx.fillText(opts.beadStatsTitle ?? "Beads used", headerW + BEAD_STATS_PAD, y + BEAD_STATS_TITLE_FONT / 2)
+    y += BEAD_STATS_TITLE_FONT + 4
+
+    ctx.font = `${BEAD_STATS_FONT}px ui-monospace, monospace`
+    const textX = headerW + BEAD_STATS_PAD + BEAD_STATS_SWATCH + BEAD_STATS_GAP
+    for (const { hex, code, count } of used) {
+      ctx.fillStyle = hex
+      ctx.fillRect(headerW + BEAD_STATS_PAD, y, BEAD_STATS_SWATCH, BEAD_STATS_SWATCH)
+      ctx.fillStyle = "#111"
+      ctx.fillText(`${code}  ×${count}`, textX, y + BEAD_STATS_SWATCH / 2)
+      y += BEAD_STATS_ROW_H
+    }
   }
 
   canvas.toBlob((blob) => {

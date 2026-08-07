@@ -141,6 +141,8 @@
     "exportTitle": "导出图案",
     "exportDescription": "将图案下载为带网格和坐标的高分辨率 PNG。",
     "showColourCodes": "显示色号",
+    "showBeadStats": "包含珠子用量",
+    "beadStatsTitle": "珠子用量",
     "pixelsPerBead": "每颗拼豆的像素",
     "exportSize": "{cols} × {rows} 颗拼豆 · {width} × {height} px",
     "scaleReduced": "比例降至每颗 {scale}px",

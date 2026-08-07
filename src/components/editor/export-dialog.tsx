@@ -38,6 +38,8 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
   // Independent of the toolbar Labels toggle: this controls only the exported
   // image, and the toolbar toggle only controls the canvas. Defaults to on.
   const [labelsOn, setLabelsOn] = useState(true)
+  // Whether to append the bead-usage list to the exported PNG. Defaults to on.
+  const [beadStatsOn, setBeadStatsOn] = useState(true)
 
   // Snapshot the grid once when the dialog opens — it can't change behind the
   // modal, so re-serializing on every scale keystroke would be wasted work.
@@ -52,7 +54,7 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
   const rows = grid?.length ?? 0
   const cols = grid?.[0]?.length ?? 0
   const scale = Math.max(1, Math.floor(Number(scaleInput)) || 1)
-  const size = grid ? exportGridSize(grid, scale) : null
+  const size = grid ? exportGridSize(grid, scale, { showBeadStats: beadStatsOn }) : null
 
   const handleExport = useCallback(() => {
     if (!data) {
@@ -75,10 +77,14 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
       data.grid,
       brand,
       scale,
-      { showLabels: labelsOn },
+      {
+        showLabels: labelsOn,
+        showBeadStats: beadStatsOn,
+        beadStatsTitle: t("editor.beadStatsTitle"),
+      },
     )
     onClose()
-  }, [data, brand, scale, labelsOn, onClose, t])
+  }, [data, brand, scale, labelsOn, beadStatsOn, onClose, t])
 
   return (
     <Dialog
@@ -101,6 +107,15 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
             id="export-labels"
             checked={labelsOn}
             onCheckedChange={(checked) => setLabelsOn(checked)}
+          />
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="export-bead-stats">{t("editor.showBeadStats")}</Label>
+          <Switch
+            id="export-bead-stats"
+            checked={beadStatsOn}
+            onCheckedChange={(checked) => setBeadStatsOn(checked)}
           />
         </div>
 
