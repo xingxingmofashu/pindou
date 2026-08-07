@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm"
 import { db } from "@/db"
 import { brands, colors } from "@/db/schema"
 import { MAX_GRID_DIMENSION } from "@/lib/editor"
-import { transform } from "@/lib/image/transform"
+import { Transform } from "@/lib/image/transform"
 import type { Palette } from "@/types"
 
 export const runtime = "nodejs"
@@ -65,9 +65,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer())
-    const result = await transform(buffer, {
+    const result = await new Transform(palette).convert(buffer, {
       width: parsed.data.width,
-      palette,
       mode: parsed.data.mode,
       mergeSimilarity: parsed.data.mergeSimilarity,
       removeBackground: parsed.data.removeBackground,
