@@ -84,6 +84,47 @@ export function getGridBounds(cells: Map<string, number>): GridBounds | null {
 }
 
 /**
+ * Per-colour bead counts for a sparse grid, computed in a single pass (no
+ * dense grid allocation — unlike {@link serializeGrid} + {@link computeBeadStats}).
+ * Also returns the painted bounding-box size and total bead count for the
+ * stats header.
+ *
+ * @param cells   - The sparse cell map.
+ * @param palette - Palette used to resolve colour index → code.
+ * @returns The dims/total and per-code counts, or null when the grid is empty.
+ */
+export interface BeadStats {
+  width: number
+  height: number
+  total: number
+  rows: { code: string; count: number }[]
+}
+
+export function countBeadStats(
+  cells: Map<string, number>,
+  palette: Palette,
+): BeadStats | null {
+  if (cells.size === 0) return null
+  let minC = Infinity, maxC = -Infinity, minR = Infinity, maxR = -Infinity
+  const counts = new Map<string, number>()
+  for (const [key, color] of cells) {
+    const [c, r] = parseCellKey(key)
+    if (c < minC) minC = c
+    if (c > maxC) maxC = c
+    if (r < minR) minR = r
+    if (r > maxR) maxR = r
+    const code = palette.colors[color - 1]?.code
+    if (code) counts.set(code, (counts.get(code) ?? 0) + 1)
+  }
+  return {
+    width: maxC - minC + 1,
+    height: maxR - minR + 1,
+    total: cells.size,
+    rows: Array.from(counts.entries(), ([code, count]) => ({ code, count })),
+  }
+}
+
+/**
  * Position the world container so painted cells are centred in the viewport.
  *
  * @param world - The PixiJS world Container (mutated in place).

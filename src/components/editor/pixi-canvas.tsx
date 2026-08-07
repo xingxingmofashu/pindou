@@ -4,7 +4,7 @@ import { useEffect, useRef, useImperativeHandle, type RefObject } from "react"
 import { usePixiApp } from "@/hooks/use-pixi-app"
 import { usePixiCanvas } from "@/hooks/use-pixi-canvas"
 import { usePalette } from "@/hooks/use-palette"
-import type { ToolKind } from "@/lib/editor"
+import type { ToolKind, BeadStats } from "@/lib/editor"
 import type { Palette } from "@/types"
 
 export interface PixiCanvasApi {
@@ -15,6 +15,8 @@ export interface PixiCanvasApi {
   getCellsData: () => {
     grid: string[][]; brandCode: string; brandId: string; beadStats: string
   } | null
+  /** Live per-colour bead counts + painted dims (null when the grid is empty). */
+  getBeadStats: () => BeadStats | null
   /** Replace the canvas contents with a serialized code grid. */
   loadGrid: (grid: string[][]) => void
 }
@@ -29,6 +31,8 @@ export interface PixiCanvasProps {
   grid?: string[][]
   apiRef?: RefObject<PixiCanvasApi | null>
   onZoomChange?: (zoom: number) => void
+  /** Fired whenever the painted cells change (stroke end, fill, clear, load). */
+  onGridChange?: () => void
   className?: string
 }
 
@@ -53,10 +57,11 @@ function PixiCanvasInner({
   grid,
   apiRef,
   onZoomChange,
+  onGridChange,
 }: InnerProps) {
   const ctx = usePixiApp(canvasRef, "#fafafa")
-  const { zoom, setZoom, onReset, onClear, getCellsData, loadGrid, resetModel } =
-    usePixiCanvas(ctx, palette, { activeTool, activeColorIndex, showLabels: label, readonly })
+  const { zoom, setZoom, onReset, onClear, getCellsData, getBeadStats, loadGrid, resetModel } =
+    usePixiCanvas(ctx, palette, { activeTool, activeColorIndex, showLabels: label, readonly, onGridChange })
 
   useEffect(() => {
     onZoomChange?.(zoom)
@@ -78,8 +83,9 @@ function PixiCanvasInner({
     onReset,
     onClear,
     getCellsData,
+    getBeadStats,
     loadGrid,
-  }), [zoom, setZoom, onReset, onClear, getCellsData, loadGrid])
+  }), [zoom, setZoom, onReset, onClear, getCellsData, getBeadStats, loadGrid])
 
   return null
 }
@@ -94,7 +100,11 @@ export function PixiCanvas({ className, palette, readonly, ...props }: PixiCanva
   // of hooks).
   return (
     <div className={className}>
-      <canvas ref={canvasRef} className="block h-full w-full" />
+      {/* The canvas parent must be padding-free: Pixi sizes itself from its
+          parent's clientWidth/clientHeight, which include padding. */}
+      <div className="h-full w-full">
+        <canvas ref={canvasRef} className="block h-full w-full" />
+      </div>
       {palette ? (
         <PixiCanvasInner canvasRef={canvasRef} palette={palette} readonly={readonly} {...props} />
       ) : (
