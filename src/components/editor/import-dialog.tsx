@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import useSWRMutation from "swr/mutation"
-import { Upload } from "lucide-react"
+import { ChevronDown, Upload } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -14,13 +14,14 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { Spinner } from "@/components/ui/spinner"
 import { toast } from "@/components/ui/toast"
 import { MAX_GRID_DIMENSION } from "@/lib/editor"
 import { postJson } from "@/lib/utils"
 import { usePalette } from "@/hooks/use-palette"
 import { useI18n } from "@/i18n/client"
-import type { TransformResult } from "@/lib/image/transform"
+import type { TransformMode, TransformResult } from "@/lib/image/transform"
 import type { Palette } from "@/types"
 
 /** Maximum accepted upload size, mirroring the serverless body limit. */
@@ -31,6 +32,9 @@ const PREVIEW_MAX = 320
 const DEFAULT_WIDTH = 64
 /** Debounce width edits before re-converting. */
 const DEBOUNCE_MS = 300
+
+/** Default merge strength (OKLab distance) when the option is enabled. */
+const DEFAULT_MERGE_SIMILARITY = 0.15
 
 interface ImportDialogProps {
   open: boolean
@@ -120,6 +124,12 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
   const [file, setFile] = useState<File | null>(null)
   const [widthInput, setWidthInput] = useState(String(DEFAULT_WIDTH))
   const [result, setResult] = useState<TransformResult | null>(null)
+  // Advanced conversion options, hidden by default.
+  const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [mode, setMode] = useState<TransformMode>("average")
+  const [mergeOn, setMergeOn] = useState(false)
+  const [mergeSimilarity, setMergeSimilarity] = useState(DEFAULT_MERGE_SIMILARITY)
+  const [removeBg, setRemoveBg] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const reqId = useRef(0)
@@ -143,6 +153,9 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
       formData.append("file", file)
       formData.append("width", String(clamped))
       formData.append("brandCode", palette.code)
+      formData.append("mode", mode)
+      formData.append("mergeSimilarity", mergeOn ? String(mergeSimilarity) : "0")
+      formData.append("removeBackground", String(removeBg))
       trigger(formData)
         .then((converted) => {
           if (id !== reqId.current) return
@@ -160,7 +173,7 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
         })
     }, DEBOUNCE_MS)
     return () => clearTimeout(timeout)
-  }, [file, widthInput, palette, trigger, t])
+  }, [file, widthInput, palette, trigger, t, mode, mergeOn, mergeSimilarity, removeBg])
 
   // Render the preview whenever a result arrives.
   useEffect(() => {
@@ -265,6 +278,81 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
           <p className="text-xs text-muted-foreground">
             {t("editor.heightScaled")}
           </p>
+        </div>
+
+        <div className="border-t pt-2">
+          <button
+            type="button"
+            onClick={() => setAdvancedOpen((v) => !v)}
+            aria-expanded={advancedOpen}
+            className="flex w-full items-center justify-between text-xs font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            {t("editor.advancedOptions")}
+            <ChevronDown
+              className={`size-3.5 transition-transform ${advancedOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+          {advancedOpen && (
+            <div className="grid gap-3 pt-3">
+              <div className="flex items-center justify-between gap-2">
+                <Label>{t("editor.importMode")}</Label>
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant={mode === "average" ? "secondary" : "outline"}
+                    onClick={() => setMode("average")}
+                  >
+                    {t("editor.photoMode")}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant={mode === "dominant" ? "secondary" : "outline"}
+                    onClick={() => setMode("dominant")}
+                  >
+                    {t("editor.cartoonMode")}
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="import-merge">{t("editor.mergeSimilar")}</Label>
+                <Switch
+                  id="import-merge"
+                  checked={mergeOn}
+                  onCheckedChange={(checked) => setMergeOn(checked)}
+                />
+              </div>
+              {mergeOn && (
+                <div className="grid gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="import-merge-level">{t("editor.mergeSimilarity")}</Label>
+                    <span className="text-xs text-muted-foreground">
+                      {mergeSimilarity.toFixed(2)}
+                    </span>
+                  </div>
+                  <input
+                    id="import-merge-level"
+                    type="range"
+                    min={0.02}
+                    max={0.5}
+                    step={0.01}
+                    value={mergeSimilarity}
+                    onChange={(e) => setMergeSimilarity(Number(e.target.value))}
+                    className="w-full accent-foreground"
+                  />
+                </div>
+              )}
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="import-bg">{t("editor.removeBackground")}</Label>
+                <Switch
+                  id="import-bg"
+                  checked={removeBg}
+                  onCheckedChange={(checked) => setRemoveBg(checked)}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {isMutating && (

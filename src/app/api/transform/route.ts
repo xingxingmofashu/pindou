@@ -12,6 +12,12 @@ export const runtime = "nodejs"
 const ConvertRequestSchema = z.object({
   width: z.coerce.number().int().min(1).max(MAX_GRID_DIMENSION),
   brandCode: z.string(),
+  mode: z.enum(["average", "dominant"]).default("average"),
+  mergeSimilarity: z.coerce.number().min(0).max(1).default(0),
+  removeBackground: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
 })
 
 export async function POST(request: NextRequest) {
@@ -29,6 +35,9 @@ export async function POST(request: NextRequest) {
   const parsed = ConvertRequestSchema.safeParse({
     width: formData.get("width"),
     brandCode: formData.get("brandCode"),
+    mode: formData.get("mode") ?? "average",
+    mergeSimilarity: formData.get("mergeSimilarity") ?? 0,
+    removeBackground: formData.get("removeBackground") ?? "false",
   })
   if (!parsed.success) {
     return NextResponse.json(
@@ -59,6 +68,9 @@ export async function POST(request: NextRequest) {
     const result = await transform(buffer, {
       width: parsed.data.width,
       palette,
+      mode: parsed.data.mode,
+      mergeSimilarity: parsed.data.mergeSimilarity,
+      removeBackground: parsed.data.removeBackground,
     })
     return NextResponse.json(result)
   } catch {

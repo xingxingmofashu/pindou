@@ -9,19 +9,34 @@ const ALPHA_THRESHOLD = 128
 const OKLAB_TOP_K = 8
 /** Source long side is never pre-scaled beyond this. */
 const MAX_SOURCE_SIDE = 2048
-/** Source is scaled at least to this long side for stable per-cell voting. */
+/** Source is scaled at least to this long side for stable per-cell averaging. */
 const MIN_SOURCE_SIDE = 256
 /** Pre-scale keeps roughly this many sub-samples per target cell. */
-const SAMPLES_PER_CELL = 4
+const SAMPLES_PER_CELL = 12
 
 const toOklab = converter("oklab")
 const toLab = converter("lab")
 
+/** How a cell's source pixels collapse into one representative colour. */
+export type TransformMode = "average" | "dominant"
+
 export interface TransformOptions {
   /** Target width in beads. */
   width: number
-  /** Palette to quantize against; grid values are 1-based indices into `colors`. */
+  /** Palette to quantize against. */
   palette: Palette
+  /**
+   * `"average"` blends the cell's pixels (photos — smooth, noise-free);
+   * `"dominant"` picks the most common exact RGB (illustrations — crisp).
+   */
+  mode?: TransformMode
+  /**
+   * Merge low-frequency colours into the most frequent colour within this
+   * OKLab distance (0 disables). Removes scattered noise colours.
+   */
+  mergeSimilarity?: number
+  /** Flood-fill the border-connected dominant colour and empty those cells. */
+  removeBackground?: boolean
 }
 
 export interface TransformResult {
@@ -58,7 +73,7 @@ function buildPaletteSamples(palette: Palette): PaletteSamples {
 }
 
 /**
- * Map an RGB pixel to the closest palette color index (0-based).
+ * Map an RGB colour to the closest palette color index (0-based).
  *
  * A cheap OKLab-euclidean pass picks the {@link OKLAB_TOP_K} closest colors,
  * then CIEDE2000 — the perceptually most accurate delta-E — breaks the tie.
@@ -108,17 +123,156 @@ function nearestColorIndex(
   return winner
 }
 
+/** Euclidean distance between two OKLab triples. */
+function oklabDistance(
+  a: [number, number, number],
+  b: [number, number, number],
+): number {
+  const dl = a[0] - b[0]
+  const da = a[1] - b[1]
+  const db = a[2] - b[2]
+  return Math.sqrt(dl * dl + da * da + db * db)
+}
+
+/**
+ * Merge low-frequency colours into the most frequent colour within an OKLab
+ * distance threshold, applied in place. Iterates colour codes from most to
+ * least frequent and records a low → high replacement map once, then rewrites
+ * the grid in a single pass.
+ *
+ * @param grid      - The code grid to rewrite in place ("" = empty).
+ * @param palette   - Palette used to resolve code → OKLab.
+ * @param threshold - Maximum OKLab distance between the merged pair.
+ */
+function mergeSimilarColours(
+  grid: string[][],
+  palette: Palette,
+  threshold: number,
+): void {
+  const counts = new Map<string, number>()
+  for (const row of grid) {
+    for (const code of row) {
+      if (code === "") continue
+      counts.set(code, (counts.get(code) ?? 0) + 1)
+    }
+  }
+  if (counts.size < 2) return
+
+  const okByCode = new Map<string, [number, number, number]>()
+  for (const color of palette.colors) {
+    const o = toOklab(color.hex)!
+    okByCode.set(color.code, [o.l, o.a, o.b])
+  }
+
+  const codes = Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([code]) => code)
+
+  const replacement = new Map<string, string>()
+  for (let i = 0; i < codes.length; i++) {
+    const high = codes[i]
+    if (replacement.has(high)) continue
+    const highOk = okByCode.get(high)
+    if (!highOk) continue
+    for (let j = i + 1; j < codes.length; j++) {
+      const low = codes[j]
+      if (replacement.has(low)) continue
+      const lowOk = okByCode.get(low)
+      if (!lowOk) continue
+      if (oklabDistance(highOk, lowOk) < threshold) {
+        replacement.set(low, high)
+      }
+    }
+  }
+  if (replacement.size === 0) return
+
+  for (const row of grid) {
+    for (let c = 0; c < row.length; c++) {
+      const target = replacement.get(row[c])
+      if (target) row[c] = target
+    }
+  }
+}
+
+/**
+ * Flood-fill the border-connected dominant colour and empty those cells, in
+ * place. Counts colours on the outer ring, takes the most frequent as the
+ * background, then from every matching border cell BFS-fills same-coloured
+ * neighbours — interior regions of the same colour are left untouched.
+ *
+ * @param grid - The code grid to rewrite in place ("" = empty).
+ */
+function removeBackgroundColour(grid: string[][]): void {
+  const h = grid.length
+  const w = grid[0]?.length ?? 0
+  if (h === 0 || w === 0) return
+
+  const borderCounts = new Map<string, number>()
+  const count = (code: string) => {
+    if (code === "") return
+    borderCounts.set(code, (borderCounts.get(code) ?? 0) + 1)
+  }
+  for (let c = 0; c < w; c++) {
+    count(grid[0][c])
+    count(grid[h - 1][c])
+  }
+  for (let r = 1; r < h - 1; r++) {
+    count(grid[r][0])
+    count(grid[r][w - 1])
+  }
+
+  let bg = ""
+  let bgCount = 0
+  for (const [code, n] of borderCounts) {
+    if (n > bgCount) {
+      bgCount = n
+      bg = code
+    }
+  }
+  if (!bg) return
+
+  const visited = new Uint8Array(w * h)
+  const stack: number[] = []
+  for (let r = 0; r < h; r++) {
+    for (let c = 0; c < w; c++) {
+      if ((r === 0 || r === h - 1 || c === 0 || c === w - 1) && grid[r][c] === bg) {
+        const idx = r * w + c
+        visited[idx] = 1
+        stack.push(idx)
+      }
+    }
+  }
+
+  while (stack.length > 0) {
+    const idx = stack.pop()!
+    const r = Math.floor(idx / w)
+    const c = idx % w
+    grid[r][c] = ""
+    const neighbours: [number, number][] = [[r + 1, c], [r - 1, c], [r, c + 1], [r, c - 1]]
+    for (const [nr, nc] of neighbours) {
+      if (nr < 0 || nr >= h || nc < 0 || nc >= w) continue
+      const nIdx = nr * w + nc
+      if (visited[nIdx] || grid[nr][nc] !== bg) continue
+      visited[nIdx] = 1
+      stack.push(nIdx)
+    }
+  }
+}
+
 /**
  * Convert an image buffer into a bead grid quantized to a palette.
  *
- * Each target cell's color is the mode (dominant colour) of its source-pixel
- * region after per-pixel palette matching — never an averaged blend, which
- * would synthesize colours absent from the source. Very large sources are
- * pre-scaled with a smooth kernel (cost cap) while keeping >= SAMPLES_PER_CELL
- * sub-samples per cell so the mode stays stable.
+ * Each target cell first collapses its source-pixel region into a single
+ * representative colour — the RGB average for photos, or the most frequent
+ * exact RGB for illustrations — and that representative is then mapped to the
+ * nearest palette colour. Averaging before quantizing (rather than quantizing
+ * each pixel and voting) keeps gradients smooth and free of scattered noise.
+ * The source is pre-scaled so each cell covers roughly {@link SAMPLES_PER_CELL}²
+ * pixels; `nearest` kernel preserves exact colours for `dominant` mode, while
+ * `linear` gives the box-like average `average` mode wants.
  *
  * @param image - Encoded image bytes (PNG/JPEG/WebP/GIF/AVIF/TIFF).
- * @param opts - Target width in beads and the palette to match against.
+ * @param opts  - Target width, palette, and optional mode / merge / background.
  * @returns The dense code grid plus dimensions and bead count.
  */
 export async function transform(
@@ -136,6 +290,7 @@ export async function transform(
     MAX_GRID_DIMENSION,
   )
 
+  const mode = opts.mode ?? "average"
   const targetSide = Math.max(width, height)
   const cap = Math.min(
     MAX_SOURCE_SIDE,
@@ -144,7 +299,10 @@ export async function transform(
   const pipeline = sharp(image)
   const preScaled =
     Math.max(srcW, srcH) > cap
-      ? pipeline.resize({ width: cap, kernel: sharp.kernel.linear })
+      ? pipeline.resize({
+          width: cap,
+          kernel: mode === "dominant" ? sharp.kernel.nearest : sharp.kernel.linear,
+        })
       : pipeline
 
   const { data, info } = await preScaled
@@ -172,29 +330,74 @@ export async function transform(
         srcWidth,
         Math.max(x0 + 1, Math.floor(((c + 1) * srcWidth) / width)),
       )
-      const counts = new Map<number, number>()
+
+      let rSum = 0
+      let gSum = 0
+      let bSum = 0
+      let pixelCount = 0
+      let domKey = 0
+      let domCount = 0
+      const freq = new Map<number, number>()
+
       for (let sy = y0; sy < y1; sy++) {
         let i = (sy * srcWidth + x0) * 4
         for (let sx = x0; sx < x1; sx++, i += 4) {
           if (data[i + 3] < ALPHA_THRESHOLD) continue
-          const idx = nearestColorIndex(data[i], data[i + 1], data[i + 2], samples, ciede)
-          counts.set(idx, (counts.get(idx) ?? 0) + 1)
-        }
-      }
-      if (counts.size > 0) {
-        let bestIdx = -1
-        let bestCount = -1
-        for (const [idx, n] of counts) {
-          if (n > bestCount) {
-            bestCount = n
-            bestIdx = idx
+          const r = data[i]
+          const g = data[i + 1]
+          const b = data[i + 2]
+          if (mode === "average") {
+            rSum += r
+            gSum += g
+            bSum += b
+            pixelCount++
+          } else {
+            pixelCount++
+            const key = (r << 16) | (g << 8) | b
+            const n = (freq.get(key) ?? 0) + 1
+            freq.set(key, n)
+            if (n > domCount) {
+              domCount = n
+              domKey = key
+            }
           }
         }
-        row[c] = opts.palette.colors[bestIdx].code
-        beadCount++
       }
+
+      if (pixelCount === 0) continue
+
+      let repR: number
+      let repG: number
+      let repB: number
+      if (mode === "average") {
+        repR = Math.round(rSum / pixelCount)
+        repG = Math.round(gSum / pixelCount)
+        repB = Math.round(bSum / pixelCount)
+      } else {
+        repR = (domKey >> 16) & 0xff
+        repG = (domKey >> 8) & 0xff
+        repB = domKey & 0xff
+      }
+
+      const idx = nearestColorIndex(repR, repG, repB, samples, ciede)
+      row[c] = opts.palette.colors[idx].code
+      beadCount++
     }
     grid.push(row)
+  }
+
+  if ((opts.mergeSimilarity ?? 0) > 0) {
+    mergeSimilarColours(grid, opts.palette, opts.mergeSimilarity!)
+  }
+  if (opts.removeBackground) {
+    removeBackgroundColour(grid)
+    // Background removal may have emptied cells; recount.
+    beadCount = 0
+    for (const row of grid) {
+      for (const code of row) {
+        if (code !== "") beadCount++
+      }
+    }
   }
 
   return { grid, width, height, beadCount }
