@@ -89,6 +89,8 @@
     "fill": "Fill",
     "showLabels": "Show labels",
     "labels": "Labels",
+    "showBeadStatsToggle": "Show bead usage",
+    "beadStats": "Bead usage",
     "clearCanvas": "Clear Canvas",
     "clearCanvasAria": "Clear canvas",
     "clearCanvasDescription": "This will remove all beads. This action cannot be undone.",

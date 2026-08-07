@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Pencil, Eraser, PaintBucket, Trash2, CaseSensitive, ImagePlus, Download } from "lucide-react"
+import { Pencil, Eraser, PaintBucket, Trash2, CaseSensitive, ImagePlus, Download, List } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -41,6 +41,10 @@ interface ToolBarProps {
   showLabels?: boolean
   /** Called when the user toggles colour-code labels. */
   onToggleLabels?: () => void
+  /** Whether the bead-usage panel is shown. */
+  showBeadStats?: boolean
+  /** Called when the user toggles the bead-usage panel. */
+  onToggleBeadStats?: () => void
   /** Called when the user clicks the publish button. */
   onPublish: () => void
   /** Current zoom factor (screen pixels per world unit). */
@@ -67,6 +71,8 @@ export function ToolBar({
   onExportImage,
   showLabels,
   onToggleLabels,
+  showBeadStats,
+  onToggleBeadStats,
   onPublish,
   zoom,
   onSetZoom,
@@ -116,6 +122,23 @@ export function ToolBar({
                 onClick={onToggleLabels}
               />
               <TooltipContent side="bottom">{t("editor.labels")}</TooltipContent>
+            </Tooltip>
+          )}
+          {onToggleBeadStats && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant={showBeadStats ? "secondary" : "outline"}
+                    size="icon-xs"
+                    aria-label={t("editor.showBeadStatsToggle")}
+                  >
+                    <List data-icon="inline-start" />
+                  </Button>
+                }
+                onClick={onToggleBeadStats}
+              />
+              <TooltipContent side="bottom">{t("editor.beadStats")}</TooltipContent>
             </Tooltip>
           )}
           {onClearCanvas && (

@@ -28,6 +28,7 @@ export function usePixiApp(
 
     const app = new Application()
     let cancelled = false
+    let resizeObserver: ResizeObserver | undefined
 
     const onContextLost = (e: Event) => {
       e.preventDefault()
@@ -65,6 +66,18 @@ export function usePixiApp(
         return
       }
 
+      // Pixi's own ResizePlugin only reacts to window resizes, so a container
+      // that reflows without a window change (e.g. the editor's sidebar panels
+      // toggling) leaves the canvas oversized. Watch the parent and resize it
+      // to its content box whenever its layout box changes.
+      resizeObserver = new ResizeObserver(() => {
+        const { clientWidth, clientHeight } = parent
+        if (clientWidth > 0 && clientHeight > 0) {
+          app.renderer.resize(clientWidth, clientHeight)
+        }
+      })
+      resizeObserver.observe(parent)
+
       const world = new Container()
       world.label = "world"
       const beadsGfx = new Graphics()
@@ -85,6 +98,7 @@ export function usePixiApp(
     return () => {
       cancelled = true
       cancelAnimationFrame(rafRef.current)
+      resizeObserver?.disconnect()
       canvas.removeEventListener("webglcontextlost", onContextLost)
       // Destroy the renderer AND release the WebGL context (`true`), and
       // recurse into the stage children. Synchronous, so nothing leaks the

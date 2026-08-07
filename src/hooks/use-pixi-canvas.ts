@@ -10,6 +10,7 @@ import {
   serializeGrid,
   deserializeGrid,
   computeBeadStats,
+  countBeadStats,
   walkLine,
   lodParams,
   computeGridLines,
@@ -45,6 +46,8 @@ interface UsePixiCanvasOptions {
   showLabels?: boolean
   /** Disable drawing — pan and zoom still work. */
   readonly?: boolean
+  /** Fired whenever the painted cells change (stroke end, fill, clear, load). */
+  onGridChange?: () => void
 }
 
 /** Mutable per-render options mirrored into refs for the event handlers. */
@@ -72,6 +75,7 @@ export function usePixiCanvas(
     activeColorIndex = 1,
     showLabels = false,
     readonly = false,
+    onGridChange,
   } = options
 
   const [zoom, setZoomState] = useState(initialZoom)
@@ -85,6 +89,7 @@ export function usePixiCanvas(
 
   const pixiRef = useRef(pixiCtx)
   const runtimeRef = useRef<RuntimeOpts>({ activeTool, activeColorIndex, readonly })
+  const onGridChangeRef = useRef(onGridChange)
   const panRef = useRef({ on: false, startX: 0, startY: 0, startWX: 0, startWY: 0 })
   const drawRef = useRef<{ on: boolean; vc: number; vr: number }>({ on: false, vc: 0, vr: 0 })
 
@@ -197,6 +202,7 @@ export function usePixiCanvas(
     pixiRef.current = pixiCtx
     rebuildRef.current = rebuild
     runtimeRef.current = { activeTool, activeColorIndex, readonly }
+    onGridChangeRef.current = onGridChange
   })
 
   /** Centre viewport and rebuild when pixiCtx becomes ready. */
@@ -339,6 +345,7 @@ export function usePixiCanvas(
         if (!w) return
         floodFill(cellsRef.current, Math.floor(w.wx / CELL), Math.floor(w.wy / CELL), rt.activeColorIndex)
         rebuildRef.current()
+        onGridChangeRef.current?.()
         return
       }
       if (!isDraw(rt.activeTool)) return
@@ -393,9 +400,11 @@ export function usePixiCanvas(
      *  pointerleave fire with button === -1 (no button state), so we reset
      *  unconditionally rather than matching a specific button. */
     const onUp = () => {
+      const wasDrawing = drawRef.current.on
       panRef.current.on = false
       drawRef.current = { on: false, vc: 0, vr: 0 }
       rectRef.current = null
+      if (wasDrawing) onGridChangeRef.current?.()
     }
 
     const onContextMenu = (e: Event) => e.preventDefault()
@@ -418,6 +427,7 @@ export function usePixiCanvas(
   const resetModel = useCallback(() => {
     cellsRef.current = new Map()
     rebuildRef.current()
+    onGridChangeRef.current?.()
   }, [])
 
   const fitToCanvas = useCallback(() => {
@@ -463,7 +473,15 @@ export function usePixiCanvas(
     }
 
     rebuildRef.current()
+    onGridChangeRef.current?.()
   }, [initialZoom, syncZoom, palette])
 
-  return { zoom, setZoom, onReset: fitToCanvas, onClear: clearCanvas, getCellsData, loadGrid, resetModel }
+  /** Live bead-usage stats computed straight from the sparse model — no dense
+   *  grid allocation (cheap enough to call after every stroke). */
+  const getBeadStats = useCallback(
+    () => countBeadStats(cellsRef.current, palette),
+    [palette],
+  )
+
+  return { zoom, setZoom, onReset: fitToCanvas, onClear: clearCanvas, getCellsData, getBeadStats, loadGrid, resetModel }
 }

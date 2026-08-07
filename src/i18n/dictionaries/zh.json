@@ -89,6 +89,8 @@
     "fill": "油漆桶",
     "showLabels": "显示色号标签",
     "labels": "色号标签",
+    "showBeadStatsToggle": "显示珠子用量",
+    "beadStats": "珠子用量",
     "clearCanvas": "清空画布",
     "clearCanvasAria": "清空画布",
     "clearCanvasDescription": "这将移除所有拼豆。此操作无法撤销。",
