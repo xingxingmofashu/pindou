@@ -433,20 +433,20 @@ export function usePixiCanvas(
   }, [resetModel])
 
   const getCellsData = useCallback((): {
-    grid: number[][]; brandCode: string; brandId: string; beadStats: string
+    grid: string[][]; brandCode: string; brandId: string; beadStats: string
   } | null => {
-    const grid = serializeGrid(cellsRef.current)
+    const grid = serializeGrid(cellsRef.current, palette)
     if (!grid) return null
     return {
       grid,
       brandCode: palette.code,
       brandId: palette.id,
-      beadStats: computeBeadStats(grid, palette),
+      beadStats: computeBeadStats(grid),
     }
   }, [palette])
 
-  const loadGrid = useCallback((grid: number[][]) => {
-    cellsRef.current = deserializeGrid(grid)
+  const loadGrid = useCallback((grid: string[][]) => {
+    cellsRef.current = deserializeGrid(grid, palette)
 
     const ctx = pixiRef.current
     if (ctx?.app.screen) {
@@ -463,7 +463,7 @@ export function usePixiCanvas(
     }
 
     rebuildRef.current()
-  }, [initialZoom, syncZoom])
+  }, [initialZoom, syncZoom, palette])
 
   return { zoom, setZoom, onReset: fitToCanvas, onClear: clearCanvas, getCellsData, loadGrid, resetModel }
 }

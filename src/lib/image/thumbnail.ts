@@ -1,5 +1,5 @@
 import sharp from "sharp"
-import { EMPTY, MIN_PX } from "@/lib/editor"
+import { MIN_PX } from "@/lib/editor"
 import { hexToRgb } from "@/lib/utils"
 import { R2 } from "@/lib/r2"
 import type { Palette } from "@/types"
@@ -28,14 +28,17 @@ export class Thumbnail {
    * per axis; otherwise each cell is scaled up to fill the canvas.
    * Background is #fafafa (editor canvas colour).
    *
-   * @param grid    - The serialized grid (`grid[row][col]`, 0 = empty).
-   * @param palette - Palette used to resolve index → colour hex.
+   * @param grid    - The serialized code grid (`grid[row][col]`, "" = empty).
+   * @param palette - Palette used to resolve colour code → hex.
    * @returns The encoded PNG bytes, or null for an empty grid.
    */
-  async generate(grid: number[][], palette: Palette): Promise<Buffer | null> {
+  async generate(grid: string[][], palette: Palette): Promise<Buffer | null> {
     const h = grid.length
     const w = grid[0]?.length ?? 0
     if (h === 0 || w === 0) return null
+
+    const hexByCode = new Map<string, string>()
+    for (const color of palette.colors) hexByCode.set(color.code, color.hex)
 
     const step = Math.ceil(Math.max(h, w) / MAX_CELLS)
     const cellsH = Math.ceil(h / step)
@@ -60,9 +63,9 @@ export class Thumbnail {
       const srcRow = grid[r * step]
       if (!srcRow) continue
       for (let c = 0; c < cellsW; c++) {
-        const colorIdx = srcRow[c * step] ?? EMPTY
-        if (colorIdx === EMPTY) continue
-        const hex = palette.colors[colorIdx - 1]?.hex
+        const code = srcRow[c * step] ?? ""
+        if (code === "") continue
+        const hex = hexByCode.get(code)
         if (!hex) continue
         const rgb = hexToRgb(hex)
         const y0 = offsetY + r * cellPx

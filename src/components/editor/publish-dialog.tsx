@@ -30,7 +30,7 @@ interface PublishDialogProps {
   open: boolean
   onClose: () => void
   getCellsData: () => {
-    grid: number[][]; brandCode: string; brandId: string; beadStats: string
+    grid: string[][]; brandCode: string; brandId: string; beadStats: string
   } | null
 }
 

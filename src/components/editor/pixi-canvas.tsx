@@ -13,10 +13,10 @@ export interface PixiCanvasApi {
   onReset: () => void
   onClear: () => void
   getCellsData: () => {
-    grid: number[][]; brandCode: string; brandId: string; beadStats: string
+    grid: string[][]; brandCode: string; brandId: string; beadStats: string
   } | null
-  /** Replace the canvas contents with a serialized grid. */
-  loadGrid: (grid: number[][]) => void
+  /** Replace the canvas contents with a serialized code grid. */
+  loadGrid: (grid: string[][]) => void
 }
 
 export interface PixiCanvasProps {
@@ -25,7 +25,8 @@ export interface PixiCanvasProps {
   label?: boolean
   readonly?: boolean
   palette?: Palette
-  grid?: number[][]
+  /** Serialized code grid (`grid[row][col]`, "" = empty) to render. */
+  grid?: string[][]
   apiRef?: RefObject<PixiCanvasApi | null>
   onZoomChange?: (zoom: number) => void
   className?: string

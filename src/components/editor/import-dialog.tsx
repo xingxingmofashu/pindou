@@ -35,8 +35,8 @@ const DEBOUNCE_MS = 300
 interface ImportDialogProps {
   open: boolean
   onClose: () => void
-  /** Called with the converted grid (`grid[row][col]`, 0 = empty) when the user applies. */
-  onApply: (grid: number[][]) => void
+  /** Called with the converted code grid (`grid[row][col]`, "" = empty) when the user applies. */
+  onApply: (grid: string[][]) => void
 }
 
 /**
@@ -47,12 +47,15 @@ interface ImportDialogProps {
  */
 function drawGridToCanvas(
   canvas: HTMLCanvasElement,
-  grid: number[][],
+  grid: string[][],
   palette: Palette,
 ): void {
   const rows = grid.length
   const cols = grid[0]?.length ?? 0
   if (rows === 0 || cols === 0) return
+
+  const hexByCode = new Map<string, string>()
+  for (const color of palette.colors) hexByCode.set(color.code, color.hex)
 
   const scale = Math.min(1, PREVIEW_MAX / Math.max(rows, cols))
   const pw = Math.max(1, Math.round(cols * scale))
@@ -67,24 +70,24 @@ function drawGridToCanvas(
     for (let r = 0; r < rows; r++) {
       const row = grid[r]
       for (let c = 0; c < cols; c++) {
-        const val = row[c]
-        if (val <= 0) continue
-        const color = palette.colors[val - 1]
-        if (!color) continue
-        ctx.fillStyle = color.hex
+        const code = row[c]
+        if (code === "") continue
+        const hex = hexByCode.get(code)
+        if (!hex) continue
+        ctx.fillStyle = hex
         ctx.fillRect(c, r, 1, 1)
       }
     }
     return
   }
 
-  const freq = new Map<number, Map<number, number>>()
+  const freq = new Map<number, Map<string, number>>()
   for (let r = 0; r < rows; r++) {
     const row = grid[r]
     const py = Math.min(ph - 1, Math.floor(r * scale))
     for (let c = 0; c < cols; c++) {
-      const val = row[c]
-      if (val <= 0) continue
+      const code = row[c]
+      if (code === "") continue
       const px = Math.min(pw - 1, Math.floor(c * scale))
       const key = py * pw + px
       let bucket = freq.get(key)
@@ -92,21 +95,21 @@ function drawGridToCanvas(
         bucket = new Map()
         freq.set(key, bucket)
       }
-      bucket.set(val, (bucket.get(val) ?? 0) + 1)
+      bucket.set(code, (bucket.get(code) ?? 0) + 1)
     }
   }
   for (const [key, bucket] of freq) {
-    let best = 0
+    let best = ""
     let bestN = 0
-    for (const [val, n] of bucket) {
+    for (const [code, n] of bucket) {
       if (n > bestN) {
         bestN = n
-        best = val
+        best = code
       }
     }
-    const color = palette.colors[best - 1]
-    if (!color) continue
-    ctx.fillStyle = color.hex
+    const hex = hexByCode.get(best)
+    if (!hex) continue
+    ctx.fillStyle = hex
     ctx.fillRect(key % pw, Math.floor(key / pw), 1, 1)
   }
 }

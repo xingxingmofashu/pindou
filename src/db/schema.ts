@@ -9,7 +9,7 @@ export const patterns = pgTable("patterns", {
   title: text("title").notNull(),
   description: text("description").notNull().default(""),
   authorName: text("author_name"),
-  /** Dense 2D grid serialized as JSON: number[][] — 0 = empty, ≥1 = palette index */
+  /** Dense 2D grid serialized as JSON: string[][] — "" = empty, else a colour code */
   gridData: text("grid_data").notNull(),
   /** Brand UUID referencing brands.id; code→uuid mapping lives in the app layer. */
   fkBrandId: uuid("fk_brand_id").notNull().references(() => brands.id),
@@ -76,11 +76,12 @@ export const ColorSelectSchema = createSelectSchema(colors)
 
 /**
  * Shared `gridData` wire schema (used by both the select and insert schemas):
- * a rectangular `number[][]` whose rows/columns stay within
- * {@link MAX_GRID_DIMENSION}, 0 = empty.
+ * a rectangular `string[][]` whose rows/columns stay within
+ * {@link MAX_GRID_DIMENSION}; `""` = empty cell, any other value is a brand
+ * colour code (e.g. "A1").
  */
 const gridDataSchema = z
-  .array(z.array(z.number().int().min(0)))
+  .array(z.array(z.string().max(16)))
   .min(1, `Grid rows must be 1–${MAX_GRID_DIMENSION}`)
   .max(MAX_GRID_DIMENSION, `Grid rows must be 1–${MAX_GRID_DIMENSION}`)
   .refine(
@@ -93,8 +94,8 @@ const gridDataSchema = z
 
 /**
  * Wire shape of a published pattern (GET /api/patterns/[id]): the `patterns`
- * row joined with the brand code, `gridData` parsed to a number[][], and the
- * brand FK surfaced as `brandId` alongside the wire `brandCode`.
+ * row joined with the brand code, `gridData` parsed to a code `string[][]`,
+ * and the brand FK surfaced as `brandId` alongside the wire `brandCode`.
  */
 export const PatternSelectSchema = createSelectSchema(patterns, {
   gridData: gridDataSchema,
