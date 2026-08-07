@@ -1,3 +1,4 @@
+import { countGridBeads } from "@/lib/editor"
 import type { Palette } from "@/types"
 
 /** Default pixels per bead when the caller doesn't specify a scale. */
@@ -156,13 +157,7 @@ export function exportGridSize(
  * @returns The count of distinct non-empty codes.
  */
 function usedColorCount(grid: string[][]): number {
-  const seen = new Set<string>()
-  for (const row of grid) {
-    for (const val of row) {
-      if (val !== "") seen.add(val)
-    }
-  }
-  return seen.size
+  return countGridBeads(grid).size
 }
 
 /**
@@ -183,14 +178,7 @@ export function usedColorStats(
     order.set(color.code, i)
     hexByCode.set(color.code, color.hex)
   })
-  const counts = new Map<string, number>()
-  for (const row of grid) {
-    for (const code of row) {
-      if (code === "") continue
-      counts.set(code, (counts.get(code) ?? 0) + 1)
-    }
-  }
-  return Array.from(counts.entries())
+  return Array.from(countGridBeads(grid))
     .sort(([a], [b]) => (order.get(a) ?? Infinity) - (order.get(b) ?? Infinity))
     .map(([code, count]) => ({ code, hex: hexByCode.get(code) ?? "#000000", count }))
 }

@@ -272,12 +272,12 @@ export function serializeGrid(
 }
 
 /**
- * Count beads per colour code for a serialized code grid.
+ * Count painted cells per colour code in a serialized code grid.
  *
  * @param grid - The rectangular `string[][]` to count ("" = empty).
- * @returns A JSON string mapping colour code → bead count, e.g. `{"A1":12}`.
+ * @returns A map of colour code → bead count.
  */
-export function computeBeadStats(grid: string[][]): string {
+export function countGridBeads(grid: string[][]): Map<string, number> {
   const counts = new Map<string, number>()
   for (const row of grid) {
     for (const code of row) {
@@ -285,7 +285,19 @@ export function computeBeadStats(grid: string[][]): string {
       counts.set(code, (counts.get(code) ?? 0) + 1)
     }
   }
-  return JSON.stringify(Object.fromEntries(counts))
+  return counts
+}
+
+/**
+ * Count beads per colour code for a serialized code grid, as a JSON string
+ * mapping colour code → bead count (e.g. `{"A1":12}`) — the stored/published
+ * form of a pattern's usage stats.
+ *
+ * @param grid - The rectangular `string[][]` to count ("" = empty).
+ * @returns The JSON string.
+ */
+export function computeBeadStats(grid: string[][]): string {
+  return JSON.stringify(Object.fromEntries(countGridBeads(grid)))
 }
 
 /**
