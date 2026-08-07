@@ -19,6 +19,12 @@ interface ColorPaletteProps {
   activeColorIndex: number
   /** Called when the user selects a colour (or the eraser). */
   onColorPick: (index: number) => void
+  /**
+   * Pin a specific brand palette (e.g. a pattern's own brand). When set, the
+   * component skips the shared active-palette store and the catalog fetch, and
+   * hides the brand switcher.
+   */
+  palette?: Palette
 }
 
 /**
@@ -28,16 +34,21 @@ interface ColorPaletteProps {
  * brand. Colours of the active brand are grouped by series letter, plus an
  * eraser / empty-cell swatch at the top.
  */
-export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProps) {
-  const { palette, setActivePalette } = usePalette()
+export function ColorPalette({
+  activeColorIndex,
+  onColorPick,
+  palette: pinned,
+}: ColorPaletteProps) {
+  const { palette: storePalette, setActivePalette } = usePalette()
   const { t } = useI18n()
+  const palette = pinned ?? storePalette
   const { data: brands, error, isValidating, mutate } = useSWR<Array<Palette>>(
-    "/api/brands",
+    pinned ? null : "/api/brands",
     fetcher,
   )
 
   useEffect(() => {
-    if (!error || isValidating) return
+    if (pinned || !error || isValidating) return
     toast.add({
       id: "palette-load-failed",
       type: "error",
@@ -48,14 +59,14 @@ export function ColorPalette({ activeColorIndex, onColorPick }: ColorPaletteProp
         onClick: () => mutate(),
       },
     })
-  }, [error, isValidating, mutate, t])
+  }, [error, isValidating, mutate, t, pinned])
 
   // Seed the active palette once the catalog arrives.
   useEffect(() => {
     const first = brands?.[0]
-    if (!first || palette) return
+    if (pinned || !first || palette) return
     setActivePalette(first)
-  }, [brands, palette, setActivePalette])
+  }, [brands, palette, setActivePalette, pinned])
 
   /** Colours grouped by series letter, with 1‑based palette indices. */
   const seriesGroups = useMemo(() => {

@@ -6,6 +6,7 @@ import useSWR from "swr"
 import { useParams, useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { PixiCanvas, type PixiCanvasApi } from "@/components/pixi-canvas"
+import { ColorPalette } from "@/components/editor/color-palette"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -71,6 +72,7 @@ function EditForm({
   const canvasApiRef = useRef<PixiCanvasApi>(null)
   const [title, setTitle] = useState(pattern.title)
   const [description, setDescription] = useState(pattern.description ?? "")
+  const [activeColorIndex, setActiveColorIndex] = useState(1)
   const [saving, setSaving] = useState(false)
 
   const backToPattern = useCallback(
@@ -147,35 +149,45 @@ function EditForm({
         </Button>
       </div>
       <div className="flex-1 min-h-0 flex gap-2">
-        <div className="w-56 shrink-0 flex flex-col gap-3 border p-3">
-          <div className="grid gap-1.5">
-            <Label htmlFor="edit-title">
-              {t("editor.title")} <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="edit-title"
-              type="text"
-              maxLength={100}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+        <div className="w-56 shrink-0 min-h-0 flex flex-col gap-3">
+          <div className="space-y-1.5 border p-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="edit-title">
+                {t("editor.title")} <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="edit-title"
+                type="text"
+                maxLength={100}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="edit-description">{t("editor.description")}</Label>
+              <Textarea
+                id="edit-description"
+                maxLength={280}
+                rows={2}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="resize-none"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">{t("patternDetail.editHint")}</p>
+          </div>
+          <div className="flex-1 min-h-0">
+            <ColorPalette
+              palette={palette}
+              activeColorIndex={activeColorIndex}
+              onColorPick={setActiveColorIndex}
             />
           </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="edit-description">{t("editor.description")}</Label>
-            <Textarea
-              id="edit-description"
-              maxLength={280}
-              rows={2}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="resize-none"
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">{t("patternDetail.editHint")}</p>
         </div>
         <PixiCanvas
           palette={palette}
           grid={pattern.gridData}
+          activeColorIndex={activeColorIndex}
           apiRef={canvasApiRef}
           className="flex-1 min-w-0 border"
         />
