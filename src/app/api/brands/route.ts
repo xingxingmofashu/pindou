@@ -11,9 +11,13 @@ import type { Palette } from "@/types"
  * matches the 1-based grid index the editor stores.
  *
  * The catalog only changes via `db:migrate` (data migration 0006), so it's
- * effectively immutable at runtime — safe to cache at the CDN and in the
- * browser, cutting per-visit Neon queries.
+ * effectively immutable at runtime. The handler is statically generated at
+ * build time and re-validated every {@link revalidate} seconds (ISR), so the
+ * response is served from the edge/CDN without touching Neon per request; a
+ * `db:migrate` change lands on the next deploy (or `revalidatePath`).
  */
+export const revalidate = 604800
+
 export async function GET() {
   const rows = await db
     .select()

@@ -10,7 +10,21 @@ import type { Palette } from "@/types"
  * which the client receives from `/api/brands` or `/api/patterns/[id]`. Same
  * left-join + fold as the catalog route, restricted to one brand. Unknown or
  * malformed ids return 404.
+ *
+ * The catalog only changes via `db:migrate`, so brand pages are statically
+ * generated at build time (`generateStaticParams`) and re-validated every
+ * {@link revalidate} seconds (ISR); `dynamicParams = false` makes any unknown
+ * id a hard 404 instead of an on-demand render. A `db:migrate` change lands on
+ * the next deploy.
  */
+export const revalidate = 604800
+export const dynamicParams = false
+
+export async function generateStaticParams() {
+  const rows = await db.select({ id: brands.id }).from(brands)
+  return rows.map(({ id }) => ({ id }))
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -34,8 +48,15 @@ export async function GET(
     return NextResponse.json({ error: "Brand not found" }, { status: 404 })
   }
 
-  return NextResponse.json<Palette>({
-    ...rows[0].brands,
-    colors: rows.flatMap((row) => (row.colors ? [row.colors] : [])),
-  })
+  return NextResponse.json<Palette>(
+    {
+      ...rows[0].brands,
+      colors: rows.flatMap((row) => (row.colors ? [row.colors] : [])),
+    },
+    {
+      headers: {
+        "Cache-Control": "public, max-age=604800, s-maxage=604800, immutable",
+      },
+    },
+  )
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { desc, eq, sql } from "drizzle-orm"
+import { revalidateTag, unstable_cache } from "next/cache"
 import { db } from "@/db"
 import { brands, colors, patterns } from "@/db/schema"
 import { Thumbnail } from "@/lib/image/thumbnail"
@@ -10,43 +11,64 @@ import type { Palette } from "@/types"
 /** Thumbnail renderer + R2 uploader for this route. */
 const thumbnail = new Thumbnail()
 
+/**
+ * The paginated list query is cached in the data cache (30s) per `page` /
+ * `pageSize`, and publishing a pattern invalidates it on-demand via
+ * {@link revalidateTag}. The route itself stays dynamic because it also serves
+ * POST; the `s-maxage` header short-caches the response at the CDN.
+ */
+const getPatternsPage = unstable_cache(
+  async (page: number, pageSize: number) => {
+    const rows = await db
+      .select({
+        id: patterns.id,
+        title: patterns.title,
+        authorName: patterns.authorName,
+        brandCode: brands.code,
+        beadStats: patterns.beadStats,
+        thumbUrl: patterns.thumbUrl,
+        createdAt: patterns.createdAt,
+        total: sql<number>`count(*) over()`.as("total"),
+      })
+      .from(patterns)
+      .innerJoin(brands, eq(patterns.fkBrandId, brands.id))
+      .orderBy(desc(patterns.createdAt))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize)
+    const total = Number(rows[0]?.total ?? 0)
+    return { rows, total }
+  },
+  ["patterns"],
+  { revalidate: 30, tags: ["patterns"] },
+)
+
 export async function GET(request: NextRequest) {
   const { page, pageSize } = PaginationSchema.parse({
     page: request.nextUrl.searchParams.get("page"),
     pageSize: request.nextUrl.searchParams.get("pageSize"),
   })
 
-  const rows = await db
-    .select({
-      id: patterns.id,
-      title: patterns.title,
-      authorName: patterns.authorName,
-      brandCode: brands.code,
-      beadStats: patterns.beadStats,
-      thumbUrl: patterns.thumbUrl,
-      createdAt: patterns.createdAt,
-      total: sql<number>`count(*) over()`.as("total"),
-    })
-    .from(patterns)
-    .innerJoin(brands, eq(patterns.fkBrandId, brands.id))
-    .orderBy(desc(patterns.createdAt))
-    .limit(pageSize)
-    .offset((page - 1) * pageSize)
+  const { rows, total } = await getPatternsPage(page, pageSize)
 
-  const total = Number(rows[0]?.total ?? 0)
-
-  return NextResponse.json({
-    patterns: rows.map((r) => ({
-      id: r.id,
-      title: r.title,
-      authorName: r.authorName,
-      brandCode: r.brandCode,
-      beadStats: r.beadStats,
-      thumbUrl: r.thumbUrl,
-      createdAt: r.createdAt,
-    })),
-    pagination: { total, page, pageSize },
-  })
+  return NextResponse.json(
+    {
+      patterns: rows.map((r) => ({
+        id: r.id,
+        title: r.title,
+        authorName: r.authorName,
+        brandCode: r.brandCode,
+        beadStats: r.beadStats,
+        thumbUrl: r.thumbUrl,
+        createdAt: r.createdAt,
+      })),
+      pagination: { total, page, pageSize },
+    },
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=300",
+      },
+    },
+  )
 }
 
 export async function POST(request: NextRequest) {
@@ -111,6 +133,7 @@ export async function POST(request: NextRequest) {
         fkBrandId: brand.id,
       })
       .returning({ id: patterns.id })
+    await revalidateTag("patterns", "max")
     return NextResponse.json({ id: inserted.id }, { status: 201 })
   } catch {
     // Roll back the uploaded thumbnail so a failed publish leaves no orphan.
