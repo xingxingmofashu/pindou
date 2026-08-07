@@ -295,7 +295,7 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
           {advancedOpen && (
             <div className="grid gap-3 pt-3">
               <div className="flex items-center justify-between gap-2">
-                <Label>{t("editor.importMode")}</Label>
+                <Label className="text-xs">{t("editor.importMode")}</Label>
                 <div className="flex gap-1">
                   <Button
                     type="button"
@@ -316,7 +316,9 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
                 </div>
               </div>
               <div className="flex items-center justify-between gap-2">
-                <Label htmlFor="import-merge">{t("editor.mergeSimilar")}</Label>
+                <Label htmlFor="import-merge" className="text-xs">
+                  {t("editor.mergeSimilar")}
+                </Label>
                 <Switch
                   id="import-merge"
                   checked={mergeOn}
@@ -326,7 +328,9 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
               {mergeOn && (
                 <div className="grid gap-1.5">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="import-merge-level">{t("editor.mergeSimilarity")}</Label>
+                    <Label htmlFor="import-merge-level" className="text-xs">
+                      {t("editor.mergeSimilarity")}
+                    </Label>
                     <span className="text-xs text-muted-foreground">
                       {mergeSimilarity.toFixed(2)}
                     </span>
@@ -344,7 +348,9 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
                 </div>
               )}
               <div className="flex items-center justify-between gap-2">
-                <Label htmlFor="import-bg">{t("editor.removeBackground")}</Label>
+                <Label htmlFor="import-bg" className="text-xs">
+                  {t("editor.removeBackground")}
+                </Label>
                 <Switch
                   id="import-bg"
                   checked={removeBg}
