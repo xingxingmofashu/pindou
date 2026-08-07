@@ -18,6 +18,20 @@ const ConvertRequestSchema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((v) => v === "true"),
+  /** Colour codes to exclude from quantization, sent as a JSON array string. */
+  excludedCodes: z
+    .string()
+    .default("[]")
+    .transform((v) => {
+      try {
+        const arr = JSON.parse(v)
+        return Array.isArray(arr)
+          ? arr.filter((x): x is string => typeof x === "string")
+          : []
+      } catch {
+        return []
+      }
+    }),
 })
 
 export async function POST(request: NextRequest) {
@@ -38,6 +52,7 @@ export async function POST(request: NextRequest) {
     mode: formData.get("mode") ?? "average",
     mergeSimilarity: formData.get("mergeSimilarity") ?? 0,
     removeBackground: formData.get("removeBackground") ?? "false",
+    excludedCodes: formData.get("excludedCodes") ?? "[]",
   })
   if (!parsed.success) {
     return NextResponse.json(
@@ -55,11 +70,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unknown brand" }, { status: 400 })
   }
 
-  const colorRows = await db
-    .select()
-    .from(colors)
-    .where(eq(colors.fkBrandId, brand.id))
-    .orderBy(colors.sortOrder)
+  const excluded = new Set(parsed.data.excludedCodes)
+  const colorRows = (
+    await db
+      .select()
+      .from(colors)
+      .where(eq(colors.fkBrandId, brand.id))
+      .orderBy(colors.sortOrder)
+  ).filter((c) => !excluded.has(c.code))
+  if (colorRows.length === 0) {
+    return NextResponse.json({ error: "No colours left to convert" }, { status: 400 })
+  }
 
   const palette: Palette = { ...brand, colors: colorRows }
 

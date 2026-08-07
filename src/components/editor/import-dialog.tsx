@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import useSWRMutation from "swr/mutation"
-import { ChevronDown, Upload } from "lucide-react"
+import { ChevronDown, ChevronRight, Search, Upload } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Spinner } from "@/components/ui/spinner"
@@ -118,6 +121,163 @@ function drawGridToCanvas(
   }
 }
 
+interface ExcludeColoursProps {
+  palette: Palette
+  excluded: string[]
+  onToggle: (code: string) => void
+  onToggleGroup: (codes: string[]) => void
+  onReset: () => void
+}
+
+/**
+ * Pick colours of the current brand to exclude from the image→grid conversion.
+ * The palette is grouped by series, each group is collapsible and has a
+ * "select whole series" checkbox; a search box filters by code, name, or series.
+ */
+function ExcludeColours({ palette, excluded, onToggle, onToggleGroup, onReset }: ExcludeColoursProps) {
+  const { t } = useI18n()
+  const [query, setQuery] = useState("")
+  // Groups are collapsed by default; only a search forces them open so matches
+  // stay visible.
+  const [openSeries, setOpenSeries] = useState<Set<string>>(new Set())
+
+  const q = query.trim().toLowerCase()
+  const filtered = q
+    ? palette.colors.filter((c) =>
+        [c.code, c.name, c.series ?? ""].some((s) => s.toLowerCase().includes(q)),
+      )
+    : palette.colors
+
+  const groups: { series: string; colors: Palette["colors"] }[] = []
+  const bySeries = new Map<string, (typeof groups)[number]>()
+  for (const color of filtered) {
+    const series = color.series ?? "?"
+    let group = bySeries.get(series)
+    if (!group) {
+      group = { series, colors: [] }
+      bySeries.set(series, group)
+      groups.push(group)
+    }
+    group.colors.push(color)
+  }
+
+  const toggleOpen = (series: string) =>
+    setOpenSeries((prev) => {
+      const next = new Set(prev)
+      if (next.has(series)) next.delete(series)
+      else next.add(series)
+      return next
+    })
+
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <Label className="text-xs">{t("editor.excludeColours")}</Label>
+      <Popover>
+        <PopoverTrigger
+          render={
+            <Button type="button" size="xs" variant="outline">
+              {excluded.length > 0
+                ? t("editor.excludedCount", { count: excluded.length })
+                : t("editor.chooseColours")}
+            </Button>
+          }
+        />
+        <PopoverContent side="bottom" align="end" className="w-72 p-2">
+          <div className="relative">
+            <Search className="absolute top-1/2 left-2 size-3 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("editor.excludeColoursSearch")}
+              className="h-7 pl-6 text-xs md:text-xs"
+            />
+          </div>
+          <div className="max-h-44 overflow-auto rounded-md border">
+            {groups.length === 0 && (
+              <p className="px-2 py-2 text-xs text-muted-foreground">{t("editor.noColoursFound")}</p>
+            )}
+            {groups.map((group) => {
+              const codes = group.colors.map((c) => c.code)
+              const allExcluded = codes.every((c) => excluded.includes(c))
+              const someExcluded = codes.some((c) => excluded.includes(c))
+          const open = q.length > 0 || openSeries.has(group.series)
+          return (
+            <Collapsible
+              key={group.series}
+              open={open}
+              onOpenChange={() => {
+                if (q.length === 0) toggleOpen(group.series)
+              }}
+              className="border-b last:border-b-0"
+            >
+                  <div className="flex items-center gap-1 bg-muted/40 pl-1 pr-2 hover:bg-muted/70">
+                    <CollapsibleTrigger
+                      render={
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="xs"
+                          className="flex-1 justify-start gap-1.5 text-xs font-medium"
+                        >
+                          <ChevronRight
+                            className={`size-3 transition-transform ${open ? "rotate-90" : ""}`}
+                          />
+                          {t("editor.series", { series: group.series })}
+                          <span className="ml-auto text-[10px] font-normal text-muted-foreground">
+                            {group.colors.filter((c) => excluded.includes(c.code)).length}/{group.colors.length}
+                          </span>
+                        </Button>
+                      }
+                    />
+                    <Checkbox
+                      checked={allExcluded}
+                      indeterminate={someExcluded && !allExcluded}
+                      onCheckedChange={() => onToggleGroup(codes)}
+                      aria-label={t("editor.toggleSeries", { series: group.series })}
+                    />
+                  </div>
+                  <CollapsibleContent>
+                    <ul>
+                      {group.colors.map((color) => {
+                        const on = excluded.includes(color.code)
+                        const id = `excl-${color.code}`
+                        return (
+                          <li key={color.code}>
+                            <Label
+                              htmlFor={id}
+                              className="flex w-full cursor-pointer items-center gap-2 px-2 py-1 text-xs font-normal hover:bg-muted"
+                            >
+                              <Checkbox id={id} checked={on} onCheckedChange={() => onToggle(color.code)} />
+                              <span
+                                className="inline-block h-3 w-3 shrink-0 rounded-sm border"
+                                style={{ backgroundColor: color.hex }}
+                              />
+                              <span className={`flex-1 truncate ${on ? "text-muted-foreground line-through" : ""}`}>
+                                {color.name ?? color.code}
+                              </span>
+                              <span className="shrink-0 text-muted-foreground">{color.code}</span>
+                            </Label>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </CollapsibleContent>
+                </Collapsible>
+              )
+            })}
+          </div>
+          {excluded.length > 0 && (
+            <Button type="button" size="xs" variant="ghost" onClick={onReset} className="self-start">
+              {t("editor.resetExclusion")}
+            </Button>
+          )}
+        </PopoverContent>
+      </Popover>
+    </div>
+  )
+}
+
 export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
   const { palette } = usePalette()
   const { t } = useI18n()
@@ -130,6 +290,7 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
   const [mergeOn, setMergeOn] = useState(false)
   const [mergeSimilarity, setMergeSimilarity] = useState(DEFAULT_MERGE_SIMILARITY)
   const [removeBg, setRemoveBg] = useState(false)
+  const [excludedCodes, setExcludedCodes] = useState<string[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const reqId = useRef(0)
@@ -156,6 +317,7 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
       formData.append("mode", mode)
       formData.append("mergeSimilarity", mergeOn ? String(mergeSimilarity) : "0")
       formData.append("removeBackground", String(removeBg))
+      formData.append("excludedCodes", JSON.stringify(excludedCodes))
       trigger(formData)
         .then((converted) => {
           if (id !== reqId.current) return
@@ -173,7 +335,7 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
         })
     }, DEBOUNCE_MS)
     return () => clearTimeout(timeout)
-  }, [file, widthInput, palette, trigger, t, mode, mergeOn, mergeSimilarity, removeBg])
+  }, [file, widthInput, palette, trigger, t, mode, mergeOn, mergeSimilarity, removeBg, excludedCodes])
 
   // Render the preview whenever a result arrives.
   useEffect(() => {
@@ -201,6 +363,22 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
     setResult(null)
     setFile(f)
   }, [t])
+
+  const toggleExcluded = useCallback((code: string) => {
+    setExcludedCodes((prev) =>
+      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code],
+    )
+  }, [])
+
+  const toggleExcludedGroup = useCallback((codes: string[]) => {
+    setExcludedCodes((prev) => {
+      if (codes.every((c) => prev.includes(c))) {
+        const removed = new Set(codes)
+        return prev.filter((c) => !removed.has(c))
+      }
+      return [...new Set([...prev, ...codes])]
+    })
+  }, [])
 
   const handleClose = useCallback(() => {
     reqId.current++
@@ -357,6 +535,15 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
                   onCheckedChange={(checked) => setRemoveBg(checked)}
                 />
               </div>
+              {palette && (
+                <ExcludeColours
+                  palette={palette}
+                  excluded={excludedCodes}
+                  onToggle={toggleExcluded}
+                  onToggleGroup={toggleExcludedGroup}
+                  onReset={() => setExcludedCodes([])}
+                />
+              )}
             </div>
           )}
         </div>
