@@ -8,7 +8,7 @@ import { SWRConfig, type Cache, type State } from "swr"
  * storage schema version: bump it when the persisted shape or serialization
  * changes so stale entries from older versions are ignored instead of read.
  */
-const STORAGE_KEY = "pindou-swr-cache-v1"
+const STORAGE_KEY = "pindou-swr-cache-v2"
 
 /** A cache-key prefix pinned to localStorage for {@link PersistRule.ttlMs}. */
 interface PersistRule {

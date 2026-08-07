@@ -78,6 +78,13 @@
       "when": 1786006034964,
       "tag": "0010_rename_thumb_png",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1786100000000,
+      "tag": "0011_sort_colors_natural_order",
+      "breakpoints": true
     }
   ]
 }
