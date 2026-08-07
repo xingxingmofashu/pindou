@@ -48,12 +48,13 @@ Base UI is used instead of Radix. Key API differences:
 
 ```
 EditorPage (src/app/[lang]/(site)/editor/page.tsx)
-├── ToolBar (pen / eraser, labels toggle, clear-canvas, import/export, publish; embeds ZoomControls: ±1.3× buttons, read-only %, fit)
+├── ToolBar (pen / eraser / fill, labels toggle, bead-usage toggle, clear-canvas, import/export, publish; embeds ZoomControls: ±1.3× buttons, read-only %, fit)
 ├── ColorPalette (left sidebar, brand switcher + swatches grouped by series + eraser)
 ├── <canvas> → usePixiCanvas hook
+├── BeadStatsPanel (right sidebar, live per-colour counts — recomputed by EditorPage via onGridChange)
 ├── PublishDialog (title/desc/author → POST /api/patterns via getCellsData)
-├── ImportDialog (upload → POST /api/transform → Apply → loadGrid(grid))
-└── ExportDialog (reads grid via getCellsData → client-side PNG chart, downloads via src/lib/image/export.ts)
+├── ImportDialog (upload → POST /api/transform with mode/merge/background/excluded codes → Apply → loadGrid(grid))
+└── ExportDialog (reads grid via getCellsData → client-side PNG chart with colour-code labels + bead-usage list, downloads via src/lib/image/export.ts)
 ```
 
 **`usePixiCanvas` hook** (`src/hooks/use-pixi-canvas.ts`) is a thin coordinator for the PixiJS lifecycle; the logic lives in pure, React-free library modules:
@@ -64,6 +65,8 @@ src/hooks/use-pixi-app.ts    usePixiApp() — PixiJS Application lifecycle hook 
 src/hooks/use-pixi-canvas.ts PixiJS lifecycle coordinator, wheel + pointer events, zoom/pan state. Takes a fully-resolved palette argument (never subscribes to the active-palette store itself).
 src/components/pixi-canvas.tsx PixiCanvas resolves the palette: read-only views that pin `palette` render without a store subscription; the editor branch subscribes via `usePalette` (in `EditablePaletteBridge`).
 ```
+
+The canvas grid lives in a ref (`cellsRef`) and mutates **outside React**. To surface changes, `usePixiCanvas` takes an `onGridChange` callback (fired at stroke end, fill, clear, and load — never per pointermove) and exposes `getCellsData()` (dense code grid + `beadStats` JSON for publish/export) and `getBeadStats()` (sparse `BeadStats`: painted dims + per-code counts, O(painted cells), no dense allocation). EditorPage owns the stats in state and feeds `BeadStatsPanel`.
 
 ```
 PixiJS Application (WebGL)
@@ -119,16 +122,19 @@ Single render path, **`rebuild`** — redraws grid lines at data-cell spacing AN
 
 Pan draws beads + grid lines for a **padded** region (`rebuild({ skipLabels: true, padded: true })`) — a slack of `PAN_BUFFER` (0.5×) around the viewport. While a pan stays inside that slack it skips the redraw entirely (beads and grid lines are children of the `world` Container and move with it), only rebuilding when the pan leaves the slack. Labels are never rebuilt during pan, avoiding per-frame text rasterization.
 
+**Canvas sizing**: PixiJS sizes itself from its parent's `clientWidth/clientHeight` (which include padding), so the canvas is wrapped in a **padding-free** `h-full w-full` div in `pixi-canvas.tsx`. Pixi's own resize only reacts to window resizes — `use-pixi-app.ts` adds a `ResizeObserver` on that wrapper, which is what keeps the canvas in sync when the sidebar panels toggle (ColorPalette / BeadStatsPanel). Keep the wrapper padding-free.
+
 ### Drawing tools
 
-Both tools are implemented in the pointer interaction effect:
+All three tools are implemented in the pointer interaction effect:
 
 | Tool | Behaviour |
 |---|---|
 | **Pen** | Paints the active colour into the visual-cell block via `paintBlock()`. Drag uses Bresenham interpolation (`walkLine`) between visual-cell coords (stored in `drawRef` as `vc/vr`, rederived from `toPaintTarget` each move at the current LOD — survives zoom changes mid-stroke). |
 | **Eraser** | Same as pen but writes `EMPTY` (deletes from the sparse map). |
+| **Fill** | Flood-fills a 4-connected region of the start cell's colour via `floodFill()`. Empty start regions are bounded by the painted bounds ±1, so filling background can't escape to infinity on the unbounded grid. |
 
-The fill and eyedropper tools were removed; only pen and eraser remain (`ToolKind` lives in `src/lib/editor`).
+The eyedropper was removed; `ToolKind` is `"pen" | "eraser" | "fill"` and lives in `src/lib/editor.ts`.
 
 ### Zoom / pan
 
@@ -164,10 +170,10 @@ src/hooks/use-palette.ts           Editor store (Zustand) — active palette (pu
 - The row types in `src/types/index.ts` are `$inferSelect` types derived from the Drizzle schema — the schema is the single definition. Wire schemas `BrandSelectSchema`/`ColorSelectSchema` are generated from those rows by drizzle-zod in `src/db/schema.ts` (uuid ids, timestamps coerced from ISO strings). `/api/brands` (the catalog — every brand with its colors nested, `ORDER BY sort_order`) and `/api/brands/[id]` (a single brand by its uuid row id, e.g. a pattern's `brandId`) are the palette endpoints; a resolved palette is a `Palette` (`Brand & { colors: Color[] }` — a brand row with `colors` nested).
 
 - `code`/`name` are uppercase (e.g. `"A1"`); `series` is nullable — use `c.series ?? "?"`
-- Grid cells are 1‑based indices into `palette.colors`, so colors are served `ORDER BY sort_order` (the array index assigned by the data migration). **Never reorder existing color rows** — it would corrupt every published pattern. Replacing a brand's palette (as 0008 did for mard) shifts every index, so it must be paired with a separate `gridData` remap of that brand's published patterns — the migration itself does not re-key them.
+- Two representations coexist: the editor's **in-memory sparse map holds 1‑based indices** into `palette.colors` (order-dependent), while the **wire/stored grid is code‑based** (`string[][]`, `""` = empty — migration 0012, PR "store pattern grids as colour codes"). Colors are still served `ORDER BY sort_order` because the in-memory index and the editor's ordering depend on it. Reordering color rows no longer corrupts *published* patterns (codes are stable), but it does shift in-memory index semantics — `serializeGrid`/`deserializeGrid` take the palette for exactly this reason, and any brand-palette replace must rebuild the code→index binding in code that holds sparse state.
 - `/api/brands` is CDN/browser-cacheable: the catalog only changes via `db:migrate`, so the route sends `Cache-Control: public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400`. Palette changes propagate only after the cache expires.
 - Wire contract between client and server is the brand **code** (a plain string matching `brands.code`, e.g. `"mard"`); the server maps code↔brand uuid (`patterns.fk_brand_id`) internally.
-- `usePalette()` (in `use-palette.ts`) reads a module-level Zustand store and returns `{ palette, setActivePalette }`; it holds only the active palette (a `Palette` — a brand row with colors nested) and makes no network requests. ColorPalette fetches `/api/brands` via `useSWR` for its switcher and pushes the chosen brand (which already carries nested colors) into the store, seeding the first catalog brand on first load. The editor canvas (`EditablePaletteBridge`) and import dialog read the shared palette because the user-controlled EditorPage cannot wire it as a prop. Consumers that need a *specific* brand (pattern detail page, export dialog) fetch it directly with `useSWR` (a single `/api/brands/[id]` call keyed by the brand uuid — colors are nested) instead of touching the store. Consumers must guard `palette === undefined` while it loads (`EditablePaletteBridge` returns null; ColorPalette shows a placeholder). Read-only views pin a `palette` prop and bypass the store entirely. SSR snapshots are null, so hydration stays consistent.
+- `usePalette()` (in `use-palette.ts`) reads a module-level Zustand store and returns `{ palette, setActivePalette }`; it holds only the active palette (a `Palette` — a brand row with colors nested) and makes no network requests. ColorPalette fetches `/api/brands` via `useSWR` for its switcher and pushes the chosen brand (which already carries nested colors) into the store, seeding the first catalog brand on first load. The editor canvas (`EditablePaletteBridge`), the export dialog, and the import dialog read the shared palette because the user-controlled EditorPage cannot wire it as a prop (the export dialog must use the same palette instance the canvas draws with — a freshly fetched brand could serve a cached colour order and shift every bead). Consumers that need a *specific* brand (pattern detail page) fetch it directly with `useSWR` (a single `/api/brands/[id]` call keyed by the brand uuid — colors are nested) instead of touching the store. Consumers must guard `palette === undefined` while it loads (`EditablePaletteBridge` returns null; ColorPalette shows a placeholder). Read-only views pin a `palette` prop and bypass the store entirely. SSR snapshots are null, so hydration stays consistent.
 
 ### Server-side (`/api` + database)
 
@@ -175,9 +181,9 @@ src/hooks/use-palette.ts           Editor store (Zustand) — active palette (pu
 src/app/api/brands/route.ts            GET — all brands + colors (the client catalog)
 src/app/api/brands/[id]/route.ts       GET — one brand by uuid id + colors
 src/app/api/patterns/route.ts          GET (paginated list) + POST (publish)
-src/app/api/patterns/[id]/route.ts     GET (single pattern)
+src/app/api/patterns/[id]/route.ts     GET (single pattern) + PATCH (author updates)
 src/app/api/transform/route.ts         POST (image → grid), `export const runtime = "nodejs"`
-src/lib/image/transform.ts             transform(buffer, { width, palette }) — Node-only (imports sharp)
+src/lib/image/transform.ts             `class Transform` — constructor takes the palette and builds its OKLab samples once; `convert(buffer, { width, mode?, mergeSimilarity?, removeBackground? })` → code grid. Node-only (imports sharp). Two-stage: collapse each cell to a representative colour (RGB average for photos / most-frequent exact RGB for illustrations), then quantize to the nearest OKLab palette code.
 src/lib/image/thumbnail.ts             Thumbnail class: generate(grid, palette) → PNG Buffer + upload(png, patternId) → public URL, run on publish — Node-only (imports sharp)
 src/lib/r2.ts                          R2 class: upload(key, body, contentType) — generic Cloudflare R2 uploader (S3 API, @aws-sdk/client-s3); consumers `new R2()` locally — Node-only
 src/lib/image/export.ts                exportGridPng — client-only canvas PNG chart download (used by ExportDialog; must not run on the server)
@@ -185,16 +191,16 @@ src/db/                                Drizzle schema + Neon Postgres Pool (@neo
 ```
 
 - **Tables**: `brands` (id uuid PK defaultRandom, code unique, name, sort_order) · `colors` (id uuid PK defaultRandom, fk_brand_id → brands.id ON DELETE cascade, code, name, hex, series, sort_order, unique (fk_brand_id, code)) · `patterns` (id uuid PK defaultRandom, fk_brand_id → brands.id, …). All three tables share the same audit shape: uuid `id` (default `gen_random_uuid()`) and `created_at`/`updated_at` (`timestamp with time zone`, default `now()`) — the DB generates them, so routes never set them. `brands.code` is the wire brand code; `name` is the display name. Brands are served `ORDER BY sort_order` (mard=0 first), colors `ORDER BY sort_order` (the array index grid cells index into).
-- **Grid contract**: conversion returns `number[][]`, `grid[row][col]` = 0 (empty) or 1‑based `palette.colors` index — the same value domain as the editor's sparse map, so `ImportDialog` feeds the result straight into `loadGrid`.
+- **Grid contract**: the wire format is a **code grid** — `string[][]`, `grid[row][col]` = `""` (empty) or a colour code (e.g. `"A1"`). `/api/transform` and `/api/patterns` store/serve codes; the editor converts to its in-memory index-based sparse map via `deserializeGrid`, and `ImportDialog` feeds the transform's code grid straight into `loadGrid`.
 - `lib/image/transform.ts` and `lib/image/thumbnail.ts` import sharp and must never be imported from a client component — only the API routes use them. The API routes query the DB directly; palette data is never bundled into the client.
 - **Thumbnails (Cloudflare R2)**: on publish, the `Thumbnail` instance (in `lib/image/thumbnail.ts`) calls `generate` to render the grid to a PNG Buffer, then `upload` to store it at the fixed key `thumbnails/{patternId}.png` via its own `new R2()` instance (class in `lib/r2.ts`) and returns its public URL with a `?v=` cache-buster, which is saved in `patterns.thumb_url`. R2 is a **hard dependency of publishing/editing** — an upload failure fails the request (503, nothing written to the DB); there is no base64 fallback. If the DB write fails after upload, the route rolls the object back via `thumbnail.delete` (500). Required env vars: `R2_ENDPOINT_URL`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `NEXT_R2_PUBLIC_URL` (copy from `.env.example`).
-- The editor posts multipart `file + width + brandCode` (brandCode from `usePalette()`) to `/api/transform`; publish posts `brandCode` to `/api/patterns`. Both routes query `brands` + `colors` (ORDER BY `sort_order`) directly to build the palette server-side and store the brand uuid in `patterns.fk_brand_id`. GET routes join `brands` to return the code as `brandCode` on the wire.
+- The editor posts multipart `file + width + brandCode` plus optional `mode` / `mergeSimilarity` / `removeBackground` / `excludedCodes` (a JSON array of colour codes) to `/api/transform`; the route filters the brand's colors by `excludedCodes` before building the palette (all colours excluded → 400). Publish posts `brandCode` to `/api/patterns`. Both routes query `brands` + `colors` (ORDER BY `sort_order`) directly to build the palette server-side and store the brand uuid in `patterns.fk_brand_id`. GET routes join `brands` to return the code as `brandCode` on the wire.
 - Migration order matters: `brands`/`colors` must be migrated before `patterns.fk_brand_id` (uuid FK) can be added, and the old `brand_id` text codes are backfilled to uuids in migration 0002. Palette data is loaded by the idempotent data migration 0006 (brands matched by `code`, colors by the unique `(fk_brand_id, code)` pair) — there is no `db:seed` script; `db:migrate` initializes schema **and** data. When changing the schema, run `db:generate` → `db:migrate`.
 - Database is PostgreSQL on Neon (not the earlier better‑sqlite3/SQLite setup) — don't reintroduce SQLite.
 
 ### shadcn/ui components
 
-`src/components/ui/` — managed by shadcn CLI. **NEVER modify these files.** New components are added via `pnpm dlx shadcn@latest add <name>`.
+`src/components/ui/` — managed by shadcn CLI. **NEVER modify these files.** New components are added via `pnpm dlx shadcn@latest add <name>` (this repo is `base-nova`, i.e. **Base UI** variants). The registry (`ui.shadcn.com`) is intermittently unreachable from this network — retry the add a few times if the CLI errors on the registry check.
 
 ### TypeScript: `@/` path alias maps to `src/`
 

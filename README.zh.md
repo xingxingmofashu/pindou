@@ -19,13 +19,15 @@
 
 ## 功能
 
-- **画布编辑器** — 基于 WebGL (PixiJS v8)，无限稀疏网格，支持缩放、平移、画笔和橡皮擦工具
+- **画布编辑器** — 基于 WebGL (PixiJS v8)，无限稀疏网格，以光标为中心的缩放、平移，以及画笔 / 橡皮擦 / 油漆桶工具
 - **固定网格分辨率** — 网格线和豆子始终按数据格分辨率渲染，导入的图纸在任意缩放级别下格子数量保持不变（LOD 仅控制画笔块大小）
-- **图片转图纸** — 将任意图片转换为拼豆图纸，使用当前品牌色号（服务端 sharp + 感知色差匹配）
+- **图片转图纸** — 将任意图片转换为拼豆图纸，使用当前品牌色号（服务端 sharp + OKLab 感知色差匹配）；支持照片 / 插画模式、合并相近颜色、移除背景，以及排除指定色号
+- **实时珠子用量** — 编辑器右侧面板实时显示已绘制的尺寸、珠子总数和每种色号的数量
+- **导出 PNG 图纸** — 下载带坐标的打印图纸，可选色号标签和随珠尺寸缩放的用量列表
 - **多品牌色号** — 内置 MARD（漫漫）、Perler、Hama、Artkal 色号库，可自由切换品牌
 - **GitHub 登录** — 使用 GitHub 身份发布图纸（Better Auth），无需单独注册账号或填写用户名
 - **图纸画廊** — 浏览最新发布的图纸，带缩略图预览
-- **详情页** — 每张图纸都有只读交互式画布，可缩放查看细节
+- **详情页** — 每张图纸都有只读交互式画布，作者可进入编辑
 
 ## 技术栈
 
@@ -61,27 +63,30 @@ pnpm lint
 ```
 src/
   app/                  # Next.js App Router 页面
-    (site)/             # 站点主布局（页头 + 页脚外壳）
-      editor/           # 编辑器页面
-      patterns/         # 图纸画廊
-      patterns/[id]/    # 图纸详情页
-    sign-in/            # GitHub 登录页
+    [lang]/             # 带语言前缀的路由（en / zh）
+      (site)/           # 站点主布局（页头 + 页脚外壳）
+        editor/         # 编辑器页面
+        patterns/       # 图纸画廊
+        patterns/[id]/  # 图纸详情与编辑页面
+      sign-in/          # GitHub 登录页
     api/auth/           # Better Auth 路由处理
     api/patterns/       # REST API（GET 列表、POST 发布）
-    api/patterns/[id]/  # GET 单张图纸
+    api/patterns/[id]/  # GET 单张图纸、PATCH 更新
     api/transform/      # POST 图片 → 图纸转换（Node runtime）
+    api/brands/         # GET 色号目录（所有品牌及色号）
   components/
     auth/               # GitHubButton、UserMenu（登录 UI）
-    editor/             # 工具栏、缩放控件、色号面板、发布弹窗、图片导入弹窗
-    pattern/            # 图纸卡片
+    editor/             # 工具栏、缩放控件、色号面板、各弹窗、珠子用量面板
+    pattern/            # 图纸卡片、详情面板
     pixi-canvas.tsx     # 可复用 PixiJS 画布组件
     ui/                 # shadcn/ui 组件（禁止手动修改）
   hooks/
+    use-palette.ts      # 共享当前品牌 store（Zustand）
     use-pixi-app.ts     # PixiJS Application 生命周期（WebGL 上下文管理）
     use-pixi-canvas.ts  # 缩放/平移/绘制指针事件、固定分辨率重建
   lib/
     auth/               # Better Auth：server.ts（配置）+ client.ts
-    editor/index.ts     # 纯函数：网格计算、LOD、边界、序列化
+    editor.ts           # 纯函数：网格计算、LOD、油漆桶、序列化、计数
     image/              # 仅 Node：transform.ts、thumbnail.ts；仅客户端：export.ts
     r2.ts               # Cloudflare R2 缩略图上传（仅 Node）
     utils.ts            # 通用工具函数
@@ -92,9 +97,11 @@ src/
 
 访问 `/editor` 使用编辑器，功能包括：
 
-- **画笔** — 使用当前颜色绘制；拖拽时通过 Bresenham 算法插值，防止断线
-- **橡皮擦** — 擦除豆子（将格子置空）
-- **图片导入** — 上传图片并转换为拼豆图纸，使用当前品牌色号
+- **画笔 / 橡皮擦 / 油漆桶** — 使用当前颜色绘制（拖拽时通过 Bresenham 算法插值，防止断线）、擦除豆子、或对连通区域进行填充
+- **显示色号** — 在画布上切换显示每颗豆子的色号标签
+- **图片导入** — 上传图片并转换为拼豆图纸；高级选项包括照片 / 插画模式、合并相近颜色、移除背景，以及从色板中排除指定色号
+- **导出 PNG** — 下载带坐标的打印图纸，可选色号标签和珠子用量列表
+- **珠子用量面板** — 右侧边栏显示图纸尺寸、珠子总数和每种色号数量，随绘制实时更新
 - **缩放** — 滚轮缩放（以光标为中心，0.5×–20×）、百分比输入、适应画布按钮
 - **平移** — 鼠标中键拖拽
 - **色号面板** — 左侧边栏，品牌切换器，按系列分组的色块
@@ -107,7 +114,8 @@ src/
 | `GET` | `/api/patterns?page=1` | 分页获取已发布图纸列表 |
 | `POST` | `/api/patterns` | 发布新图纸（需 GitHub 登录） |
 | `GET` | `/api/patterns/[id]` | 获取单张图纸 |
-| `POST` | `/api/transform` | 将图片转换为图纸（multipart `file`、`width`、`brandCode`） |
+| `PATCH` | `/api/patterns/[id]` | 更新图纸的标题、描述或网格（仅作者） |
+| `POST` | `/api/transform` | 将图片转换为图纸（multipart `file`、`width`、`brandCode`；可选 `mode`、`mergeSimilarity`、`removeBackground`、`excludedCodes`） |
 | `GET` | `/api/brands` | 获取所有品牌及其色号 |
 | `GET` | `/api/brands/[id]` | 获取单个品牌及其色号 |
 
