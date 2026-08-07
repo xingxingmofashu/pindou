@@ -22,7 +22,7 @@ export const auth = betterAuth({
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
     },
   },
-  trustedOrigins: [baseURL ?? "http://localhost:3000"],
+  trustedOrigins: baseURL ? [baseURL] : [],
   plugins: [nextCookies()],
 })
 
