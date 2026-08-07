@@ -29,7 +29,7 @@ const MAX_FILE_BYTES = 4 * 1024 * 1024
 /** Preview canvas is drawn at most this many pixels per side. */
 const PREVIEW_MAX = 320
 /** Initial grid width in beads. */
-const DEFAULT_WIDTH = 64
+const DEFAULT_WIDTH = 128
 /** Debounce width edits before re-converting. */
 const DEBOUNCE_MS = 300
 
