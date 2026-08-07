@@ -17,6 +17,10 @@
 
 Create pixel-art patterns, sign in with GitHub, and share them with the world.
 
+<p align="center">
+  <img src=".github/assets/en/preview.png" alt="Pindou pattern editor preview" width="800" />
+</p>
+
 ## Features
 
 - **Canvas editor** — WebGL-powered (PixiJS v8) with an infinite sparse grid, cursor-centred zoom, pan, and pen / eraser / fill tools

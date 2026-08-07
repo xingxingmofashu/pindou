@@ -17,6 +17,10 @@
 
 创建像素风格的拼豆图纸，使用 GitHub 登录，与世界分享你的设计。
 
+<p align="center">
+  <img src=".github/assets/zh-Cn/preview.png" alt="拼豆图纸编辑器预览" width="800" />
+</p>
+
 ## 功能
 
 - **画布编辑器** — 基于 WebGL (PixiJS v8)，无限稀疏网格，以光标为中心的缩放、平移，以及画笔 / 橡皮擦 / 油漆桶工具
