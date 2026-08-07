@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useRef, useState } from "react"
-import { PixiCanvas, type PixiCanvasApi } from "@/components/pixi-canvas"
+import { PixiCanvas, type PixiCanvasApi } from "@/components/editor/pixi-canvas"
 import { ToolBar } from "@/components/editor/toolbar"
 import { ColorPalette } from "@/components/editor/color-palette"
 import { PublishDialog } from "@/components/editor/publish-dialog"

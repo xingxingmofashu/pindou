@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { I18nProvider } from "@/i18n/client";
 import { getDictionary } from "@/i18n/server";
 import { isLocale, locales } from "@/i18n/config";
-import { SWRProvider } from "@/components/swr-provider";
+import { SWRProvider } from "@/components/providers/swr-provider";
 import { Toaster } from "@/components/ui/toast";
 import "../globals.css";
 
