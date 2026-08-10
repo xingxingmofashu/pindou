@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { formatDistanceToNow, parseISO, isValid } from "date-fns"
 import { zhCN } from "date-fns/locale"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
@@ -28,12 +29,15 @@ export function PatternCard({ id, title, authorName, beadStats, createdAt, thumb
     <Link href={localizedPath(locale, `/patterns/${id}`)} className="block">
       <Card>
         {thumbUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={thumbUrl}
-            alt={title}
-            className="block aspect-square w-full bg-muted object-cover"
-          />
+          <div className="relative aspect-square w-full">
+            <Image
+              src={thumbUrl}
+              alt={title}
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
+              className="bg-muted object-cover"
+            />
+          </div>
         ) : (
           <div className="aspect-square w-full bg-muted" />
         )}

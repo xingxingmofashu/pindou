@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
-import { desc, eq, sql } from "drizzle-orm"
-import { revalidateTag, unstable_cache } from "next/cache"
+import { eq } from "drizzle-orm"
+import { revalidateTag } from "next/cache"
 import { db } from "@/db"
 import { brands, colors, patterns } from "@/db/schema"
 import { Thumbnail } from "@/lib/thumbnail"
 import { GridStorage } from "@/lib/grid-storage"
 import { PatternInsertSchema, PaginationSchema } from "@/db/schema"
+import { getPatternsPage } from "@/lib/server/patterns"
 import { auth } from "@/lib/auth/server"
 import type { Palette } from "@/types"
 
@@ -16,36 +17,12 @@ const thumbnail = new Thumbnail()
 const grids = new GridStorage()
 
 /**
- * The paginated list query is cached in the data cache (30s) per `page` /
- * `pageSize`, and publishing a pattern invalidates it on-demand via
- * {@link revalidateTag}. The route itself stays dynamic because it also serves
- * POST; the `s-maxage` header short-caches the response at the CDN.
+ * The paginated list query lives in `@/lib/server/patterns` (shared with the
+ * SSR catalog page) — cached 30s in the data cache per `page`/`pageSize`,
+ * invalidated on publish/edit via {@link revalidateTag}. The route stays
+ * dynamic because it also serves POST; the `s-maxage` header short-caches the
+ * response at the CDN.
  */
-const getPatternsPage = unstable_cache(
-  async (page: number, pageSize: number) => {
-    const rows = await db
-      .select({
-        id: patterns.id,
-        title: patterns.title,
-        authorName: patterns.authorName,
-        brandCode: brands.code,
-        beadStats: patterns.beadStats,
-        thumbUrl: patterns.thumbUrl,
-        createdAt: patterns.createdAt,
-        total: sql<number>`count(*) over()`.as("total"),
-      })
-      .from(patterns)
-      .innerJoin(brands, eq(patterns.fkBrandId, brands.id))
-      .orderBy(desc(patterns.createdAt))
-      .limit(pageSize)
-      .offset((page - 1) * pageSize)
-    const total = Number(rows[0]?.total ?? 0)
-    return { rows, total }
-  },
-  ["patterns"],
-  { revalidate: 30, tags: ["patterns"] },
-)
-
 export async function GET(request: NextRequest) {
   const { page, pageSize } = PaginationSchema.parse({
     page: request.nextUrl.searchParams.get("page"),

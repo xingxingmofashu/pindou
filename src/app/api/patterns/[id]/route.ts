@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server"
 import { eq } from "drizzle-orm"
-import { revalidateTag, unstable_cache } from "next/cache"
+import { revalidateTag } from "next/cache"
 import { db } from "@/db"
 import { brands, colors, patterns } from "@/db/schema"
 import { PatternUpdateSchema } from "@/db/schema"
+import { getPattern } from "@/lib/server/patterns"
 import { auth } from "@/lib/auth/server"
 import { Thumbnail } from "@/lib/thumbnail"
 import { GridStorage } from "@/lib/grid-storage"
@@ -16,41 +17,13 @@ const thumbnail = new Thumbnail()
 const grids = new GridStorage()
 
 /**
- * Public pattern data (excluding the session-derived `canEdit`) cached via the
- * data cache — the grid JSON fetch from R2 is the expensive part, so it's
- * cached across requests. The response itself stays dynamic (`force-dynamic` +
- * `private, no-store`) because `canEdit` depends on the requester's session;
- * edits invalidate every pattern entry via {@link revalidateTag} on PATCH,
- * with a 30s time-based fallback.
+ * Public pattern data (excluding the session-derived `canEdit`) is fetched via
+ * `@/lib/server/patterns` — the grid JSON from R2 is the expensive part, so
+ * it's cached across requests. The response itself stays dynamic
+ * (`force-dynamic` + `private, no-store`) because `canEdit` depends on the
+ * requester's session; edits invalidate every pattern entry via
+ * {@link revalidateTag} on PATCH, with a 30s time-based fallback.
  */
-const getPattern = unstable_cache(
-  async (id: string) => {
-    const [row] = await db
-      .select({
-        id: patterns.id,
-        title: patterns.title,
-        description: patterns.description,
-        authorName: patterns.authorName,
-        brandCode: brands.code,
-        brandId: patterns.fkBrandId,
-        gridKey: patterns.gridKey,
-        beadStats: patterns.beadStats,
-        thumbUrl: patterns.thumbUrl,
-        fkUserId: patterns.fkUserId,
-        createdAt: patterns.createdAt,
-        updatedAt: patterns.updatedAt,
-      })
-      .from(patterns)
-      .innerJoin(brands, eq(patterns.fkBrandId, brands.id))
-      .where(eq(patterns.id, id))
-    if (!row) return null
-    const grid = await grids.get(row.gridKey)
-    return { ...row, grid }
-  },
-  ["pattern"],
-  { revalidate: 30, tags: ["pattern"] },
-)
-
 export const dynamic = "force-dynamic"
 
 export async function GET(

@@ -1,10 +1,7 @@
-"use client"
-
-import { useEffect, useState } from "react"
+import type { Metadata } from "next"
 import Link from "next/link"
-import useSWR from "swr"
+import { getPatternsPage } from "@/lib/server/patterns"
 import { PatternCard } from "@/components/pattern/card"
-import { Card, CardHeader } from "@/components/ui/card"
 import {
   Pagination,
   PaginationContent,
@@ -12,69 +9,59 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
-import { Skeleton } from "@/components/ui/skeleton"
-import { toast } from "@/components/ui/toast"
-import { cn, fetcher, parseBeadStats } from "@/lib/utils"
+import { parseBeadStats } from "@/lib/utils"
+import { pageMetadata } from "@/lib/server/meta"
 import { localizedPath } from "@/i18n/config"
-import { useI18n } from "@/i18n/client"
-import type { PatternResponseType } from "@/db/schema"
+import { getDictionary, getLocale } from "@/i18n/server"
+import { PaginationSchema } from "@/db/schema"
 
-export default function PatternsPage() {
-  const { locale, t } = useI18n()
-  const [page, setPage] = useState(1)
-  const { data, error, isLoading, isValidating, mutate } = useSWR<PatternResponseType>(
-    `/api/patterns?page=${page}`,
-    fetcher,
-  )
+const PAGE_SIZE = 20
 
-  useEffect(() => {
-    if (!error || isValidating) return
-    toast.add({
-      id: "patterns-load-failed",
-      type: "error",
-      title: t("patterns.loadFailedTitle"),
-      description: t("patterns.loadFailedDescription"),
-      actionProps: {
-        children: t("common.retry"),
-        onClick: () => mutate(),
-      },
-    })
-  }, [error, isValidating, mutate, t])
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale()
+  const dict = await getDictionary()
+  return pageMetadata({
+    locale,
+    path: "/patterns",
+    title: dict.meta.title,
+    description: dict.meta.description,
+  })
+}
 
-  const list = data?.patterns ?? []
-  const total = data?.pagination.total ?? 0
-  const totalPages = data
-    ? Math.ceil(data.pagination.total / data.pagination.pageSize)
-    : 0
+export default async function PatternsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const locale = await getLocale()
+  const dict = await getDictionary()
+  const { page: pageParam } = await searchParams
+  const parsed = PaginationSchema.safeParse({ page: pageParam, pageSize: PAGE_SIZE })
+  const page = parsed.success ? parsed.data.page : 1
+
+  const { rows, total } = await getPatternsPage(page, PAGE_SIZE)
+  const totalPages = Math.ceil(total / PAGE_SIZE)
+  const list = rows.map((r) => ({
+    ...r,
+    beadStats: parseBeadStats(r.beadStats),
+    // unstable_cache serializes Dates to ISO strings on cache hits; the
+    // first (cache-miss) call returns a live Date object.
+    createdAt:
+      typeof r.createdAt === "string" ? r.createdAt : r.createdAt.toISOString(),
+  }))
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="flex-1 min-h-0 flex flex-col border">
         <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
-          <h1 className="text-sm font-semibold">{t("patterns.title")}</h1>
+          <h1 className="text-sm font-semibold">{dict.patterns.title}</h1>
           <p className="text-[10px] text-muted-foreground">
-            {error
-              ? t("patterns.error")
-              : data
-                ? t("patterns.publishedCount", { count: total.toLocaleString() })
-                : ""}
+            {dict.patterns.publishedCount.replace("{count}", total.toLocaleString())}
           </p>
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto p-3">
-          {isLoading ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <Card className="pt-0" key={i}>
-                  <Skeleton className="aspect-square w-full rounded-none" />
-                  <CardHeader>
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="mt-2 h-3 w-1/2" />
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
-          ) : data && list.length > 0 ? (
+          {list.length > 0 ? (
             <>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                 {list.map((p) => (
@@ -83,7 +70,7 @@ export default function PatternsPage() {
                     id={p.id}
                     title={p.title}
                     authorName={p.authorName ?? null}
-                    beadStats={parseBeadStats(p.beadStats)}
+                    beadStats={p.beadStats}
                     createdAt={p.createdAt}
                     thumbUrl={p.thumbUrl}
                   />
@@ -95,50 +82,42 @@ export default function PatternsPage() {
                   <PaginationContent>
                     <PaginationItem>
                       <PaginationPrevious
-                        href="#"
+                        href={page > 1 ? `?page=${page - 1}` : undefined}
                         aria-disabled={page <= 1}
-                        className={cn(page <= 1 && "pointer-events-none opacity-50")}
-                        onClick={(e) => {
-                          e.preventDefault()
-                          setPage(page - 1)
-                        }}
+                        className={page <= 1 ? "pointer-events-none opacity-50" : undefined}
                       />
                     </PaginationItem>
 
                     <PaginationItem>
                       <span className="px-3 text-sm text-muted-foreground">
-                        {t("patterns.pageOf", { page, total: totalPages })}
+                        {dict.patterns.pageOf.replace("{page}", String(page)).replace("{total}", String(totalPages))}
                       </span>
                     </PaginationItem>
 
                     <PaginationItem>
                       <PaginationNext
-                        href="#"
+                        href={page < totalPages ? `?page=${page + 1}` : undefined}
                         aria-disabled={page >= totalPages}
-                        className={cn(page >= totalPages && "pointer-events-none opacity-50")}
-                        onClick={(e) => {
-                          e.preventDefault()
-                          setPage(page + 1)
-                        }}
+                        className={page >= totalPages ? "pointer-events-none opacity-50" : undefined}
                       />
                     </PaginationItem>
                   </PaginationContent>
                 </Pagination>
               )}
             </>
-          ) : data ? (
+          ) : (
             <div className="flex h-full items-center justify-center text-center">
               <div>
-                <p className="text-sm text-muted-foreground">{t("patterns.empty")}</p>
+                <p className="text-sm text-muted-foreground">{dict.patterns.empty}</p>
                 <Link
                   href={localizedPath(locale, "/editor")}
                   className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
                 >
-                  {t("patterns.createFirst")}
+                  {dict.patterns.createFirst}
                 </Link>
               </div>
             </div>
-          ) : null}
+          )}
         </div>
       </div>
     </div>

@@ -1,97 +1,59 @@
-"use client"
-
-import { useEffect, useRef, useState } from "react"
-import useSWR from "swr"
-import { useParams } from "next/navigation"
+import type { Metadata } from "next"
 import Link from "next/link"
+import { notFound } from "next/navigation"
+import { headers } from "next/headers"
+import { getPattern, getBrandPalette } from "@/lib/server/patterns"
 import { PatternDetailPanel } from "@/components/pattern/detail/panel"
-import { PixiCanvas, type PixiCanvasApi } from "@/components/editor/pixi-canvas"
-import { ZoomControls } from "@/components/editor/zoom-controls"
+import { PatternViewer } from "@/components/pattern/detail/viewer"
 import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { toast } from "@/components/ui/toast"
-import { fetcher, parseBeadStats, totalBeadCount } from "@/lib/utils"
-import { localizedPath } from "@/i18n/config"
-import { useI18n } from "@/i18n/client"
-import type { PatternDetailType } from "@/db/schema"
-import type { Palette } from "@/types"
+import { parseBeadStats, totalBeadCount } from "@/lib/utils"
+import { pageMetadata } from "@/lib/server/meta"
+import { localizedPath, isLocale } from "@/i18n/config"
+import { getDictionary, getLocale } from "@/i18n/server"
+import { auth } from "@/lib/auth/server"
 import { format, formatDistanceToNow, parseISO, isValid } from "date-fns"
 import { zhCN } from "date-fns/locale"
 
-const DEFAULT_ZOOM = 3
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string; id: string }>
+}): Promise<Metadata> {
+  const [{ lang, id }, locale] = await Promise.all([params, getLocale()])
+  const dict = await getDictionary(isLocale(lang) ? lang : undefined)
+  const pattern = await getPattern(id)
+  if (!pattern) return {}
 
-export default function PatternDetailPage() {
-  const { id } = useParams<{ id: string }>()
-  const { locale, t } = useI18n()
+  return pageMetadata({
+    locale,
+    path: `/patterns/${id}`,
+    title: `${pattern.title} — ${dict.meta.title}`,
+    description: pattern.description || dict.meta.description,
+    image: pattern.thumbUrl || undefined,
+  })
+}
+
+export default async function PatternDetailPage({
+  params,
+}: {
+  params: Promise<{ lang: string; id: string }>
+}) {
+  const [{ id }, locale] = await Promise.all([params, getLocale()])
+  const dict = await getDictionary()
   const dateLocale = locale === "zh" ? zhCN : undefined
-  const canvasApiRef = useRef<PixiCanvasApi>(null)
-  const [zoom, setZoom] = useState(DEFAULT_ZOOM)
-  const { data, error, isValidating, mutate } = useSWR<PatternDetailType>(
-    `/api/patterns/${id}`,
-    fetcher,
-  )
-  const {
-    data: brand,
-    error: brandError,
-    isValidating: brandValidating,
-    mutate: mutateBrand,
-  } = useSWR<Palette>(data ? `/api/brands/${data.brandId}` : null, fetcher)
 
-  useEffect(() => {
-    if (error && !isValidating) {
-      toast.add({
-        id: "pattern-load-failed",
-        type: "error",
-        title: t("patternDetail.loadFailedTitle"),
-        description: t("patternDetail.loadFailedDescription"),
-        actionProps: {
-          children: t("common.retry"),
-          onClick: () => mutate(),
-        },
-      })
-      return
-    }
-    if (brandError && !brandValidating) {
-      toast.add({
-        id: "brand-load-failed",
-        type: "error",
-        title: t("patternDetail.paletteFailedTitle"),
-        description: t("patternDetail.paletteFailedDescription"),
-        actionProps: {
-          children: t("common.retry"),
-          onClick: () => mutateBrand(),
-        },
-      })
-    }
-  }, [error, isValidating, brandError, brandValidating, mutate, mutateBrand, t])
+  const [pattern, session] = await Promise.all([
+    getPattern(id),
+    auth.api.getSession({ headers: await headers() }),
+  ])
+  if (!pattern) notFound()
+  if (!pattern.grid) notFound()
 
-  if (error || brandError) return null
+  const palette = await getBrandPalette(pattern.brandId)
+  if (!palette) notFound()
 
-  if (!data || !brand) {
-    return (
-      <div className="flex h-full flex-col gap-2 overflow-hidden">
-        <div className="flex items-center justify-between px-3 py-2 border">
-          <Skeleton className="h-4 w-40" />
-          <Skeleton className="h-8 w-24" />
-        </div>
-        <div className="flex-1 min-h-0 flex gap-2">
-          <div className="w-56 shrink-0 flex flex-col gap-4 border p-3">
-            <Skeleton className="h-5 w-3/4" />
-            <div className="flex flex-col gap-1.5">
-              <Skeleton className="h-3 w-16" />
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-3 w-16" />
-              <Skeleton className="h-4 w-20" />
-            </div>
-          </div>
-          <Skeleton className="flex-1 min-w-0 rounded-none border" />
-        </div>
-      </div>
-    )
-  }
-
-  const grid = data.gridData
-  const beadStats = parseBeadStats(data.beadStats)
+  const grid = pattern.grid
+  const beadStats = parseBeadStats(pattern.beadStats)
   const rows = grid.length
   const cols = grid[0]?.length ?? 0
   const totalBeads = totalBeadCount(beadStats)
@@ -99,60 +61,55 @@ export default function PatternDetailPage() {
   const sortedStats = Object.entries(beadStats)
     .sort(([, a], [, b]) => b - a)
     .map(([code, count]) => {
-      const color = brand.colors.find((c) => c.code === code)
+      const color = palette.colors.find((c) => c.code === code)
       return { code, count, name: color?.name, hex: color?.hex }
     })
 
-  const createdAt = parseISO(data.createdAt)
+  // unstable_cache serializes Dates to ISO strings on cache hits; the first
+  // (cache-miss) call returns a live Date object.
+  const createdAt =
+    pattern.createdAt instanceof Date
+      ? pattern.createdAt
+      : parseISO(pattern.createdAt)
   const absoluteDate = isValid(createdAt)
-    ? format(createdAt, t("patternDetail.dateFormat"), { locale: dateLocale })
+    ? format(createdAt, dict.patternDetail.dateFormat, { locale: dateLocale })
     : ""
   const relativeDate = isValid(createdAt)
     ? formatDistanceToNow(createdAt, { addSuffix: true, locale: dateLocale })
     : ""
 
+  const canEdit = Boolean(session && session.user.id === pattern.fkUserId)
+
   return (
     <div className="flex h-full flex-col gap-2 overflow-hidden">
       <div className="flex items-center justify-between gap-2 px-3 py-2 border">
-        <h1 className="text-sm font-semibold truncate">{data.title}</h1>
+        <h1 className="text-sm font-semibold truncate">{pattern.title}</h1>
         <div className="flex shrink-0 items-center gap-2">
-          {data.canEdit && (
+          {canEdit && (
             <Button
               size="sm"
               variant="outline"
               nativeButton={false}
               render={<Link href={localizedPath(locale, `/patterns/${id}/edit`)} />}
             >
-              {t("patternDetail.edit")}
+              {dict.patternDetail.edit}
             </Button>
           )}
-          <ZoomControls
-            zoom={zoom}
-            onSetZoom={(z) => canvasApiRef.current?.setZoom(z)}
-            onReset={() => canvasApiRef.current?.onReset()}
-          />
         </div>
       </div>
       <div className="flex-1 min-h-0 flex gap-2">
         <PatternDetailPanel
-          authorName={data.authorName ?? null}
+          authorName={pattern.authorName ?? null}
           relativeDate={relativeDate}
           absoluteDate={absoluteDate}
-          description={data.description ?? null}
+          description={pattern.description || null}
           cols={cols}
           rows={rows}
           totalBeads={totalBeads}
-          brand={brand.name}
+          brand={palette.name}
           sortedStats={sortedStats}
         />
-        <PixiCanvas
-          grid={grid}
-          palette={brand}
-          readonly
-          apiRef={canvasApiRef}
-          onZoomChange={setZoom}
-          className="flex-1 min-w-0 border"
-        />
+        <PatternViewer grid={grid} palette={palette} />
       </div>
     </div>
   )
