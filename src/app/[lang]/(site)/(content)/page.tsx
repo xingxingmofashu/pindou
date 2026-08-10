@@ -65,7 +65,7 @@ export default async function HomePage() {
           </section>
 
           <section className="border-t bg-muted/30">
-            <div className="mx-auto grid w-full max-w-5xl gap-4 px-4 py-16 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mx-auto grid w-full max-w-5xl gap-4 px-4 py-4 sm:grid-cols-2 lg:grid-cols-4">
               {FEATURES.map(({ key, icon: Icon }) => (
                 <Card key={key}>
                   <CardHeader>
