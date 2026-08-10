@@ -33,20 +33,6 @@ export interface ViewRect {
   bottom: number
 }
 
-/**
- * Parse a sparse-grid key (`"c,r"`) into its cell coordinates.
- *
- * Faster than `key.split(",").map(Number)` on the editor's hot path (every
- * rebuild iterates all painted cells): no intermediate arrays are allocated.
- *
- * @param key - The sparse-map key.
- * @returns The `[column, row]` pair.
- */
-function parseCellKey(key: string): [number, number] {
-  const i = key.indexOf(",")
-  return [Number(key.slice(0, i)), Number(key.slice(i + 1))]
-}
-
 /** Descriptor for one visual bead rectangle to be drawn. */
 export interface BeadEntry {
   worldX: number
@@ -62,6 +48,36 @@ export interface GridBounds {
   maxC: number
   minR: number
   maxR: number
+}
+
+/** One axis-aligned rectangle describing a grid line, in world units. */
+export interface GridRect {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+/** Per-colour bead counts plus the painted bounding-box size and total. */
+export interface BeadStats {
+  width: number
+  height: number
+  total: number
+  rows: { code: string; count: number }[]
+}
+
+/**
+ * Parse a sparse-grid key (`"c,r"`) into its cell coordinates.
+ *
+ * Faster than `key.split(",").map(Number)` on the editor's hot path (every
+ * rebuild iterates all painted cells): no intermediate arrays are allocated.
+ *
+ * @param key - The sparse-map key.
+ * @returns The `[column, row]` pair.
+ */
+function parseCellKey(key: string): [number, number] {
+  const i = key.indexOf(",")
+  return [Number(key.slice(0, i)), Number(key.slice(i + 1))]
 }
 
 /**
@@ -93,13 +109,6 @@ export function getGridBounds(cells: Map<string, number>): GridBounds | null {
  * @param palette - Palette used to resolve colour index → code.
  * @returns The dims/total and per-code counts, or null when the grid is empty.
  */
-export interface BeadStats {
-  width: number
-  height: number
-  total: number
-  rows: { code: string; count: number }[]
-}
-
 export function countBeadStats(
   cells: Map<string, number>,
   palette: Palette,
@@ -127,11 +136,11 @@ export function countBeadStats(
 /**
  * Position the world container so painted cells are centred in the viewport.
  *
- * @param world - The PixiJS world Container (mutated in place).
- * @param bounds - The bounding box of painted cells.
+ * @param world   - The PixiJS world Container (mutated in place).
+ * @param bounds  - The bounding box of painted cells.
  * @param screenW - Viewport width in screen pixels.
  * @param screenH - Viewport height in screen pixels.
- * @param zoom - Current zoom level.
+ * @param zoom    - Current zoom level.
  */
 export function centerViewport(
   world: { x: number; y: number },
@@ -153,11 +162,11 @@ export function centerViewport(
  *
  * Passing {@link EMPTY} as `colorIdx` removes the cells from the map.
  *
- * @param map - The sparse cell map to write into.
- * @param c0  - Left column (inclusive).
- * @param r0  - Top row (inclusive).
- * @param c1  - Right column (exclusive).
- * @param r1  - Bottom row (exclusive).
+ * @param map      - The sparse cell map to write into.
+ * @param c0       - Left column (inclusive).
+ * @param r0       - Top row (inclusive).
+ * @param c1       - Right column (exclusive).
+ * @param r1       - Bottom row (exclusive).
  * @param colorIdx - 1‑based palette index, or {@link EMPTY} to erase.
  */
 export function paintBlock(
@@ -166,7 +175,7 @@ export function paintBlock(
   r0: number,
   c1: number,
   r1: number,
-  colorIdx: number
+  colorIdx: number,
 ): void {
   for (let r = r0; r < r1; r++) {
     for (let c = c0; c < c1; c++) {
@@ -197,7 +206,7 @@ export function floodFill(
   map: Map<string, number>,
   c: number,
   r: number,
-  colorIdx: number
+  colorIdx: number,
 ): void {
   const startKey = `${c},${r}`
   const startColor = map.get(startKey) ?? EMPTY
@@ -237,6 +246,40 @@ export function floodFill(
 }
 
 /**
+ * Walk along a line segment between two integer grid points, invoking a
+ * callback for every point on the path (Bresenham's algorithm).
+ *
+ * @param x0 - Start column.
+ * @param y0 - Start row.
+ * @param x1 - End column.
+ * @param y1 - End row.
+ * @param fn - Callback invoked for each grid point on the line.
+ */
+export function walkLine(
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  fn: (x: number, y: number) => void,
+): void {
+  const dx = Math.abs(x1 - x0)
+  const dy = Math.abs(y1 - y0)
+  const sx = x0 < x1 ? 1 : -1
+  const sy = y0 < y1 ? 1 : -1
+  let err = dx - dy
+  let x = x0
+  let y = y0
+
+  fn(x, y)
+  while (x !== x1 || y !== y1) {
+    const e2 = err * 2
+    if (e2 > -dy) { err -= dy; x += sx }
+    if (e2 < dx) { err += dx; y += sy }
+    fn(x, y)
+  }
+}
+
+/**
  * Convert the sparse cell map into a compact 2D code grid suitable for
  * storage: `""` = empty, any other value is a brand colour code (e.g. "A1").
  * Colour codes are the stable identity of a palette colour, so a reordered
@@ -272,6 +315,49 @@ export function serializeGrid(
 }
 
 /**
+ * The inverse of {@link serializeGrid} — rebuild a sparse cell map from a
+ * compact 2D code grid. Colour codes are resolved to the palette's 1‑based
+ * index (codes absent from the palette are skipped). Co-located with
+ * {@link serializeGrid} so the sparse-grid key format (`"c,r"`) is owned in
+ * one place.
+ *
+ * @param grid    - The rectangular `string[][]` ("" = empty) to load.
+ * @param palette - Palette used to resolve colour code → index.
+ * @returns A new sparse cell map.
+ */
+export function deserializeGrid(
+  grid: string[][],
+  palette: Palette,
+): Map<string, number> {
+  const map = new Map<string, number>()
+  const indexByCode = new Map<string, number>()
+  palette.colors.forEach((color, i) => indexByCode.set(color.code, i + 1))
+  for (let r = 0; r < grid.length; r++) {
+    const row = grid[r]
+    for (let c = 0; c < row.length; c++) {
+      const code = row[c]
+      if (code === "") continue
+      const idx = indexByCode.get(code)
+      if (idx === undefined) continue
+      map.set(`${c},${r}`, idx)
+    }
+  }
+  return map
+}
+
+/**
+ * Resolve a serialized code grid's dimensions, or null when it is empty.
+ *
+ * @param grid - The rectangular `string[][]` ("" = empty).
+ * @returns `{ rows, cols }`, or null when either axis has no cells.
+ */
+export function gridSize(grid: string[][]): { rows: number; cols: number } | null {
+  const rows = grid.length
+  const cols = grid[0]?.length ?? 0
+  return rows === 0 || cols === 0 ? null : { rows, cols }
+}
+
+/**
  * Count painted cells per colour code in a serialized code grid.
  *
  * @param grid - The rectangular `string[][]` to count ("" = empty).
@@ -289,15 +375,15 @@ export function countGridBeads(grid: string[][]): Map<string, number> {
 }
 
 /**
- * Resolve a serialized code grid's dimensions, or null when it is empty.
+ * Count beads per colour code for a serialized code grid, as a JSON string
+ * mapping colour code → bead count (e.g. `{"A1":12}`) — the stored/published
+ * form of a pattern's usage stats.
  *
- * @param grid - The rectangular `string[][]` ("" = empty).
- * @returns `{ rows, cols }`, or null when either axis has no cells.
+ * @param grid - The rectangular `string[][]` to count ("" = empty).
+ * @returns The JSON string.
  */
-export function gridSize(grid: string[][]): { rows: number; cols: number } | null {
-  const rows = grid.length
-  const cols = grid[0]?.length ?? 0
-  return rows === 0 || cols === 0 ? null : { rows, cols }
+export function computeBeadStats(grid: string[][]): string {
+  return JSON.stringify(Object.fromEntries(countGridBeads(grid)))
 }
 
 /**
@@ -333,83 +419,6 @@ export function forEachPaintedCell(
 }
 
 /**
- * Count beads per colour code for a serialized code grid, as a JSON string
- * mapping colour code → bead count (e.g. `{"A1":12}`) — the stored/published
- * form of a pattern's usage stats.
- *
- * @param grid - The rectangular `string[][]` to count ("" = empty).
- * @returns The JSON string.
- */
-export function computeBeadStats(grid: string[][]): string {
-  return JSON.stringify(Object.fromEntries(countGridBeads(grid)))
-}
-
-/**
- * The inverse of {@link serializeGrid} — rebuild a sparse cell map from a
- * compact 2D code grid. Colour codes are resolved to the palette's 1‑based
- * index (codes absent from the palette are skipped). Co-located with
- * {@link serializeGrid} so the sparse-grid key format (`"c,r"`) is owned in
- * one place.
- *
- * @param grid    - The rectangular `string[][]` ("" = empty) to load.
- * @param palette - Palette used to resolve colour code → index.
- * @returns A new sparse cell map.
- */
-export function deserializeGrid(
-  grid: string[][],
-  palette: Palette,
-): Map<string, number> {
-  const map = new Map<string, number>()
-  const indexByCode = new Map<string, number>()
-  palette.colors.forEach((color, i) => indexByCode.set(color.code, i + 1))
-  for (let r = 0; r < grid.length; r++) {
-    const row = grid[r]
-    for (let c = 0; c < row.length; c++) {
-      const code = row[c]
-      if (code === "") continue
-      const idx = indexByCode.get(code)
-      if (idx === undefined) continue
-      map.set(`${c},${r}`, idx)
-    }
-  }
-  return map
-}
-
-/**
- * Walk along a line segment between two integer grid points, invoking a
- * callback for every point on the path (Bresenham's algorithm).
- *
- * @param x0 - Start column.
- * @param y0 - Start row.
- * @param x1 - End column.
- * @param y1 - End row.
- * @param fn - Callback invoked for each grid point on the line.
- */
-export function walkLine(
-  x0: number,
-  y0: number,
-  x1: number,
-  y1: number,
-  fn: (x: number, y: number) => void
-): void {
-  const dx = Math.abs(x1 - x0)
-  const dy = Math.abs(y1 - y0)
-  const sx = x0 < x1 ? 1 : -1
-  const sy = y0 < y1 ? 1 : -1
-  let err = dx - dy
-  let x = x0
-  let y = y0
-
-  fn(x, y)
-  while (x !== x1 || y !== y1) {
-    const e2 = err * 2
-    if (e2 > -dy) { err -= dy; x += sx }
-    if (e2 < dx) { err += dx; y += sy }
-    fn(x, y)
-  }
-}
-
-/**
  * Compute LOD parameters for a given zoom level.
  *
  * The visual cell size is chosen so that each visual cell is at least
@@ -423,31 +432,6 @@ export function lodParams(zoom: number): { scale: number; size: number } {
   const px = zoom * CELL
   const scale = Math.max(1, Math.ceil(MIN_PX / px))
   return { scale, size: scale * CELL }
-}
-
-/**
- * Return the colour with the highest frequency in a colour→count map,
- * skipping {@link EMPTY}.
- *
- * @param counts - Map from colour index to occurrence count.
- * @returns The dominant colour index, or 0 if the map is empty.
- */
-function dominant(counts: Map<number, number>): number {
-  let best = 0
-  let bestN = 0
-  for (const [c, n] of counts) {
-    if (c === EMPTY) continue
-    if (n > bestN) { bestN = n; best = c }
-  }
-  return best
-}
-
-/** One axis-aligned rectangle describing a grid line, in world units. */
-export interface GridRect {
-  x: number
-  y: number
-  width: number
-  height: number
 }
 
 /**
@@ -470,7 +454,7 @@ export interface GridRect {
 export function computeGridLines(
   view: ViewRect,
   cellSize: number,
-  zoom: number
+  zoom: number,
 ): { rects: GridRect[]; lineWidth: number } {
   const lineWidth = 1 / zoom
   const m = cellSize * 2
@@ -494,14 +478,31 @@ export function computeGridLines(
 }
 
 /**
+ * Return the colour with the highest frequency in a colour→count map,
+ * skipping {@link EMPTY}.
+ *
+ * @param counts - Map from colour index to occurrence count.
+ * @returns The dominant colour index, or 0 if the map is empty.
+ */
+function dominant(counts: Map<number, number>): number {
+  let best = 0
+  let bestN = 0
+  for (const [c, n] of counts) {
+    if (c === EMPTY) continue
+    if (n > bestN) { bestN = n; best = c }
+  }
+  return best
+}
+
+/**
  * Build a list of {@link BeadEntry} descriptors from the sparse cell map.
  *
  * Iterates all painted cells, buckets them by visual cell at the current LOD
  * scale, picks the dominant colour per bucket, and returns only the non-empty
  * entries that fall within the visible viewport.
  *
- * @param map     - The sparse cell map.
- * @param view    - Visible viewport rectangle in world space.
+ * @param map      - The sparse cell map.
+ * @param view     - Visible viewport rectangle in world space.
  * @param lodScale - LOD factor (1 = 1:1, higher values merge cells).
  * @param cellSize - World-unit size of each visual cell.
  * @param palette  - Palette used to resolve colour index → hex/code.
@@ -512,7 +513,7 @@ export function buildBeadEntries(
   view: ViewRect,
   lodScale: number,
   cellSize: number,
-  palette: Palette
+  palette: Palette,
 ): BeadEntry[] {
   const margin = cellSize * 2
   const dc0 = Math.floor((view.left - margin) / CELL)
@@ -557,4 +558,3 @@ export function buildBeadEntries(
 
   return entries
 }
-

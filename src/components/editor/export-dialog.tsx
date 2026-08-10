@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch"
 import { toast } from "@/components/ui/toast"
 import { usePalette } from "@/hooks/use-palette"
 import { useI18n } from "@/i18n/client"
-import { exportGridPng, exportGridSize, DEFAULT_EXPORT_SCALE } from "@/lib/export"
+import { Export, DEFAULT_EXPORT_SCALE } from "@/lib/export"
 
 interface ExportDialogProps {
   open: boolean
@@ -32,6 +32,7 @@ interface ExportDialogProps {
  */
 export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps) {
   const { t } = useI18n()
+  const exporter = useMemo(() => new Export(), [])
   const [scaleInput, setScaleInput] = useState(String(DEFAULT_EXPORT_SCALE))
   // Independent of the toolbar Labels toggle: this controls only the exported
   // image, and the toolbar toggle only controls the canvas. Defaults to on.
@@ -51,7 +52,7 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
   const rows = grid?.length ?? 0
   const cols = grid?.[0]?.length ?? 0
   const scale = Math.max(1, Math.floor(Number(scaleInput)) || 1)
-  const size = grid ? exportGridSize(grid, scale, { showBeadStats: beadStatsOn }) : null
+  const size = grid ? exporter.size(grid, scale, { showBeadStats: beadStatsOn }) : null
 
   const handleExport = useCallback(() => {
     if (!data) {
@@ -70,7 +71,7 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
       })
       return
     }
-    exportGridPng(
+    exporter.png(
       data.grid,
       palette,
       scale,
@@ -81,7 +82,7 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
       },
     )
     onClose()
-  }, [data, palette, scale, labelsOn, beadStatsOn, onClose, t])
+  }, [data, palette, scale, labelsOn, beadStatsOn, exporter, onClose, t])
 
   return (
     <Dialog
