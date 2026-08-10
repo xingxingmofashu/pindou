@@ -409,17 +409,17 @@ export function usePixiCanvas(
 
     const onContextMenu = (e: Event) => e.preventDefault()
 
-    for (const [ev, fn] of [["pointerdown", onDown], ["pointermove", onMove], ["pointerup", onUp], ["pointercancel", onUp], ["pointerleave", onUp], ["contextmenu", onContextMenu]] as const) {
-      cvs.addEventListener(ev, fn)
-    }
-
+    const events = [
+      ["pointerdown", onDown],
+      ["pointermove", onMove],
+      ["pointerup", onUp],
+      ["pointercancel", onUp],
+      ["pointerleave", onUp],
+      ["contextmenu", onContextMenu],
+    ] as const
+    for (const [ev, fn] of events) cvs.addEventListener(ev, fn)
     return () => {
-      cvs.removeEventListener("pointerdown", onDown)
-      cvs.removeEventListener("pointermove", onMove)
-      cvs.removeEventListener("pointerup", onUp)
-      cvs.removeEventListener("pointercancel", onUp)
-      cvs.removeEventListener("pointerleave", onUp)
-      cvs.removeEventListener("contextmenu", onContextMenu)
+      for (const [ev, fn] of events) cvs.removeEventListener(ev, fn)
     }
   }, [canvas, toWorld, toPaintTarget])
 
@@ -438,19 +438,14 @@ export function usePixiCanvas(
     setZoom(initialZoom)
   }, [setZoom, initialZoom])
 
-  const clearCanvas = useCallback(() => {
-    resetModel()
-  }, [resetModel])
-
   const getCellsData = useCallback((): {
-    grid: string[][]; brandCode: string; brandId: string; beadStats: string
+    grid: string[][]; brandCode: string; beadStats: string
   } | null => {
     const grid = serializeGrid(cellsRef.current, palette)
     if (!grid) return null
     return {
       grid,
       brandCode: palette.code,
-      brandId: palette.id,
       beadStats: computeBeadStats(grid),
     }
   }, [palette])
@@ -483,5 +478,5 @@ export function usePixiCanvas(
     [palette],
   )
 
-  return { zoom, setZoom, onReset: fitToCanvas, onClear: clearCanvas, getCellsData, getBeadStats, loadGrid, resetModel }
+  return { zoom, setZoom, onReset: fitToCanvas, onClear: resetModel, getCellsData, getBeadStats, loadGrid, resetModel }
 }
