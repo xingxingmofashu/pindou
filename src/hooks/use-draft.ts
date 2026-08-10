@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, type RefObject } from "react"
 import { create } from "zustand"
 import useSWR from "swr"
-import { Draft, type EditorDraft } from "@/lib/draft"
 import { usePalette } from "@/hooks/use-palette"
 import { fetcher } from "@/lib/utils"
 import { toast } from "@/components/ui/toast"
@@ -11,26 +10,29 @@ import { useI18n } from "@/i18n/client"
 import type { PixiCanvasApi } from "@/components/editor/pixi-canvas"
 import type { Palette } from "@/types"
 
-/** Shared draft state; persisted to localStorage by the actions below. */
+/**
+ * An in-memory editor draft. The grid is a brand-specific code grid
+ * (`grid[row][col]` = `""` empty or a colour code like `"A1"`), so the brand
+ * is stored alongside it to restore the correct palette.
+ */
+interface EditorDraft {
+  /** The palette's brand code (e.g. "mard") the grid was drawn with. */
+  brandCode: string
+  /** The serialized code grid. */
+  grid: string[][]
+}
+
+/** Shared draft state, held in memory only (no localStorage). */
 interface DraftStore {
   draft: EditorDraft | null
-  persistDraft: (draft: EditorDraft) => void
+  onSaveDraft: (draft: EditorDraft) => void
   onClearDraft: () => void
 }
 
-/** localStorage persistence for the editor draft. */
-const draftStorage = new Draft()
-
 const useDraftStore = create<DraftStore>((set) => ({
   draft: null,
-  persistDraft: (draft) => {
-    draftStorage.write(draft)
-    set({ draft })
-  },
-  onClearDraft: () => {
-    draftStorage.remove()
-    set({ draft: null })
-  },
+  onSaveDraft: (draft) => set({ draft }),
+  onClearDraft: () => set({ draft: null }),
 }))
 
 /** The canvas cells payload (grid + brand), as exposed by the canvas api. */
@@ -40,14 +42,15 @@ type CellsData = NonNullable<ReturnType<PixiCanvasApi["getCellsData"]>>
 type RestoreState = "idle" | "pending" | "done"
 
 /**
- * Auto-save the editor canvas to localStorage and restore it on mount.
+ * Hold the editor draft in memory across client-side navigation.
  *
- * The draft is written on every grid change (stroke end, fill, import, …) and
- * on page unload, so it survives full reloads — including the GitHub OAuth
- * round-trip triggered when an anonymous user clicks publish. On mount the
- * saved draft is loaded back into the canvas once the palette resolves; if the
- * draft's brand differs from the active one, the brand is switched first so the
- * code grid deserializes against the correct palette.
+ * The draft is written on every grid change (stroke end, fill, import, …) into
+ * a module-level store, so it survives SPA route changes (editor → patterns →
+ * editor) within the same page session. It is intentionally NOT persisted —
+ * a full reload (including the GitHub OAuth round-trip on publish) starts with
+ * a blank canvas. On mount the store's draft is loaded back into the canvas
+ * once the palette resolves; if the draft's brand differs from the active one,
+ * the brand is switched first so the code grid deserializes correctly.
  *
  * An empty canvas never clears the draft here: brand switches fire a canvas
  * reset (which surfaces as a null grid) right before the restore, so clearing
@@ -62,62 +65,25 @@ export function useDraft(apiRef: RefObject<PixiCanvasApi | null>) {
   const { palette, setActivePalette } = usePalette()
   const { data: brands } = useSWR<Array<Palette>>("/api/brands", fetcher)
   const restoreStateRef = useRef<RestoreState>("idle")
-  // True after a clear (publish / clear-canvas / brand-missing) until the next
-  // real grid change, so the pagehide flush can't re-save the stale canvas.
-  const suppressFlushRef = useRef(false)
-
-  // Hydrate once per tab lifetime; the module re-creates on reload, so this
-  // re-runs exactly when a fresh localStorage read is wanted.
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    const draft = draftStorage.read()
-    if (draft) useDraftStore.setState({ draft })
-  }, [])
 
   const draft = useDraftStore((s) => s.draft)
-  const persistDraft = useDraftStore((s) => s.persistDraft)
-  const clearDraft = useDraftStore((s) => s.onClearDraft)
+  const onSaveDraft = useDraftStore((s) => s.onSaveDraft)
+  const onClearDraft = useDraftStore((s) => s.onClearDraft)
 
   /**
    * Persist the canvas cells as a draft. Null (empty canvas) is a no-op; saves
    * are also suppressed while a restore is pending so drawing during the brand
    * lookup can't clobber the draft we're about to restore.
    */
-  const onSaveDraft = useCallback(
+  const saveDraft = useCallback(
     (cells: CellsData | null) => {
       if (!cells || restoreStateRef.current === "pending") return
-      suppressFlushRef.current = false
-      persistDraft({
-        version: Draft.VERSION,
-        brandCode: cells.brandCode,
-        grid: cells.grid,
-        savedAt: Date.now(),
-      })
+      onSaveDraft({ brandCode: cells.brandCode, grid: cells.grid })
     },
-    [persistDraft],
+    [onSaveDraft],
   )
 
-  /** Clear the draft and keep the unload flush quiet until the next draw. */
-  const handleClearDraft = useCallback(() => {
-    suppressFlushRef.current = true
-    clearDraft()
-  }, [clearDraft])
-
-  /** Backstop: flush the canvas to storage on page hide/unload. */
-  useEffect(() => {
-    const flush = () => {
-      if (suppressFlushRef.current) return
-      onSaveDraft(apiRef.current?.getCellsData() ?? null)
-    }
-    window.addEventListener("pagehide", flush)
-    window.addEventListener("beforeunload", flush)
-    return () => {
-      window.removeEventListener("pagehide", flush)
-      window.removeEventListener("beforeunload", flush)
-    }
-  }, [apiRef, onSaveDraft])
-
-  /** Restore the saved draft once the palette (and its brand catalog) resolve. */
+  /** Restore the store's draft once the palette (and its brand catalog) resolve. */
   useEffect(() => {
     if (restoreStateRef.current === "done") return
     if (!draft || !palette || !apiRef.current) return
@@ -133,7 +99,7 @@ export function useDraft(apiRef: RefObject<PixiCanvasApi | null>) {
       if (!brand) {
         // The brand no longer exists — the draft can't be mapped, so discard.
         restoreStateRef.current = "done"
-        handleClearDraft()
+        onClearDraft()
         toast.add({
           type: "error",
           title: t("editor.draftBrandMissing"),
@@ -152,7 +118,7 @@ export function useDraft(apiRef: RefObject<PixiCanvasApi | null>) {
       title: t("editor.draftRestored"),
       description: t("editor.draftRestoredDescription"),
     })
-  }, [draft, palette, brands, apiRef, setActivePalette, handleClearDraft, t])
+  }, [draft, palette, brands, apiRef, setActivePalette, onClearDraft, t])
 
-  return { onSaveDraft, onClearDraft: handleClearDraft }
+  return { onSaveDraft: saveDraft, onClearDraft }
 }
