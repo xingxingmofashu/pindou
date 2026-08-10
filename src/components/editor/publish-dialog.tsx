@@ -32,7 +32,7 @@ interface PublishDialogProps {
   /** Called after a successful publish (e.g. to clear the editor draft). */
   onPublished?: () => void
   getCellsData: () => {
-    grid: string[][]; brandCode: string; brandId: string; beadStats: string
+    grid: string[][]; brandCode: string; beadStats: string
   } | null
 }
 

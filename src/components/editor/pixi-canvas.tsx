@@ -8,12 +8,11 @@ import type { ToolKind, BeadStats } from "@/lib/editor"
 import type { Palette } from "@/types"
 
 export interface PixiCanvasApi {
-  zoom: number
   setZoom: (z: number | ((prev: number) => number)) => void
   onReset: () => void
   onClear: () => void
   getCellsData: () => {
-    grid: string[][]; brandCode: string; brandId: string; beadStats: string
+    grid: string[][]; brandCode: string; beadStats: string
   } | null
   /** Live per-colour bead counts + painted dims (null when the grid is empty). */
   getBeadStats: () => BeadStats | null
@@ -71,21 +70,25 @@ function PixiCanvasInner({
     if (grid && grid.length > 0 && ctx) loadGrid(grid)
   }, [grid, ctx, loadGrid])
 
-  // Clear the canvas when the palette identity changes (brand switch in the
-  // editor); the detail page pins its palette so this never fires there.
+  // Clear the canvas only when the palette code actually changes (brand switch
+  // in the editor). On mount the canvas is already empty, so clearing there
+  // would wipe a grid loaded by the pinned-grid effect. The detail page pins
+  // its palette so this never fires there.
+  const prevPaletteCodeRef = useRef(palette.code)
   useEffect(() => {
+    if (prevPaletteCodeRef.current === palette.code) return
+    prevPaletteCodeRef.current = palette.code
     resetModel()
   }, [palette.code, resetModel])
 
   useImperativeHandle(apiRef, () => ({
-    zoom,
     setZoom,
     onReset,
     onClear,
     getCellsData,
     getBeadStats,
     loadGrid,
-  }), [zoom, setZoom, onReset, onClear, getCellsData, getBeadStats, loadGrid])
+  }), [setZoom, onReset, onClear, getCellsData, getBeadStats, loadGrid])
 
   return null
 }

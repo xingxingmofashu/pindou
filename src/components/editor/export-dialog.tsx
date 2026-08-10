@@ -22,7 +22,7 @@ interface ExportDialogProps {
   open: boolean
   onClose: () => void
   getCellsData: () => {
-    grid: string[][]; brandCode: string; brandId: string; beadStats: string
+    grid: string[][]; brandCode: string; beadStats: string
   } | null
 }
 

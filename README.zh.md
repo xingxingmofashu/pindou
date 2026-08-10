@@ -18,7 +18,7 @@
 创建像素风格的拼豆图纸，使用 GitHub 登录，与世界分享你的设计。
 
 <p align="center">
-  <img src=".github/assets/zh-Cn/preview.png" alt="拼豆图纸编辑器预览" width="800" />
+  <img src=".github/assets/zh/preview.png" alt="拼豆图纸编辑器预览" width="800" />
 </p>
 
 ## 功能
