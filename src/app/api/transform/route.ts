@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import { eq } from "drizzle-orm"
-import { db } from "@/db"
-import { brands, colors } from "@/db/schema"
 import { MAX_GRID_DIMENSION } from "@/lib/editor"
 import { Transform } from "@/lib/transform"
 import { rateLimit } from "@/lib/rate-limit"
-import type { Palette } from "@/types"
+import { getPaletteByCode } from "@/lib/server/palettes"
 
 export const runtime = "nodejs"
 
@@ -74,28 +71,13 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const [brand] = await db
-    .select()
-    .from(brands)
-    .where(eq(brands.code, parsed.data.brandCode))
-    .limit(1)
-  if (!brand) {
+  const palette = await getPaletteByCode(parsed.data.brandCode, parsed.data.excludedCodes)
+  if (!palette) {
     return NextResponse.json({ error: "Unknown brand" }, { status: 400 })
   }
-
-  const excluded = new Set(parsed.data.excludedCodes)
-  const colorRows = (
-    await db
-      .select()
-      .from(colors)
-      .where(eq(colors.fkBrandId, brand.id))
-      .orderBy(colors.sortOrder)
-  ).filter((c) => !excluded.has(c.code))
-  if (colorRows.length === 0) {
+  if (palette.colors.length === 0) {
     return NextResponse.json({ error: "No colours left to convert" }, { status: 400 })
   }
-
-  const palette: Palette = { ...brand, colors: colorRows }
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer())

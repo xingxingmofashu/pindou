@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/db"
 import { brands } from "@/db/schema"
-import { getBrandPalette } from "@/lib/server/patterns"
+import { getBrandPalette } from "@/lib/server/palettes"
 import type { Palette } from "@/types"
 
 /**

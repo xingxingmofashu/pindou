@@ -2,13 +2,13 @@ import { NextResponse } from "next/server"
 import { eq } from "drizzle-orm"
 import { revalidateTag } from "next/cache"
 import { db } from "@/db"
-import { brands, colors, patterns } from "@/db/schema"
+import { patterns } from "@/db/schema"
 import { PatternUpdateSchema } from "@/db/schema"
 import { getPattern } from "@/lib/server/patterns"
+import { getPaletteById } from "@/lib/server/palettes"
 import { auth } from "@/lib/auth/server"
 import { Thumbnail } from "@/lib/thumbnail"
 import { GridStorage } from "@/lib/grid-storage"
-import type { Palette } from "@/types"
 
 /** Thumbnail renderer + R2 uploader for this route. */
 const thumbnail = new Thumbnail()
@@ -107,22 +107,10 @@ export async function PATCH(
 
   const { title, description, gridData, beadStats } = parsed.data
 
-  const [brand] = await db
-    .select()
-    .from(brands)
-    .where(eq(brands.id, row.fkBrandId))
-    .limit(1)
-  if (!brand) {
+  const palette = await getPaletteById(row.fkBrandId)
+  if (!palette) {
     return NextResponse.json({ error: "Unknown brand" }, { status: 400 })
   }
-
-  const colorRows = await db
-    .select()
-    .from(colors)
-    .where(eq(colors.fkBrandId, brand.id))
-    .orderBy(colors.sortOrder)
-
-  const palette: Palette = { ...brand, colors: colorRows }
 
   const [png, gridKey] = await Promise.allSettled([
     thumbnail.generate(gridData, palette),

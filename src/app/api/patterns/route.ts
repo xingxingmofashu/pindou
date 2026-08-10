@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
-import { eq } from "drizzle-orm"
 import { revalidateTag } from "next/cache"
 import { db } from "@/db"
-import { brands, colors, patterns } from "@/db/schema"
+import { patterns } from "@/db/schema"
 import { Thumbnail } from "@/lib/thumbnail"
 import { GridStorage } from "@/lib/grid-storage"
 import { PatternInsertSchema, PaginationSchema } from "@/db/schema"
 import { getPatternsPage } from "@/lib/server/patterns"
+import { getPaletteByCode } from "@/lib/server/palettes"
 import { auth } from "@/lib/auth/server"
-import type { Palette } from "@/types"
 
 /** Thumbnail renderer + R2 uploader for this route. */
 const thumbnail = new Thumbnail()
@@ -69,22 +68,10 @@ export async function POST(request: NextRequest) {
   }
 
   const { title, description, gridData, brandCode, beadStats } = parsed.data
-  const [brand] = await db
-    .select()
-    .from(brands)
-    .where(eq(brands.code, brandCode))
-    .limit(1)
-  if (!brand) {
+  const palette = await getPaletteByCode(brandCode)
+  if (!palette) {
     return NextResponse.json({ error: "Unknown brand" }, { status: 400 })
   }
-
-  const colorRows = await db
-    .select()
-    .from(colors)
-    .where(eq(colors.fkBrandId, brand.id))
-    .orderBy(colors.sortOrder)
-
-  const palette: Palette = { ...brand, colors: colorRows }
 
   const patternId = crypto.randomUUID()
 
@@ -128,7 +115,7 @@ export async function POST(request: NextRequest) {
         gridKey: gridKey.value,
         beadStats,
         thumbUrl,
-        fkBrandId: brand.id,
+        fkBrandId: palette.id,
       })
       .returning({ id: patterns.id })
     await revalidateTag("patterns", "max")

@@ -29,15 +29,17 @@ export function PatternCard({ id, title, authorName, beadStats, createdAt, thumb
     <Link href={localizedPath(locale, `/patterns/${id}`)} className="block">
       <Card>
         {thumbUrl ? (
-          <div className="relative aspect-square w-full">
-            <Image
-              src={thumbUrl}
-              alt={title}
-              fill
-              sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
-              className="bg-muted object-cover"
-            />
-          </div>
+          <Image
+            src={thumbUrl}
+            alt={title}
+            // Thumbnails are fixed 480×480 (see Thumbnail.SIZE); rendering a
+            // real <img> keeps the Card's `:first-child` styles (no top
+            // padding, top corners rounded) exactly as the old <img> did.
+            width={480}
+            height={480}
+            sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
+            className="block aspect-square w-full bg-muted object-cover"
+          />
         ) : (
           <div className="aspect-square w-full bg-muted" />
         )}

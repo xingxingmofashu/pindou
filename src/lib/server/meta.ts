@@ -1,6 +1,6 @@
 import "server-only"
 import type { Metadata } from "next"
-import { localizedPath, type Locale } from "@/i18n/config"
+import { localizedPath, locales, type Locale } from "@/i18n/config"
 
 /**
  * Absolute site origin used to build canonical/OG URLs. Must be set in the
@@ -34,7 +34,7 @@ export function pageMetadata({
   ogImage,
 }: PageMetadataOptions): Metadata {
   const languages: Record<string, string> = {}
-  for (const loc of ["en", "zh"] as const) {
+  for (const loc of locales) {
     languages[loc] = new URL(localizedPath(loc, path), SITE_URL).toString()
   }
 

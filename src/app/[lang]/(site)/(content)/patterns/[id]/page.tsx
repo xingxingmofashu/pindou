@@ -2,7 +2,8 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { headers } from "next/headers"
-import { getPattern, getBrandPalette } from "@/lib/server/patterns"
+import { getPattern } from "@/lib/server/patterns"
+import { getBrandPalette } from "@/lib/server/palettes"
 import { PatternDetailPanel } from "@/components/pattern/detail/panel"
 import { PatternViewer } from "@/components/pattern/detail/viewer"
 import { Button } from "@/components/ui/button"
@@ -65,12 +66,7 @@ export default async function PatternDetailPage({
       return { code, count, name: color?.name, hex: color?.hex }
     })
 
-  // unstable_cache serializes Dates to ISO strings on cache hits; the first
-  // (cache-miss) call returns a live Date object.
-  const createdAt =
-    pattern.createdAt instanceof Date
-      ? pattern.createdAt
-      : parseISO(pattern.createdAt)
+  const createdAt = parseISO(pattern.createdAt)
   const absoluteDate = isValid(createdAt)
     ? format(createdAt, dict.patternDetail.dateFormat, { locale: dateLocale })
     : ""

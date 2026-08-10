@@ -7,7 +7,7 @@ export default function SiteLayout({ children }: LayoutProps<"/[lang]">) {
       <div className="h-full p-2">
         <div className="flex h-full min-h-0 flex-col gap-2 border p-2">
           <Header />
-          <main className="flex-1 min-h-0">{children}</main>
+          <div className="min-h-0 flex-1">{children}</div>
         </div>
       </div>
     </TooltipProvider>

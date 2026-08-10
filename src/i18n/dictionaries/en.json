@@ -171,5 +171,9 @@
     "exportPng": "Export PNG",
     "unknownPalette": "Unknown palette",
     "unknownPaletteDescription": "This pattern's palette could not be loaded."
+  },
+  "footer": {
+    "tagline": "Fuse bead pattern editor & community",
+    "rights": "© {year} Pindou. All rights reserved."
   }
 }

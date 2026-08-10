@@ -2,12 +2,20 @@ import "server-only"
 import { unstable_cache } from "next/cache"
 import { desc, eq, sql } from "drizzle-orm"
 import { db } from "@/db"
-import { brands, colors, patterns } from "@/db/schema"
+import { brands, patterns } from "@/db/schema"
 import { GridStorage } from "@/lib/grid-storage"
-import type { Palette } from "@/types"
 
 /** Grid JSON storage (R2) shared by the data-access functions below. */
 const grids = new GridStorage()
+
+/**
+ * `unstable_cache` round-trips results through JSON, so Date objects come back
+ * as ISO strings on cache hits. Normalize at the data layer so callers always
+ * receive a stable shape regardless of cache state.
+ */
+function isoDate(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : value
+}
 
 /**
  * The paginated pattern list, cached in the data cache (30s) per
@@ -34,7 +42,10 @@ export const getPatternsPage = unstable_cache(
       .limit(pageSize)
       .offset((page - 1) * pageSize)
     const total = Number(rows[0]?.total ?? 0)
-    return { rows, total }
+    return {
+      rows: rows.map((r) => ({ ...r, createdAt: isoDate(r.createdAt) })),
+      total,
+    }
   },
   ["patterns"],
   { revalidate: 30, tags: ["patterns"] },
@@ -68,31 +79,13 @@ export const getPattern = unstable_cache(
       .where(eq(patterns.id, id))
     if (!row) return null
     const grid = await grids.get(row.gridKey)
-    return { ...row, grid }
+    return {
+      ...row,
+      createdAt: isoDate(row.createdAt),
+      updatedAt: isoDate(row.updatedAt),
+      grid,
+    }
   },
   ["pattern"],
   { revalidate: 30, tags: ["pattern"] },
-)
-
-/**
- * A brand's resolved palette (brand row + nested colors), cached for a week —
- * palettes only change via `db:migrate`. The wire shape matches
- * GET /api/brands/[id].
- */
-export const getBrandPalette = unstable_cache(
-  async (id: string): Promise<Palette | null> => {
-    const rows = await db
-      .select()
-      .from(brands)
-      .leftJoin(colors, eq(colors.fkBrandId, brands.id))
-      .where(eq(brands.id, id))
-      .orderBy(colors.sortOrder)
-    if (rows.length === 0) return null
-    return {
-      ...rows[0].brands,
-      colors: rows.flatMap((row) => (row.colors ? [row.colors] : [])),
-    }
-  },
-  ["brand-palette"],
-  { revalidate: 604800, tags: ["brand-palette"] },
 )

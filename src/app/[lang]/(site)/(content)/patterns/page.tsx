@@ -44,10 +44,6 @@ export default async function PatternsPage({
   const list = rows.map((r) => ({
     ...r,
     beadStats: parseBeadStats(r.beadStats),
-    // unstable_cache serializes Dates to ISO strings on cache hits; the
-    // first (cache-miss) call returns a live Date object.
-    createdAt:
-      typeof r.createdAt === "string" ? r.createdAt : r.createdAt.toISOString(),
   }))
 
   return (

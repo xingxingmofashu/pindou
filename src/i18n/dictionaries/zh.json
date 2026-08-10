@@ -171,5 +171,9 @@
     "exportPng": "导出 PNG",
     "unknownPalette": "未知色板",
     "unknownPaletteDescription": "无法加载这个图案的色板。"
+  },
+  "footer": {
+    "tagline": "拼豆图案编辑器与社区",
+    "rights": "© {year} Pindou 版权所有。"
   }
 }
