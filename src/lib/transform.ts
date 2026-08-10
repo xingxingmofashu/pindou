@@ -53,69 +53,6 @@ interface RgbColor {
 }
 
 /**
- * Collapse a cell's source-pixel region into one representative RGB colour —
- * the average in `average` mode, the most frequent exact RGB in `dominant` —
- * or null when every pixel is transparent.
- *
- * @param data      - Raw RGBA source pixels.
- * @param srcWidth  - Raw source width (row stride).
- * @param x0/y0/x1/y1 - Cell bounds in source pixels (half-open).
- * @param mode      - Representative-colour strategy.
- * @returns The representative colour, or null for an empty cell.
- */
-function cellRepresentative(
-  data: Buffer,
-  srcWidth: number,
-  x0: number,
-  y0: number,
-  x1: number,
-  y1: number,
-  mode: TransformMode,
-): RgbColor | null {
-  let rSum = 0
-  let gSum = 0
-  let bSum = 0
-  let pixelCount = 0
-  let domKey = 0
-  let domCount = 0
-  const freq = mode === "dominant" ? new Map<number, number>() : null
-
-  for (let sy = y0; sy < y1; sy++) {
-    let i = (sy * srcWidth + x0) * 4
-    for (let sx = x0; sx < x1; sx++, i += 4) {
-      if (data[i + 3] < ALPHA_THRESHOLD) continue
-      const r = data[i]
-      const g = data[i + 1]
-      const b = data[i + 2]
-      pixelCount++
-      if (freq) {
-        const key = (r << 16) | (g << 8) | b
-        const n = (freq.get(key) ?? 0) + 1
-        freq.set(key, n)
-        if (n > domCount) {
-          domCount = n
-          domKey = key
-        }
-      } else {
-        rSum += r
-        gSum += g
-        bSum += b
-      }
-    }
-  }
-
-  if (pixelCount === 0) return null
-  if (freq) {
-    return { r: (domKey >> 16) & 0xff, g: (domKey >> 8) & 0xff, b: domKey & 0xff }
-  }
-  return {
-    r: Math.round(rSum / pixelCount),
-    g: Math.round(gSum / pixelCount),
-    b: Math.round(bSum / pixelCount),
-  }
-}
-
-/**
  * One image → bead-grid conversion. Holds the palette's precomputed OKLab
  * samples once and shares them between nearest-colour matching and the
  * similarity merge (building them twice was the previous waste).
@@ -136,6 +73,69 @@ export class Transform {
       this.samples.push([o.l, o.a, o.b])
       this.codes.push(color.code)
       this.indexByCode.set(color.code, this.samples.length - 1)
+    }
+  }
+
+  /**
+   * Collapse a cell's source-pixel region into one representative RGB colour —
+   * the average in `average` mode, the most frequent exact RGB in `dominant` —
+   * or null when every pixel is transparent.
+   *
+   * @param data      - Raw RGBA source pixels.
+   * @param srcWidth  - Raw source width (row stride).
+   * @param x0/y0/x1/y1 - Cell bounds in source pixels (half-open).
+   * @param mode      - Representative-colour strategy.
+   * @returns The representative colour, or null for an empty cell.
+   */
+  private static cellRepresentative(
+    data: Buffer,
+    srcWidth: number,
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    mode: TransformMode,
+  ): RgbColor | null {
+    let rSum = 0
+    let gSum = 0
+    let bSum = 0
+    let pixelCount = 0
+    let domKey = 0
+    let domCount = 0
+    const freq = mode === "dominant" ? new Map<number, number>() : null
+
+    for (let sy = y0; sy < y1; sy++) {
+      let i = (sy * srcWidth + x0) * 4
+      for (let sx = x0; sx < x1; sx++, i += 4) {
+        if (data[i + 3] < ALPHA_THRESHOLD) continue
+        const r = data[i]
+        const g = data[i + 1]
+        const b = data[i + 2]
+        pixelCount++
+        if (freq) {
+          const key = (r << 16) | (g << 8) | b
+          const n = (freq.get(key) ?? 0) + 1
+          freq.set(key, n)
+          if (n > domCount) {
+            domCount = n
+            domKey = key
+          }
+        } else {
+          rSum += r
+          gSum += g
+          bSum += b
+        }
+      }
+    }
+
+    if (pixelCount === 0) return null
+    if (freq) {
+      return { r: (domKey >> 16) & 0xff, g: (domKey >> 8) & 0xff, b: domKey & 0xff }
+    }
+    return {
+      r: Math.round(rSum / pixelCount),
+      g: Math.round(gSum / pixelCount),
+      b: Math.round(bSum / pixelCount),
     }
   }
 
@@ -360,7 +360,7 @@ export class Transform {
           srcWidth,
           Math.max(x0 + 1, Math.floor(((c + 1) * srcWidth) / width)),
         )
-        const rep = cellRepresentative(data, srcWidth, x0, y0, x1, y1, mode)
+        const rep = Transform.cellRepresentative(data, srcWidth, x0, y0, x1, y1, mode)
         if (!rep) continue
         row[c] = this.codes[this.nearestColorIndex(rep.r, rep.g, rep.b)]
       }
