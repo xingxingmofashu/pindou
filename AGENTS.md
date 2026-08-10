@@ -4,7 +4,7 @@ Guidance for agent sessions (e.g. Claude Code, OpenCode, Codex) working in this 
 
 ## Project
 
-拼豆 (Pindou) — fuse beads / Perler beads pattern editor and community. Browse anonymously; publishing requires a GitHub sign-in (Better Auth).
+拼豆 (Pindou) — fuse beads / MARD bead pattern editor and community. Browse anonymously; publishing requires a GitHub sign-in (Better Auth).
 
 ## Commands
 
@@ -63,7 +63,7 @@ EditorPage (src/app/[lang]/(site)/editor/page.tsx)
 src/lib/editor.ts         EMPTY/CELL/MIN_PX/MAX_GRID_DIMENSION, serializeGrid/deserializeGrid/computeBeadStats, countGridBeads/countBeadStats, paintBlock/walkLine/floodFill, lodParams/computeGridLines/buildBeadEntries, getGridBounds/centerViewport, PixiContext/ViewRect/BeadEntry/GridRect/BeadStats types
 src/hooks/use-pixi-app.ts    usePixiApp() — PixiJS Application lifecycle hook (owns app.destroy(true))
 src/hooks/use-pixi-canvas.ts PixiJS lifecycle coordinator, wheel + pointer events, zoom/pan state. Takes a fully-resolved palette argument (never subscribes to the active-palette store itself).
-src/components/pixi-canvas.tsx PixiCanvas resolves the palette: read-only views that pin `palette` render without a store subscription; the editor branch subscribes via `usePalette` (in `EditablePaletteBridge`).
+src/components/editor/pixi-canvas.tsx PixiCanvas resolves the palette: read-only views that pin `palette` render without a store subscription; the editor branch subscribes via `usePalette` (in `EditablePaletteBridge`).
 ```
 
 The canvas grid lives in a ref (`cellsRef`) and mutates **outside React**. To surface changes, `usePixiCanvas` takes an `onGridChange` callback (fired at stroke end, fill, clear, and load — never per pointermove) and exposes `getCellsData()` (dense code grid + `beadStats` JSON for publish/export) and `getBeadStats()` (sparse `BeadStats`: painted dims + per-code counts, O(painted cells), no dense allocation). EditorPage owns the stats in state and feeds `BeadStatsPanel`.
@@ -95,6 +95,7 @@ src/proxy.ts              locale detection + redirect; matcher excludes _next|ap
 - **Links/routes**: use `localizedPath(locale, path)` (e.g. `/editor` → `/en/editor`); SWR/API calls stay locale-agnostic absolute paths (`/api/...`).
 - **Dates**: date-fns locale `zhCN` (`date-fns/locale`) for `zh`; localized format strings live in the dictionary (`patternDetail.dateFormat`).
 - Better Auth OAuth callback `/api/auth/callback/github` is under `/api`, so the proxy never touches it.
+- `/api/auth/...` (Better Auth) lives in `src/app/api/auth/` via `toNextJsHandler`; the sign-in UI is `src/components/auth/` (GitHubButton, UserMenu).
 
 ### Data model
 
@@ -192,10 +193,13 @@ src/db/                                Drizzle schema + Neon Postgres Pool (@neo
 
 - **Tables**: `brands` (id uuid PK defaultRandom, code unique, name, sort_order) · `colors` (id uuid PK defaultRandom, fk_brand_id → brands.id ON DELETE cascade, code, name, hex, series, sort_order, unique (fk_brand_id, code)) · `patterns` (id uuid PK defaultRandom, fk_brand_id → brands.id, …). All three tables share the same audit shape: uuid `id` (default `gen_random_uuid()`) and `created_at`/`updated_at` (`timestamp with time zone`, default `now()`) — the DB generates them, so routes never set them. `brands.code` is the wire brand code; `name` is the display name. Brands are served `ORDER BY sort_order` (mard=0 first), colors `ORDER BY sort_order` (the array index grid cells index into).
 - **Grid contract**: the wire format is a **code grid** — `string[][]`, `grid[row][col]` = `""` (empty) or a colour code (e.g. `"A1"`). `/api/transform` and `/api/patterns` store/serve codes; the editor converts to its in-memory index-based sparse map via `deserializeGrid`, and `ImportDialog` feeds the transform's code grid straight into `loadGrid`.
+- **Edit flow**: `/patterns/[id]/edit` (under `[lang]/(site)/patterns/[id]/edit/page.tsx`) is a client page that loads the pattern + its brand palette via `useSWR`, renders an editable `PixiCanvas`, then `PATCH`es the grid/title/desc back through `/api/patterns/[id]` via `postJson` (method `"PATCH"`). Only the owner (session `fkUserId` match) can edit — the API returns 403 otherwise.
 - `lib/image/transform.ts` and `lib/image/thumbnail.ts` import sharp and must never be imported from a client component — only the API routes use them. The API routes query the DB directly; palette data is never bundled into the client.
 - **Thumbnails (Cloudflare R2)**: on publish, the `Thumbnail` instance (in `lib/image/thumbnail.ts`) calls `generate` to render the grid to a PNG Buffer, then `upload` to store it at the fixed key `thumbnails/{patternId}.png` via its own `new R2()` instance (class in `lib/r2.ts`) and returns its public URL with a `?v=` cache-buster, which is saved in `patterns.thumb_url`. R2 is a **hard dependency of publishing/editing** — an upload failure fails the request (503, nothing written to the DB); there is no base64 fallback. If the DB write fails after upload, the route rolls the object back via `thumbnail.delete` (500). Required env vars: `R2_ENDPOINT_URL`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `NEXT_R2_PUBLIC_URL` (copy from `.env.example`).
 - The editor posts multipart `file + width + brandCode` plus optional `mode` / `mergeSimilarity` / `removeBackground` / `excludedCodes` (a JSON array of colour codes) to `/api/transform`; the route filters the brand's colors by `excludedCodes` before building the palette (all colours excluded → 400). Publish posts `brandCode` to `/api/patterns`. Both routes query `brands` + `colors` (ORDER BY `sort_order`) directly to build the palette server-side and store the brand uuid in `patterns.fk_brand_id`. GET routes join `brands` to return the code as `brandCode` on the wire.
 - Migration order matters: `brands`/`colors` must be migrated before `patterns.fk_brand_id` (uuid FK) can be added, and the old `brand_id` text codes are backfilled to uuids in migration 0002. Palette data is loaded by the idempotent data migration 0006 (brands matched by `code`, colors by the unique `(fk_brand_id, code)` pair) — there is no `db:seed` script; `db:migrate` initializes schema **and** data. When changing the schema, run `db:generate` → `db:migrate`.
+- **Route caching**: `/api/patterns` GET and `/api/patterns/[id]` GET wrap their DB queries in `unstable_cache` (30s revalidate, tags `patterns`/`pattern`) and set `Cache-Control`; publish (POST) and edit (PATCH) invalidate via `revalidateTag`. The `[id]` route is `force-dynamic` + `private, no-store` because the response includes the session-derived `canEdit`.
+- **Deploy**: `vercel.json` runs `db:migrate` before the build **only on production** (`VERCEL_ENV = production`); preview builds skip migrations. Production `pnpm build` therefore needs `DATABASE_URL` (also set in the CI workflow).
 - Database is PostgreSQL on Neon (not the earlier better‑sqlite3/SQLite setup) — don't reintroduce SQLite.
 
 ### shadcn/ui components

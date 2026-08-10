@@ -1,7 +1,7 @@
 <p align="center">
   <img src="public/lockup.svg" alt="PINDOU" width="280" />
 </p>
-<p align="center">Fuse bead / Perler bead pattern editor and community.</p>
+<p align="center">Fuse bead pattern editor and community.</p>
 <p align="center">
   <a href="https://github.com/xingxingmofashu/pindou/actions/workflows/ci.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/xingxingmofashu/pindou/ci.yml?style=flat-square&branch=main" /></a>
   <a href="https://github.com/xingxingmofashu/pindou"><img alt="GitHub stars" src="https://img.shields.io/github/stars/xingxingmofashu/pindou?style=flat-square" /></a>

@@ -1,6 +1,7 @@
 {
   "name": "pindou",
   "version": "0.1.0",
+  "description": "Fuse bead pattern editor and community",
   "private": true,
   "packageManager": "pnpm@11.20.0",
   "scripts": {
