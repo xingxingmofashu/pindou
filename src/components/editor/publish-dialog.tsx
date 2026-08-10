@@ -29,12 +29,14 @@ import { useI18n } from "@/i18n/client"
 interface PublishDialogProps {
   open: boolean
   onClose: () => void
+  /** Called after a successful publish (e.g. to clear the editor draft). */
+  onPublished?: () => void
   getCellsData: () => {
     grid: string[][]; brandCode: string; brandId: string; beadStats: string
   } | null
 }
 
-export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProps) {
+export function PublishDialog({ open, onClose, onPublished, getCellsData }: PublishDialogProps) {
   const { locale, t } = useI18n()
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -76,6 +78,7 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
     try {
       const result = await trigger(JSON.stringify(parsed.data))
       setPatternId(result.id)
+      onPublished?.()
     } catch (e) {
       toast.add({
         type: "error",
@@ -83,7 +86,7 @@ export function PublishDialog({ open, onClose, getCellsData }: PublishDialogProp
         description: e instanceof Error ? e.message : t("editor.networkError"),
       })
     }
-  }, [title, description, getCellsData, trigger, t])
+  }, [title, description, getCellsData, trigger, t, onPublished])
 
   const handleClose = useCallback(() => {
     setTitle("")
