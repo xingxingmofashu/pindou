@@ -151,23 +151,30 @@ export async function PATCH(
 
   const palette: Palette = { ...brand, colors: colorRows }
 
-  const png = await thumbnail.generate(gridData, palette)
-  if (!png) {
-    return NextResponse.json({ error: "Empty grid" }, { status: 400 })
+  const [png, gridKey] = await Promise.allSettled([
+    thumbnail.generate(gridData, palette),
+    grids.upload(id, gridData),
+  ])
+
+  if (gridKey.status === "rejected") {
+    return NextResponse.json({ error: "Failed to upload grid" }, { status: 503 })
   }
 
-  let gridKey = ""
-  try {
-    gridKey = await grids.upload(id, gridData)
-  } catch {
-    return NextResponse.json({ error: "Failed to upload grid" }, { status: 503 })
+  const thumbPng = png.status === "fulfilled" ? png.value : null
+  if (!thumbPng) {
+    // Roll back the grid object so a failed edit leaves no orphan.
+    await grids.delete(gridKey.value).catch(() => {})
+    return NextResponse.json(
+      { error: png.status === "rejected" ? "Failed to convert grid" : "Empty grid" },
+      { status: png.status === "rejected" ? 503 : 400 },
+    )
   }
 
   let thumbUrl: string
   try {
-    thumbUrl = await thumbnail.upload(png, id)
+    thumbUrl = await thumbnail.upload(thumbPng, id)
   } catch {
-    await grids.delete(gridKey).catch(() => {})
+    await grids.delete(gridKey.value).catch(() => {})
     return NextResponse.json({ error: "Failed to upload thumbnail" }, { status: 503 })
   }
 
@@ -177,22 +184,24 @@ export async function PATCH(
       .set({
         title,
         description,
-        gridKey,
+        gridKey: gridKey.value,
         beadStats,
         thumbUrl,
         updatedAt: new Date(),
       })
       .where(eq(patterns.id, id))
   } catch {
-    // Roll back the new grid object; the previously published one (row.gridKey)
-    // is untouched because versioned keys never overwrite it.
-    await grids.delete(gridKey).catch(() => {})
+    // Roll back the new grid/thumbnail objects; the previously published ones
+    // (row.gridKey / row.thumbUrl) are untouched because versioned keys never
+    // overwrite them.
+    await grids.delete(gridKey.value).catch(() => {})
     await thumbnail.delete(thumbUrl).catch(() => {})
     return NextResponse.json({ error: "Failed to update pattern" }, { status: 500 })
   }
 
-  // Success — the previous grid object is now orphaned; garbage-collect it.
+  // Success — the previous grid and thumbnail objects are now orphaned; GC them.
   await grids.delete(row.gridKey).catch(() => {})
+  await thumbnail.delete(row.thumbUrl).catch(() => {})
 
   await revalidateTag("pattern", "max")
   await revalidateTag("patterns", "max")

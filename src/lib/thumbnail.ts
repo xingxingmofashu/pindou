@@ -94,22 +94,24 @@ export class Thumbnail {
   /**
    * Upload a thumbnail PNG to Cloudflare R2 and return its public URL.
    *
-   * The object key is fixed at `thumbnails/{patternId}.png`, so re-rendering
-   * overwrites it in place. A `?v=` query param busts browser/CDN caches of
-   * the immutable thumbnail whenever the pattern is re-rendered.
+   * The object key is versioned (`thumbnails/{patternId}/{uuid}.png`), so every
+   * render writes a fresh object and never overwrites the previous thumbnail.
+   * A failed DB write can roll back by deleting only the new object, leaving
+   * the previously published thumbnail intact; the superseded object is
+   * garbage-collected after a successful edit.
    *
    * @param png       - The encoded PNG bytes to upload.
-   * @param patternId - The pattern's uuid, used as the object key.
-   * @returns The public URL: `{NEXT_R2_PUBLIC_URL}/thumbnails/{patternId}.png?v={timestamp}`.
+   * @param patternId - The pattern's uuid, used in the object key.
+   * @returns The public URL: `{NEXT_R2_PUBLIC_URL}/thumbnails/{patternId}/{uuid}.png`.
    * @throws If the public URL is not configured (caught by the caller as a
    *         failed publish).
    */
   async upload(png: Buffer, patternId: string): Promise<string> {
     const publicUrl = process.env.NEXT_R2_PUBLIC_URL
     if (!publicUrl) throw new Error("NEXT_R2_PUBLIC_URL is not configured")
-    const key = `${KEY_PREFIX}/${patternId}.png`
+    const key = `${KEY_PREFIX}/${patternId}/${crypto.randomUUID()}.png`
     await this.r2.upload(key, png, "image/png")
-    return `${publicUrl}/${key}?v=${Date.now()}`
+    return `${publicUrl}/${key}`
   }
 
   /**

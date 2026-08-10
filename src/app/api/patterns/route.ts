@@ -109,25 +109,33 @@ export async function POST(request: NextRequest) {
 
   const palette: Palette = { ...brand, colors: colorRows }
 
-  const thumbPng = await thumbnail.generate(gridData, palette)
-  if (!thumbPng) {
-    return NextResponse.json({ error: "Empty grid" }, { status: 400 })
+  const patternId = crypto.randomUUID()
+
+  const [thumbPng, gridKey] = await Promise.allSettled([
+    thumbnail.generate(gridData, palette),
+    grids.upload(patternId, gridData),
+  ])
+
+  if (gridKey.status === "rejected") {
+    return NextResponse.json({ error: "Failed to upload grid" }, { status: 503 })
   }
 
-  const patternId = crypto.randomUUID()
-  let gridKey = ""
-  try {
-    gridKey = await grids.upload(patternId, gridData)
-  } catch {
-    return NextResponse.json({ error: "Failed to upload grid" }, { status: 503 })
+  const png = thumbPng.status === "fulfilled" ? thumbPng.value : null
+  if (!png) {
+    // Roll back the grid object so a failed publish leaves no orphan.
+    await grids.delete(gridKey.value).catch(() => {})
+    return NextResponse.json(
+      { error: thumbPng.status === "rejected" ? "Failed to convert grid" : "Empty grid" },
+      { status: thumbPng.status === "rejected" ? 503 : 400 },
+    )
   }
 
   let thumbUrl: string
   try {
-    thumbUrl = await thumbnail.upload(thumbPng, patternId)
+    thumbUrl = await thumbnail.upload(png, patternId)
   } catch {
     // Roll back the grid object so a failed publish leaves no orphan.
-    await grids.delete(gridKey).catch(() => {})
+    await grids.delete(gridKey.value).catch(() => {})
     return NextResponse.json({ error: "Failed to upload thumbnail" }, { status: 503 })
   }
 
@@ -140,7 +148,7 @@ export async function POST(request: NextRequest) {
         description,
         authorName: session.user.name,
         fkUserId: session.user.id,
-        gridKey,
+        gridKey: gridKey.value,
         beadStats,
         thumbUrl,
         fkBrandId: brand.id,
@@ -150,7 +158,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ id: inserted.id }, { status: 201 })
   } catch {
     // Roll back the uploaded objects so a failed publish leaves no orphans.
-    await grids.delete(gridKey).catch(() => {})
+    await grids.delete(gridKey.value).catch(() => {})
     await thumbnail.delete(thumbUrl).catch(() => {})
     return NextResponse.json({ error: "Failed to publish pattern" }, { status: 500 })
   }
