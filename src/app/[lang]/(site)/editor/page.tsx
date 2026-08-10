@@ -8,7 +8,6 @@ import { BeadStatsPanel } from "@/components/editor/bead-stats"
 import { PublishDialog } from "@/components/editor/publish-dialog"
 import { ImportDialog } from "@/components/editor/import-dialog"
 import { ExportDialog } from "@/components/editor/export-dialog"
-import { useDraft } from "@/hooks/use-draft"
 import type { ToolKind, BeadStats } from "@/lib/editor"
 
 const DEFAULT_ZOOM = 3
@@ -27,18 +26,12 @@ export default function EditorPage() {
   const [exportOpen, setExportOpen] = useState(false)
   const [zoom, setZoom] = useState(DEFAULT_ZOOM)
 
-  // Auto-save the canvas grid to localStorage and restore it on mount (e.g.
-  // after the sign-in round-trip on publish).
-  const { onSaveDraft, onClearDraft } = useDraft(canvasApiRef)
-
   // Stable: both dialogs read the canvas grid through it, and the export dialog
   // memoizes on it, so an identity change per render would defeat the memo.
   const getCellsData = useCallback(() => canvasApiRef.current?.getCellsData() ?? null, [])
   const onGridChange = useCallback(() => {
-    const api = canvasApiRef.current
-    setBeadStats(api?.getBeadStats() ?? null)
-    onSaveDraft(api?.getCellsData() ?? null)
-  }, [onSaveDraft])
+    setBeadStats(canvasApiRef.current?.getBeadStats() ?? null)
+  }, [])
 
   return (
     <div className="flex h-full flex-col gap-2 overflow-hidden">
@@ -47,7 +40,6 @@ export default function EditorPage() {
         onSelectTool={setActiveTool}
         onClearCanvas={() => {
           canvasApiRef.current?.onClear()
-          onClearDraft()
         }}
         onImportImage={() => setImportOpen(true)}
         onExportImage={() => setExportOpen(true)}
@@ -86,7 +78,6 @@ export default function EditorPage() {
       <PublishDialog
         open={publishOpen}
         onClose={() => setPublishOpen(false)}
-        onPublished={onClearDraft}
         getCellsData={getCellsData}
       />
 
