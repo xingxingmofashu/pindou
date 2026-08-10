@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm"
 import { db } from "@/db"
 import { brands, colors } from "@/db/schema"
 import { MAX_GRID_DIMENSION } from "@/lib/editor"
-import { Transform } from "@/lib/image/transform"
+import { Transform } from "@/lib/transform"
 import type { Palette } from "@/types"
 
 export const runtime = "nodejs"

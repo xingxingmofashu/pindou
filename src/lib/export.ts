@@ -1,4 +1,9 @@
-import { countGridBeads } from "@/lib/editor"
+import {
+  buildHexByCode,
+  countGridBeads,
+  forEachPaintedCell,
+  gridSize,
+} from "@/lib/editor"
 import type { Palette } from "@/types"
 
 /** Default pixels per bead when the caller doesn't specify a scale. */
@@ -141,9 +146,9 @@ export function exportGridSize(
   scale: number,
   opts: ExportGridOptions = {},
 ): { width: number; height: number; scale: number } | null {
-  const rows = grid.length
-  const cols = grid[0]?.length ?? 0
-  if (rows === 0 || cols === 0) return null
+  const size = gridSize(grid)
+  if (!size) return null
+  const { rows, cols } = size
   const count = opts.showBeadStats ? usedColorCount(grid) : 0
   const { s, width, height } = computeLayout(cols, rows, scale, count)
   return { width, height, scale: s }
@@ -173,11 +178,10 @@ export function usedColorStats(
   palette: Palette,
 ): { code: string; hex: string; count: number }[] {
   const order = new Map<string, number>()
-  const hexByCode = new Map<string, string>()
   palette.colors.forEach((color, i) => {
     order.set(color.code, i)
-    hexByCode.set(color.code, color.hex)
   })
+  const hexByCode = buildHexByCode(palette)
   return Array.from(countGridBeads(grid))
     .sort(([a], [b]) => (order.get(a) ?? Infinity) - (order.get(b) ?? Infinity))
     .map(([code, count]) => ({ code, hex: hexByCode.get(code) ?? "#000000", count }))
@@ -260,12 +264,11 @@ export function exportGridPng(
   scale = DEFAULT_EXPORT_SCALE,
   opts: ExportGridOptions = {},
 ): void {
-  const rows = grid.length
-  const cols = grid[0]?.length ?? 0
-  if (rows === 0 || cols === 0) return
+  const size = gridSize(grid)
+  if (!size) return
+  const { rows, cols } = size
 
-  const hexByCode = new Map<string, string>()
-  for (const color of palette.colors) hexByCode.set(color.code, color.hex)
+  const hexByCode = buildHexByCode(palette)
 
   const used = opts.showBeadStats ? usedColorStats(grid, palette) : []
   const layout = computeLayout(cols, rows, scale, used.length)
@@ -288,17 +291,12 @@ export function exportGridPng(
   ctx.fillRect(0, 0, canvas.width, headerH)
   ctx.fillRect(0, 0, headerW, canvas.height)
 
-  for (let r = 0; r < rows; r++) {
-    const row = grid[r]
-    for (let c = 0; c < cols; c++) {
-      const code = row[c]
-      if (code === "") continue
-      const hex = hexByCode.get(code)
-      if (!hex) continue
-      ctx.fillStyle = hex
-      ctx.fillRect(headerW + c * s, headerH + r * s, s, s)
-    }
-  }
+  forEachPaintedCell(grid, (code, r, c) => {
+    const hex = hexByCode.get(code)
+    if (!hex) return
+    ctx.fillStyle = hex
+    ctx.fillRect(headerW + c * s, headerH + r * s, s, s)
+  })
 
   // Grid lines run through the coordinate bands and over the beads (matches
   // the editor's grid-over-beads layer order) so header cells and data cells
@@ -335,21 +333,16 @@ export function exportGridPng(
     ctx.textBaseline = "middle"
     // Widths depend only on the code (the font is fixed), so measure each once.
     const labelWidths = new Map<string, number>()
-    for (let r = 0; r < rows; r++) {
-      const row = grid[r]
-      for (let c = 0; c < cols; c++) {
-        const code = row[c]
-        if (code === "") continue
-        const label = code
-        let width = labelWidths.get(label)
-        if (width === undefined) {
-          width = ctx.measureText(label).width
-          labelWidths.set(label, width)
-        }
-        if (width > s) continue
-        ctx.fillText(label, headerW + (c + 0.5) * s, headerH + (r + 0.5) * s)
+    forEachPaintedCell(grid, (code, r, c) => {
+      const label = code
+      let width = labelWidths.get(label)
+      if (width === undefined) {
+        width = ctx.measureText(label).width
+        labelWidths.set(label, width)
       }
-    }
+      if (width > s) return
+      ctx.fillText(label, headerW + (c + 0.5) * s, headerH + (r + 0.5) * s)
+    })
   }
 
   // Column numbers centred in their header cells along the top, row numbers

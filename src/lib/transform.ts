@@ -1,6 +1,6 @@
 import sharp from "sharp"
 import { converter } from "culori"
-import { MAX_GRID_DIMENSION } from "@/lib/editor"
+import { MAX_GRID_DIMENSION, countGridBeads } from "@/lib/editor"
 import type { Palette } from "@/types"
 
 /** Pixels with alpha below this are treated as empty cells. */
@@ -113,17 +113,6 @@ function cellRepresentative(
     g: Math.round(gSum / pixelCount),
     b: Math.round(bSum / pixelCount),
   }
-}
-
-/** Number of non-empty cells in a code grid. */
-function countBeads(grid: string[][]): number {
-  let n = 0
-  for (const row of grid) {
-    for (const code of row) {
-      if (code !== "") n++
-    }
-  }
-  return n
 }
 
 /**
@@ -386,6 +375,6 @@ export class Transform {
       this.removeBackgroundColour(grid)
     }
 
-    return { grid, width, height, beadCount: countBeads(grid) }
+    return { grid, width, height, beadCount: countGridBeads(grid).size }
   }
 }

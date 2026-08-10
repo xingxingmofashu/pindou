@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch"
 import { toast } from "@/components/ui/toast"
 import { usePalette } from "@/hooks/use-palette"
 import { useI18n } from "@/i18n/client"
-import { exportGridPng, exportGridSize, DEFAULT_EXPORT_SCALE } from "@/lib/image/export"
+import { exportGridPng, exportGridSize, DEFAULT_EXPORT_SCALE } from "@/lib/export"
 
 interface ExportDialogProps {
   open: boolean

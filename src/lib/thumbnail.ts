@@ -1,5 +1,5 @@
 import sharp from "sharp"
-import { MIN_PX } from "@/lib/editor"
+import { MIN_PX, buildHexByCode, gridSize } from "@/lib/editor"
 import { hexToRgb } from "@/lib/utils"
 import { R2 } from "@/lib/r2"
 import type { Palette } from "@/types"
@@ -33,12 +33,11 @@ export class Thumbnail {
    * @returns The encoded PNG bytes, or null for an empty grid.
    */
   async generate(grid: string[][], palette: Palette): Promise<Buffer | null> {
-    const h = grid.length
-    const w = grid[0]?.length ?? 0
-    if (h === 0 || w === 0) return null
+    const size = gridSize(grid)
+    if (!size) return null
+    const { rows: h, cols: w } = size
 
-    const hexByCode = new Map<string, string>()
-    for (const color of palette.colors) hexByCode.set(color.code, color.hex)
+    const hexByCode = buildHexByCode(palette)
 
     const step = Math.ceil(Math.max(h, w) / MAX_CELLS)
     const cellsH = Math.ceil(h / step)

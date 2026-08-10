@@ -24,7 +24,7 @@ import { MAX_GRID_DIMENSION } from "@/lib/editor"
 import { postJson } from "@/lib/utils"
 import { usePalette } from "@/hooks/use-palette"
 import { useI18n } from "@/i18n/client"
-import type { TransformMode, TransformResult } from "@/lib/image/transform"
+import type { TransformMode, TransformResult } from "@/lib/transform"
 import type { Palette } from "@/types"
 
 /** Maximum accepted upload size, mirroring the serverless body limit. */

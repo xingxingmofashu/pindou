@@ -5,7 +5,7 @@ import { db } from "@/db"
 import { brands, colors, patterns } from "@/db/schema"
 import { PatternUpdateSchema } from "@/db/schema"
 import { auth } from "@/lib/auth/server"
-import { Thumbnail } from "@/lib/image/thumbnail"
+import { Thumbnail } from "@/lib/thumbnail"
 import { GridStorage } from "@/lib/grid-storage"
 import type { Palette } from "@/types"
 

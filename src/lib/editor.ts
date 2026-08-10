@@ -289,6 +289,50 @@ export function countGridBeads(grid: string[][]): Map<string, number> {
 }
 
 /**
+ * Resolve a serialized code grid's dimensions, or null when it is empty.
+ *
+ * @param grid - The rectangular `string[][]` ("" = empty).
+ * @returns `{ rows, cols }`, or null when either axis has no cells.
+ */
+export function gridSize(grid: string[][]): { rows: number; cols: number } | null {
+  const rows = grid.length
+  const cols = grid[0]?.length ?? 0
+  return rows === 0 || cols === 0 ? null : { rows, cols }
+}
+
+/**
+ * Build a colour-code → hex lookup for a palette.
+ *
+ * @param palette - The palette to index.
+ * @returns A map of colour code (e.g. "A1") → hex string.
+ */
+export function buildHexByCode(palette: Palette): Map<string, string> {
+  const hexByCode = new Map<string, string>()
+  for (const color of palette.colors) hexByCode.set(color.code, color.hex)
+  return hexByCode
+}
+
+/**
+ * Visit every painted cell of a code grid, skipping empty cells.
+ *
+ * @param grid - The rectangular `string[][]` ("" = empty).
+ * @param fn   - Called with the colour code and the cell's row/column.
+ */
+export function forEachPaintedCell(
+  grid: string[][],
+  fn: (code: string, row: number, col: number) => void,
+): void {
+  for (let r = 0; r < grid.length; r++) {
+    const row = grid[r]
+    for (let c = 0; c < row.length; c++) {
+      const code = row[c]
+      if (code === "") continue
+      fn(code, r, c)
+    }
+  }
+}
+
+/**
  * Count beads per colour code for a serialized code grid, as a JSON string
  * mapping colour code → bead count (e.g. `{"A1":12}`) — the stored/published
  * form of a pattern's usage stats.
