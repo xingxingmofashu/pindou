@@ -4,12 +4,16 @@ import { revalidateTag, unstable_cache } from "next/cache"
 import { db } from "@/db"
 import { brands, colors, patterns } from "@/db/schema"
 import { Thumbnail } from "@/lib/image/thumbnail"
+import { GridStorage } from "@/lib/grid-storage"
 import { PatternInsertSchema, PaginationSchema } from "@/db/schema"
 import { auth } from "@/lib/auth/server"
 import type { Palette } from "@/types"
 
 /** Thumbnail renderer + R2 uploader for this route. */
 const thumbnail = new Thumbnail()
+
+/** Grid JSON storage (R2) for this route. */
+const grids = new GridStorage()
 
 /**
  * The paginated list query is cached in the data cache (30s) per `page` /
@@ -111,10 +115,19 @@ export async function POST(request: NextRequest) {
   }
 
   const patternId = crypto.randomUUID()
+  let gridKey = ""
+  try {
+    gridKey = await grids.upload(patternId, gridData)
+  } catch {
+    return NextResponse.json({ error: "Failed to upload grid" }, { status: 503 })
+  }
+
   let thumbUrl: string
   try {
     thumbUrl = await thumbnail.upload(thumbPng, patternId)
   } catch {
+    // Roll back the grid object so a failed publish leaves no orphan.
+    await grids.delete(gridKey).catch(() => {})
     return NextResponse.json({ error: "Failed to upload thumbnail" }, { status: 503 })
   }
 
@@ -127,7 +140,7 @@ export async function POST(request: NextRequest) {
         description,
         authorName: session.user.name,
         fkUserId: session.user.id,
-        gridData: JSON.stringify(gridData),
+        gridKey,
         beadStats,
         thumbUrl,
         fkBrandId: brand.id,
@@ -136,7 +149,8 @@ export async function POST(request: NextRequest) {
     await revalidateTag("patterns", "max")
     return NextResponse.json({ id: inserted.id }, { status: 201 })
   } catch {
-    // Roll back the uploaded thumbnail so a failed publish leaves no orphan.
+    // Roll back the uploaded objects so a failed publish leaves no orphans.
+    await grids.delete(gridKey).catch(() => {})
     await thumbnail.delete(thumbUrl).catch(() => {})
     return NextResponse.json({ error: "Failed to publish pattern" }, { status: 500 })
   }

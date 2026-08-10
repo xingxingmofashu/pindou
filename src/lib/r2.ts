@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3"
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3"
 
 /**
  * Minimal Cloudflare R2 client over the S3-compatible API.
@@ -37,6 +37,30 @@ export class R2 {
         ContentType: contentType,
       }),
     )
+  }
+
+  /**
+   * Fetch an object from the configured bucket.
+   *
+   * @param key - The object key (e.g. `thumbnails/{id}.png`).
+   * @returns The object bytes, or null when no object exists at the key.
+   */
+  async get(key: string): Promise<Buffer | null> {
+    try {
+      const res = await this.client.send(
+        new GetObjectCommand({
+          Bucket: process.env.R2_BUCKET_NAME,
+          Key: key,
+        }),
+      )
+      if (!res.Body) return null
+      const chunks: Buffer[] = []
+      for await (const chunk of res.Body as AsyncIterable<Buffer>) chunks.push(chunk)
+      return Buffer.concat(chunks)
+    } catch (e) {
+      if (e instanceof Error && e.name === "NoSuchKey") return null
+      throw e
+    }
   }
 
   /**

@@ -6,18 +6,22 @@ import { brands, colors, patterns } from "@/db/schema"
 import { PatternUpdateSchema } from "@/db/schema"
 import { auth } from "@/lib/auth/server"
 import { Thumbnail } from "@/lib/image/thumbnail"
+import { GridStorage } from "@/lib/grid-storage"
 import type { Palette } from "@/types"
 
 /** Thumbnail renderer + R2 uploader for this route. */
 const thumbnail = new Thumbnail()
 
+/** Grid JSON storage (R2) for this route. */
+const grids = new GridStorage()
+
 /**
  * Public pattern data (excluding the session-derived `canEdit`) cached via the
- * data cache — the large `gridData` blob is the expensive part of this query,
- * so it's worth caching across requests. The response itself stays dynamic
- * (`force-dynamic` + `private, no-store`) because `canEdit` depends on the
- * requester's session; edits invalidate every pattern entry via
- * {@link revalidateTag} on PATCH, with a 30s time-based fallback.
+ * data cache — the grid JSON fetch from R2 is the expensive part, so it's
+ * cached across requests. The response itself stays dynamic (`force-dynamic` +
+ * `private, no-store`) because `canEdit` depends on the requester's session;
+ * edits invalidate every pattern entry via {@link revalidateTag} on PATCH,
+ * with a 30s time-based fallback.
  */
 const getPattern = unstable_cache(
   async (id: string) => {
@@ -29,7 +33,7 @@ const getPattern = unstable_cache(
         authorName: patterns.authorName,
         brandCode: brands.code,
         brandId: patterns.fkBrandId,
-        gridData: patterns.gridData,
+        gridKey: patterns.gridKey,
         beadStats: patterns.beadStats,
         thumbUrl: patterns.thumbUrl,
         fkUserId: patterns.fkUserId,
@@ -39,7 +43,9 @@ const getPattern = unstable_cache(
       .from(patterns)
       .innerJoin(brands, eq(patterns.fkBrandId, brands.id))
       .where(eq(patterns.id, id))
-    return row ?? null
+    if (!row) return null
+    const grid = await grids.get(row.gridKey)
+    return { ...row, grid }
   },
   ["pattern"],
   { revalidate: 30, tags: ["pattern"] },
@@ -59,6 +65,10 @@ export async function GET(
     return NextResponse.json({ error: "Pattern not found" }, { status: 404 })
   }
 
+  if (!row.grid) {
+    return NextResponse.json({ error: "Pattern grid is missing" }, { status: 500 })
+  }
+
   const session = await auth.api.getSession({ headers: request.headers })
 
   return NextResponse.json(
@@ -69,7 +79,7 @@ export async function GET(
       authorName: row.authorName,
       brandCode: row.brandCode,
       brandId: row.brandId,
-      gridData: JSON.parse(row.gridData),
+      gridData: row.grid,
       beadStats: row.beadStats,
       thumbUrl: row.thumbUrl,
       createdAt: row.createdAt,
@@ -96,7 +106,12 @@ export async function PATCH(
   const { id } = await params
 
   const [row] = await db
-    .select({ fkUserId: patterns.fkUserId, fkBrandId: patterns.fkBrandId, thumbUrl: patterns.thumbUrl })
+    .select({
+      fkUserId: patterns.fkUserId,
+      fkBrandId: patterns.fkBrandId,
+      gridKey: patterns.gridKey,
+      thumbUrl: patterns.thumbUrl,
+    })
     .from(patterns)
     .where(eq(patterns.id, id))
     .limit(1)
@@ -141,10 +156,18 @@ export async function PATCH(
     return NextResponse.json({ error: "Empty grid" }, { status: 400 })
   }
 
+  let gridKey = ""
+  try {
+    gridKey = await grids.upload(id, gridData)
+  } catch {
+    return NextResponse.json({ error: "Failed to upload grid" }, { status: 503 })
+  }
+
   let thumbUrl: string
   try {
     thumbUrl = await thumbnail.upload(png, id)
   } catch {
+    await grids.delete(gridKey).catch(() => {})
     return NextResponse.json({ error: "Failed to upload thumbnail" }, { status: 503 })
   }
 
@@ -154,16 +177,22 @@ export async function PATCH(
       .set({
         title,
         description,
-        gridData: JSON.stringify(gridData),
+        gridKey,
         beadStats,
         thumbUrl,
         updatedAt: new Date(),
       })
       .where(eq(patterns.id, id))
   } catch {
+    // Roll back the new grid object; the previously published one (row.gridKey)
+    // is untouched because versioned keys never overwrite it.
+    await grids.delete(gridKey).catch(() => {})
     await thumbnail.delete(thumbUrl).catch(() => {})
     return NextResponse.json({ error: "Failed to update pattern" }, { status: 500 })
   }
+
+  // Success — the previous grid object is now orphaned; garbage-collect it.
+  await grids.delete(row.gridKey).catch(() => {})
 
   await revalidateTag("pattern", "max")
   await revalidateTag("patterns", "max")

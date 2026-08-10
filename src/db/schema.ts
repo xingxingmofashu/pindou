@@ -9,8 +9,11 @@ export const patterns = pgTable("patterns", {
   title: text("title").notNull(),
   description: text("description").notNull().default(""),
   authorName: text("author_name"),
-  /** Dense 2D grid serialized as JSON: string[][] — "" = empty, else a colour code */
-  gridData: text("grid_data").notNull(),
+  /**
+   * R2 object key holding the grid JSON (`patterns/{id}/{uuid}.json`); the
+   * grid itself is never stored in Postgres. Empty until the grid is written.
+   */
+  gridKey: text("grid_key").notNull().default(""),
   /** Brand UUID referencing brands.id; code→uuid mapping lives in the app layer. */
   fkBrandId: uuid("fk_brand_id").notNull().references(() => brands.id),
   /** Owning Better Auth user (set server-side on publish); NULL if the account is deleted. */
@@ -94,16 +97,16 @@ const gridDataSchema = z
 
 /**
  * Wire shape of a published pattern (GET /api/patterns/[id]): the `patterns`
- * row joined with the brand code, `gridData` parsed to a code `string[][]`,
- * and the brand FK surfaced as `brandId` alongside the wire `brandCode`.
+ * row joined with the brand code, `gridData` fetched from R2 and parsed to a
+ * code `string[][]`, and the brand FK surfaced as `brandId` alongside the wire
+ * `brandCode`. `gridKey` is server-internal and never sent to the client.
  */
 export const PatternSelectSchema = createSelectSchema(patterns, {
-  gridData: gridDataSchema,
   createdAt: z.string(),
   updatedAt: z.string(),
 })
-  .extend({ brandCode: z.string(), brandId: z.uuid() })
-  .omit({ fkBrandId: true, fkUserId: true })
+  .omit({ fkBrandId: true, fkUserId: true, gridKey: true })
+  .extend({ gridData: gridDataSchema, brandCode: z.string(), brandId: z.uuid() })
 
 /**
  * Client-supplied fields for POST /api/patterns. `beadStats` is computed
@@ -111,7 +114,6 @@ export const PatternSelectSchema = createSelectSchema(patterns, {
  * are added on the route.
  */
 export const PatternInsertSchema = createInsertSchema(patterns, {
-  gridData: gridDataSchema,
   beadStats: z.string(),
 })
   .omit({
@@ -120,10 +122,11 @@ export const PatternInsertSchema = createInsertSchema(patterns, {
     fkUserId: true,
     authorName: true,
     thumbUrl: true,
+    gridKey: true,
     createdAt: true,
     updatedAt: true,
   })
-  .extend({ brandCode: z.string() })
+  .extend({ gridData: gridDataSchema, brandCode: z.string() })
 
 /** Query-parameter pagination for GET /api/patterns. */
 export const PaginationSchema = z.object({
