@@ -5,8 +5,6 @@ import { create } from "zustand"
 import useSWR from "swr"
 import { usePalette } from "@/hooks/use-palette"
 import { fetcher } from "@/lib/utils"
-import { toast } from "@/components/ui/toast"
-import { useI18n } from "@/i18n/client"
 import type { PixiCanvasApi } from "@/components/editor/pixi-canvas"
 import type { Palette } from "@/types"
 
@@ -61,7 +59,6 @@ type RestoreState = "idle" | "pending" | "done"
  * @returns A stable save callback and the draft's clear action.
  */
 export function useDraft(apiRef: RefObject<PixiCanvasApi | null>) {
-  const { t } = useI18n()
   const { palette, setActivePalette } = usePalette()
   const { data: brands } = useSWR<Array<Palette>>("/api/brands", fetcher)
   const restoreStateRef = useRef<RestoreState>("idle")
@@ -100,11 +97,6 @@ export function useDraft(apiRef: RefObject<PixiCanvasApi | null>) {
         // The brand no longer exists — the draft can't be mapped, so discard.
         restoreStateRef.current = "done"
         onClearDraft()
-        toast.add({
-          type: "error",
-          title: t("editor.draftBrandMissing"),
-          description: t("editor.draftBrandMissingDescription"),
-        })
         return
       }
       setActivePalette(brand)
@@ -113,12 +105,7 @@ export function useDraft(apiRef: RefObject<PixiCanvasApi | null>) {
 
     restoreStateRef.current = "done"
     apiRef.current.loadGrid(draft.grid)
-    toast.add({
-      type: "success",
-      title: t("editor.draftRestored"),
-      description: t("editor.draftRestoredDescription"),
-    })
-  }, [draft, palette, brands, apiRef, setActivePalette, onClearDraft, t])
+  }, [draft, palette, brands, apiRef, setActivePalette, onClearDraft])
 
   return { onSaveDraft: saveDraft, onClearDraft }
 }
