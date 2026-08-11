@@ -31,12 +31,13 @@ interface PublishDialogProps {
   onClose: () => void
   /** Called after a successful publish (e.g. to clear the editor draft). */
   onPublished?: () => void
-  getCellsData: () => {
+  /** Reads the canvas grid — same contract as the API method. */
+  onGetCellsData: () => {
     grid: string[][]; brandCode: string; beadStats: string
   } | null
 }
 
-export function PublishDialog({ open, onClose, onPublished, getCellsData }: PublishDialogProps) {
+export function PublishDialog({ open, onClose, onPublished, onGetCellsData }: PublishDialogProps) {
   const { locale, t } = useI18n()
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -49,7 +50,7 @@ export function PublishDialog({ open, onClose, onPublished, getCellsData }: Publ
   )
 
   const handleSubmit = useCallback(async () => {
-    const data = getCellsData()
+    const data = onGetCellsData()
     if (!data) {
       toast.add({
         type: "error",
@@ -86,7 +87,7 @@ export function PublishDialog({ open, onClose, onPublished, getCellsData }: Publ
         description: e instanceof Error ? e.message : t("editor.networkError"),
       })
     }
-  }, [title, description, getCellsData, trigger, t, onPublished])
+  }, [title, description, onGetCellsData, trigger, t, onPublished])
 
   const handleClose = useCallback(() => {
     setTitle("")

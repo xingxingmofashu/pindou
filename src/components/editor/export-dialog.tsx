@@ -21,7 +21,8 @@ import { Export, DEFAULT_EXPORT_SCALE } from "@/lib/export"
 interface ExportDialogProps {
   open: boolean
   onClose: () => void
-  getCellsData: () => {
+  /** Reads the canvas grid — same contract as the API method. */
+  onGetCellsData: () => {
     grid: string[][]; brandCode: string; beadStats: string
   } | null
 }
@@ -30,7 +31,7 @@ interface ExportDialogProps {
  * Export dialog: pick pixels-per-bead, preview the output size, then download
  * the pattern as a PNG chart (grid + coordinates in the header bands).
  */
-export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps) {
+export function ExportDialog({ open, onClose, onGetCellsData }: ExportDialogProps) {
   const { t } = useI18n()
   const exporter = useMemo(() => new Export(), [])
   const [scaleInput, setScaleInput] = useState(String(DEFAULT_EXPORT_SCALE))
@@ -42,7 +43,7 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
 
   // Snapshot the grid once when the dialog opens — it can't change behind the
   // modal, so re-serializing on every scale keystroke would be wasted work.
-  const data = useMemo(() => (open ? getCellsData() : null), [open, getCellsData])
+  const data = useMemo(() => (open ? onGetCellsData() : null), [open, onGetCellsData])
   // Use the same palette instance the canvas draws with (the active-brand
   // store), so grid indices — 1-based positions in that palette — render
   // identically on export. Fetching a fresh brand here could serve a cached
