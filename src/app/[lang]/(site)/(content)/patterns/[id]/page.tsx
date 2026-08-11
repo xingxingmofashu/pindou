@@ -83,17 +83,16 @@ export default async function PatternDetailPage({
       <div className="flex items-center justify-between gap-2 border px-3 py-2">
         <h1 className="min-w-0 truncate text-sm font-semibold">{pattern.title}</h1>
         <div className="flex shrink-0 items-center gap-2">
+          <PatternExportButton grid={grid} palette={palette} beadStats={pattern.beadStats} />
           {canEdit && (
             <Button
               size="sm"
-              variant="outline"
               nativeButton={false}
               render={<Link href={localizedPath(locale, `/patterns/${id}/edit`)} />}
             >
               {dict.patternDetail.edit}
             </Button>
           )}
-          <PatternExportButton grid={grid} palette={palette} beadStats={pattern.beadStats} />
           <PatternZoomControls />
         </div>
       </div>

@@ -187,14 +187,6 @@ function EditForm({
         <h1 className="text-sm font-semibold truncate">{t("patternDetail.editTitle")}</h1>
         <div className="flex items-center gap-2">
           <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setExportOpen(true)}
-          >
-            <Download data-icon="inline-start" />
-            {t("editor.export")}
-          </Button>
-          <Button
             variant={showLabels ? "secondary" : "outline"}
             size="icon-sm"
             aria-label={t("editor.showLabels")}
@@ -215,6 +207,14 @@ function EditForm({
             onSetZoom={(z) => canvasApiRef.current?.setZoom(z)}
             onReset={() => canvasApiRef.current?.onReset()}
           />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setExportOpen(true)}
+          >
+            <Download data-icon="inline-start" />
+            {t("editor.export")}
+          </Button>
           <Button size="sm" onClick={handleSave} disabled={saving}>
             {saving && <Spinner data-icon="inline-start" />}
             {t("patternDetail.save")}
