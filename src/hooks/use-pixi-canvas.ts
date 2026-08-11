@@ -34,6 +34,9 @@ const DEFAULT_ZOOM = 3
 /** Fraction of the viewport kept as pan slack around a padded rebuild. */
 const PAN_BUFFER = 0.5
 
+/** Max undo snapshots kept in memory (each is a sparse Map copy). */
+const UNDO_LIMIT = 50
+
 /** Grid line colour and alpha — fixed for all views. */
 const GRID_COLOR = 0x000000
 const GRID_ALPHA = 0.12
@@ -48,6 +51,8 @@ interface UsePixiCanvasOptions {
   readonly?: boolean
   /** Fired whenever the painted cells change (stroke end, fill, clear, load). */
   onGridChange?: () => void
+  /** Fired with the current undo/redo availability whenever history changes. */
+  onHistoryChange?: (canUndo: boolean, canRedo: boolean) => void
 }
 
 /** Mutable per-render options mirrored into refs for the event handlers. */
@@ -64,6 +69,15 @@ function paintGridLines(poly: Graphics, rects: GridRect[], color: number, alpha:
   poly.fill({ color, alpha })
 }
 
+/** Whether two sparse grids hold identical cells (same keys + values). */
+function mapsEqual(a: Map<string, number>, b: Map<string, number>): boolean {
+  if (a.size !== b.size) return false
+  for (const [key, value] of a) {
+    if (b.get(key) !== value) return false
+  }
+  return true
+}
+
 export function usePixiCanvas(
   pixiCtx: PixiContext | null,
   palette: Palette,
@@ -76,6 +90,7 @@ export function usePixiCanvas(
     showLabels = false,
     readonly = false,
     onGridChange,
+    onHistoryChange,
   } = options
 
   const [zoom, setZoomState] = useState(initialZoom)
@@ -87,11 +102,18 @@ export function usePixiCanvas(
   /** World position of the last padded rebuild; null when nothing covers a slack region. */
   const builtWorldRef = useRef<{ x: number; y: number } | null>(null)
 
+  /** Undo/redo history: sparse-map snapshots taken before each destructive op. */
+  const undoStackRef = useRef<Map<string, number>[]>([])
+  const redoStackRef = useRef<Map<string, number>[]>([])
+
   const pixiRef = useRef(pixiCtx)
   const runtimeRef = useRef<RuntimeOpts>({ activeTool, activeColorIndex, readonly })
   const onGridChangeRef = useRef(onGridChange)
+  const onHistoryChangeRef = useRef(onHistoryChange)
   const panRef = useRef({ on: false, startX: 0, startY: 0, startWX: 0, startWY: 0 })
-  const drawRef = useRef<{ on: boolean; vc: number; vr: number }>({ on: false, vc: 0, vr: 0 })
+  const drawRef = useRef<{ on: boolean; vc: number; vr: number; before: Map<string, number> | null }>({
+    on: false, vc: 0, vr: 0, before: null,
+  })
 
   const canvas = pixiCtx?.app.canvas as HTMLCanvasElement | undefined
 
@@ -203,7 +225,55 @@ export function usePixiCanvas(
     rebuildRef.current = rebuild
     runtimeRef.current = { activeTool, activeColorIndex, readonly }
     onGridChangeRef.current = onGridChange
+    onHistoryChangeRef.current = onHistoryChange
   })
+
+  /** Deep-copy the sparse grid so a snapshot survives later mutations. */
+  function snapshot(): Map<string, number> {
+    return new Map(cellsRef.current)
+  }
+
+  const pushHistory = useCallback((before: Map<string, number>) => {
+    if (runtimeRef.current.readonly) return
+    // No-op ops (same colour on an already-painted cell, empty clear, …) would
+    // push a snapshot identical to the current state — drop them so undo/redo
+    // stay meaningful.
+    if (mapsEqual(before, cellsRef.current)) return
+    undoStackRef.current.push(before)
+    if (undoStackRef.current.length > UNDO_LIMIT) undoStackRef.current.shift()
+    redoStackRef.current = []
+    onHistoryChangeRef.current?.(true, false)
+  }, [])
+
+  const undo = useCallback(() => {
+    if (runtimeRef.current.readonly) return
+    const prev = undoStackRef.current.pop()
+    if (!prev) return
+    redoStackRef.current.push(cellsRef.current)
+    cellsRef.current = prev
+    rebuildRef.current()
+    onGridChangeRef.current?.()
+    onHistoryChangeRef.current?.(undoStackRef.current.length > 0, true)
+  }, [])
+
+  const redo = useCallback(() => {
+    if (runtimeRef.current.readonly) return
+    const next = redoStackRef.current.pop()
+    if (!next) return
+    undoStackRef.current.push(cellsRef.current)
+    if (undoStackRef.current.length > UNDO_LIMIT) undoStackRef.current.shift()
+    cellsRef.current = next
+    rebuildRef.current()
+    onGridChangeRef.current?.()
+    onHistoryChangeRef.current?.(true, redoStackRef.current.length > 0)
+  }, [])
+
+  /** Clear undo/redo history (used on brand switch, where cell indices change meaning). */
+  const clearHistory = useCallback(() => {
+    undoStackRef.current = []
+    redoStackRef.current = []
+    onHistoryChangeRef.current?.(false, false)
+  }, [])
 
   /** Centre viewport and rebuild when pixiCtx becomes ready. */
   useEffect(() => {
@@ -314,6 +384,39 @@ export function usePixiCanvas(
     return () => cvs.removeEventListener("wheel", onWheel)
   }, [canvas, syncZoom])
 
+  /** Undo/redo keyboard shortcuts (Cmd/Ctrl+Z, +Shift+Z, Cmd/Ctrl+Y). Ignored
+   *  in readonly views and while typing in a text field. */
+  useEffect(() => {
+    const isTypingTarget = (t: EventTarget | null) => {
+      if (!(t instanceof HTMLElement)) return false
+      const tag = t.tagName
+      return tag === "INPUT" || tag === "TEXTAREA" || t.isContentEditable
+    }
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey
+      if (!mod || isTypingTarget(e.target)) return
+      // Undoing mid-stroke would swap the grid under the active drag and then
+      // push a stale pre-stroke snapshot on release — ignore shortcuts while a
+      // stroke is in progress.
+      if (drawRef.current.on) return
+      if (e.key.toLowerCase() === "z") {
+        e.preventDefault()
+        if (e.shiftKey) {
+          redo()
+        } else {
+          undo()
+        }
+      } else if (e.key.toLowerCase() === "y") {
+        e.preventDefault()
+        redo()
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [undo, redo])
+
   /** Pointer event handling: pan + pen / eraser. */
   useEffect(() => {
     const cvs = canvas
@@ -343,7 +446,9 @@ export function usePixiCanvas(
         e.preventDefault()
         const w = toWorld(e.clientX, e.clientY, rectRef.current)
         if (!w) return
+        const before = snapshot()
         floodFill(cellsRef.current, Math.floor(w.wx / CELL), Math.floor(w.wy / CELL), rt.activeColorIndex)
+        pushHistory(before)
         rebuildRef.current()
         onGridChangeRef.current?.()
         return
@@ -353,8 +458,9 @@ export function usePixiCanvas(
       e.preventDefault()
       const t = toPaintTarget(e.clientX, e.clientY, rectRef.current)
       if (!t) return
+      // Capture the pre-stroke state; it becomes an undo entry at stroke end.
+      drawRef.current = { on: true, vc: t.vc, vr: t.vr, before: snapshot() }
       paintBlock(cellsRef.current, t.c0, t.r0, t.c1, t.r1, rt.activeTool === "eraser" ? EMPTY : rt.activeColorIndex)
-      drawRef.current = { on: true, vc: t.vc, vr: t.vr }
       rebuildRef.current()
       cvs.setPointerCapture(e.pointerId)
     }
@@ -400,11 +506,14 @@ export function usePixiCanvas(
      *  pointerleave fire with button === -1 (no button state), so we reset
      *  unconditionally rather than matching a specific button. */
     const onUp = () => {
-      const wasDrawing = drawRef.current.on
+      const d = drawRef.current
       panRef.current.on = false
-      drawRef.current = { on: false, vc: 0, vr: 0 }
+      drawRef.current = { on: false, vc: 0, vr: 0, before: null }
       rectRef.current = null
-      if (wasDrawing) onGridChangeRef.current?.()
+      if (d.on) {
+        if (d.before) pushHistory(d.before)
+        onGridChangeRef.current?.()
+      }
     }
 
     const onContextMenu = (e: Event) => e.preventDefault()
@@ -421,14 +530,23 @@ export function usePixiCanvas(
     return () => {
       for (const [ev, fn] of events) cvs.removeEventListener(ev, fn)
     }
-  }, [canvas, toWorld, toPaintTarget])
+  }, [canvas, toWorld, toPaintTarget, pushHistory])
 
-  /** Reset the sparse model and redraw (used by clear + brand switch). */
-  const resetModel = useCallback(() => {
+  /** Reset the sparse model and redraw. With `clearHistory` (brand switch) the
+   *  undo/redo stacks are wiped too — cell indices change meaning across
+   *  palettes, so old snapshots would render wrong colours. */
+  const resetModel = useCallback((clearHistoryFlag = false) => {
+    const before = snapshot()
+    if (clearHistoryFlag) {
+      clearHistory()
+    }
     cellsRef.current = new Map()
+    // Push *after* the swap so `mapsEqual` sees old vs new and records the
+    // clear as an undoable step.
+    if (!clearHistoryFlag) pushHistory(before)
     rebuildRef.current()
     onGridChangeRef.current?.()
-  }, [])
+  }, [clearHistory, pushHistory])
 
   const fitToCanvas = useCallback(() => {
     const ctx = pixiRef.current
@@ -465,7 +583,11 @@ export function usePixiCanvas(
   }, [palette])
 
   const loadGrid = useCallback((grid: string[][]) => {
+    const before = snapshot()
     cellsRef.current = deserializeGrid(grid, palette)
+    // Push *after* the swap so `mapsEqual` sees old vs new and records the
+    // load as an undoable step (undo returns to the previous canvas).
+    pushHistory(before)
 
     const ctx = pixiRef.current
     if (ctx?.app.screen) {
@@ -483,7 +605,7 @@ export function usePixiCanvas(
 
     rebuildRef.current()
     onGridChangeRef.current?.()
-  }, [initialZoom, syncZoom, palette])
+  }, [initialZoom, syncZoom, palette, pushHistory])
 
   /** Live bead-usage stats computed straight from the sparse model — no dense
    *  grid allocation (cheap enough to call after every stroke). */
@@ -492,5 +614,17 @@ export function usePixiCanvas(
     [palette],
   )
 
-  return { zoom, setZoom, onReset: fitToCanvas, onClear: resetModel, getCellsData, getBeadStats, loadGrid, resetModel }
+  return {
+    zoom,
+    setZoom,
+    onReset: fitToCanvas,
+    onClear: resetModel,
+    undo,
+    redo,
+    clearHistory,
+    getCellsData,
+    getBeadStats,
+    loadGrid,
+    resetModel,
+  }
 }

@@ -92,6 +92,8 @@
     "pen": "画笔",
     "eraser": "橡皮擦",
     "fill": "油漆桶",
+    "undo": "撤销",
+    "redo": "重做",
     "showLabels": "显示色号标签",
     "labels": "色号标签",
     "showBeadStatsToggle": "显示珠子用量",

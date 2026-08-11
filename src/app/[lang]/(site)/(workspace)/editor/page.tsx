@@ -39,12 +39,18 @@ export default function EditorPage() {
   const [importOpen, setImportOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [zoom, setZoom] = useState(DEFAULT_ZOOM)
+  const [canUndo, setCanUndo] = useState(false)
+  const [canRedo, setCanRedo] = useState(false)
 
   // Stable: both dialogs read the canvas grid through it, and the export dialog
   // memoizes on it, so an identity change per render would defeat the memo.
   const getCellsData = useCallback(() => canvasApiRef.current?.getCellsData() ?? null, [])
   const onGridChange = useCallback(() => {
     setBeadStats(canvasApiRef.current?.getBeadStats() ?? null)
+  }, [])
+  const onHistoryChange = useCallback((canUndo: boolean, canRedo: boolean) => {
+    setCanUndo(canUndo)
+    setCanRedo(canRedo)
   }, [])
 
   return (
@@ -65,6 +71,10 @@ export default function EditorPage() {
         zoom={zoom}
         onSetZoom={(z) => canvasApiRef.current?.setZoom(z)}
         onReset={() => canvasApiRef.current?.onReset()}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={() => canvasApiRef.current?.undo()}
+        onRedo={() => canvasApiRef.current?.redo()}
       />
       <div className="flex-1 min-h-0 flex gap-2">
         <div className="w-56 shrink-0 overflow-hidden">
@@ -81,6 +91,7 @@ export default function EditorPage() {
           apiRef={canvasApiRef}
           onZoomChange={setZoom}
           onGridChange={onGridChange}
+          onHistoryChange={onHistoryChange}
         />
         {showBeadStats && (
           <div className="w-56 shrink-0 overflow-hidden">
