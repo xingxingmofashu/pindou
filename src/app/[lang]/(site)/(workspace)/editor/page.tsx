@@ -6,6 +6,7 @@ import { PixiCanvas, type PixiCanvasApi } from "@/components/editor/pixi-canvas"
 import { ToolBar } from "@/components/editor/toolbar"
 import { ColorPalette } from "@/components/editor/color-palette"
 import { BeadStatsPanel } from "@/components/editor/bead-stats"
+import { useToolShortcuts } from "@/hooks/use-tool-shortcuts"
 import type { ToolKind, BeadStats } from "@/lib/editor"
 
 // Dialogs are only opened on demand — load them (and their heavy deps like
@@ -52,6 +53,9 @@ export default function EditorPage() {
     setCanUndo(canUndo)
     setCanRedo(canRedo)
   }, [])
+
+  // Tool shortcuts (B/E/G) advertised in the ToolBar tooltips.
+  useToolShortcuts(setActiveTool)
 
   return (
     <div className="flex h-full flex-col gap-2 overflow-hidden">
