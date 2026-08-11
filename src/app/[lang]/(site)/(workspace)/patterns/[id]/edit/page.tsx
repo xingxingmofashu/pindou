@@ -279,6 +279,7 @@ function EditForm({
           open={exportOpen}
           onClose={() => setExportOpen(false)}
           onGetCellsData={onGetCellsData}
+          palette={palette}
         />
       )}
     </div>
