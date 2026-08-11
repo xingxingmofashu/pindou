@@ -7,6 +7,7 @@ import { getBrandPalette } from "@/lib/server/palettes"
 import { PatternViewer } from "@/components/pattern/detail/viewer"
 import { PatternDetailPanel } from "@/components/pattern/detail/panel"
 import { PatternZoomControls } from "@/components/pattern/detail/zoom-controls"
+import { PatternExportButton } from "@/components/pattern/detail/export-button"
 import { Button } from "@/components/ui/button"
 import { parseBeadStats, totalBeadCount } from "@/lib/utils"
 import { pageMetadata } from "@/lib/server/meta"
@@ -92,6 +93,7 @@ export default async function PatternDetailPage({
               {dict.patternDetail.edit}
             </Button>
           )}
+          <PatternExportButton grid={grid} palette={palette} beadStats={pattern.beadStats} />
           <PatternZoomControls />
         </div>
       </div>
