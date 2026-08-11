@@ -56,10 +56,7 @@
   },
   "patterns": {
     "title": "Patterns",
-    "error": "Failed to load patterns.",
     "publishedCount": "{count} patterns published",
-    "loadFailedTitle": "Failed to load patterns",
-    "loadFailedDescription": "Something went wrong. Please try again.",
     "pageOf": "Page {page} of {total}",
     "empty": "No patterns published yet.",
     "createFirst": "Create the first one"

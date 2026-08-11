@@ -20,17 +20,39 @@ import { useI18n } from "@/i18n/client"
 import type { PatternDetailType } from "@/db/schema"
 import type { Palette } from "@/types"
 import Loading from "./loading"
+import Error from "./error"
 
 export default function PatternEditPage() {
   const { id } = useParams<{ id: string }>()
   const { locale, t } = useI18n()
-  const { data, error } = useSWR<PatternDetailType>(`/api/patterns/${id}`, fetcher)
-  const { data: brand } = useSWR<Palette>(
+  const { data, error, mutate } = useSWR<PatternDetailType>(`/api/patterns/${id}`, fetcher)
+  const { data: brand, error: brandError, mutate: mutateBrand } = useSWR<Palette>(
     data ? `/api/brands/${data.brandId}` : null,
     fetcher,
   )
 
-  if (error) return null
+  // Pattern fetch failed — show an error state instead of a blank page.
+  if (error) {
+    return (
+      <Error
+        title={t("patternDetail.loadFailedTitle")}
+        description={t("patternDetail.loadFailedDescription")}
+        onRetry={() => mutate()}
+      />
+    )
+  }
+
+  // Brand (palette) fetch failed — without it the editor can't run, so show a
+  // distinct error instead of spinning forever.
+  if (brandError) {
+    return (
+      <Error
+        title={t("patternDetail.paletteFailedTitle")}
+        description={t("patternDetail.paletteFailedDescription")}
+        onRetry={() => mutateBrand()}
+      />
+    )
+  }
 
   if (!data || !brand) {
     return <Loading />
@@ -125,7 +147,7 @@ function EditForm({
       toast.add({
         type: "error",
         title: t("patternDetail.saveFailedTitle"),
-        description: e instanceof Error ? e.message : t("editor.networkError"),
+        description: e instanceof globalThis.Error ? e.message : t("editor.networkError"),
       })
     } finally {
       setSaving(false)
