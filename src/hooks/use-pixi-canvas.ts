@@ -589,23 +589,13 @@ export function usePixiCanvas(
     // load as an undoable step (undo returns to the previous canvas).
     pushHistory(before)
 
-    const ctx = pixiRef.current
-    if (ctx?.app.screen) {
-      zoomRef.current = initialZoom
-      ctx.world.scale.set(initialZoom)
-      const bounds = getGridBounds(cellsRef.current)
-      if (bounds) {
-        centerViewport(ctx.world, bounds, ctx.app.screen.width, ctx.app.screen.height, initialZoom)
-      } else {
-        ctx.world.x = ctx.app.screen.width / 2
-        ctx.world.y = ctx.app.screen.height / 2
-      }
-      syncZoom()
-    }
+    // Fit the loaded grid to the viewport instead of forcing a fixed zoom, so
+    // detail/edit/import all open with the whole pattern visible.
+    fitToCanvas()
 
     rebuildRef.current()
     onGridChangeRef.current?.()
-  }, [initialZoom, syncZoom, palette, pushHistory])
+  }, [fitToCanvas, palette, pushHistory])
 
   /** Live bead-usage stats computed straight from the sparse model — no dense
    *  grid allocation (cheap enough to call after every stroke). */
