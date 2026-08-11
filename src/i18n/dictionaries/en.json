@@ -92,6 +92,8 @@
     "pen": "Pen",
     "eraser": "Eraser",
     "fill": "Fill",
+    "undo": "Undo",
+    "redo": "Redo",
     "showLabels": "Show labels",
     "labels": "Labels",
     "showBeadStatsToggle": "Show bead usage",

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Pencil, Eraser, PaintBucket, Trash2, CaseSensitive, ImagePlus, Download, List } from "lucide-react"
+import { Pencil, Eraser, PaintBucket, Trash2, CaseSensitive, ImagePlus, Download, List, Undo2, Redo2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -54,6 +54,14 @@ interface ToolBarProps {
    * Accepts an absolute value or an updater function `(prev: number) => number`.
    */
   onSetZoom: (z: number | ((prev: number) => number)) => void
+  /** Whether the user can undo/redo the last canvas edit. */
+  canUndo?: boolean
+  /** Whether the user can redo a previously undone canvas edit. */
+  canRedo?: boolean
+  /** Called when the user clicks the undo button. */
+  onUndo?: () => void
+  /** Called when the user clicks the redo button. */
+  onRedo?: () => void
   /** Reset zoom to default and centre the view. */
   onReset: () => void
 }
@@ -77,6 +85,10 @@ export function ToolBar({
   zoom,
   onSetZoom,
   onReset,
+  canUndo = false,
+  canRedo = false,
+  onUndo,
+  onRedo,
 }: ToolBarProps) {
   const { t } = useI18n()
   const [clearOpen, setClearOpen] = useState(false)
@@ -85,6 +97,46 @@ export function ToolBar({
     <div className="flex items-center justify-between px-3 py-2 border">
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-0.5">
+          {onUndo && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    size="icon-xs"
+                    disabled={!canUndo}
+                    aria-label={t("editor.undo")}
+                  >
+                    <Undo2 data-icon="inline-start" />
+                  </Button>
+                }
+                onClick={onUndo}
+              />
+              <TooltipContent side="bottom">
+                {t("editor.undo")} (⌘Z)
+              </TooltipContent>
+            </Tooltip>
+          )}
+          {onRedo && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    size="icon-xs"
+                    disabled={!canRedo}
+                    aria-label={t("editor.redo")}
+                  >
+                    <Redo2 data-icon="inline-start" />
+                  </Button>
+                }
+                onClick={onRedo}
+              />
+              <TooltipContent side="bottom">
+                {t("editor.redo")} (⇧⌘Z)
+              </TooltipContent>
+            </Tooltip>
+          )}
           {TOOLS.map(({ value, icon: Icon, shortcut }) => {
             const label = t(`editor.${value}`)
             return (
@@ -182,6 +234,8 @@ export function ToolBar({
             </>
           )}
         </div>
+      </div>
+      <div className="flex items-center gap-2">
         {onImportImage && (
           <Tooltip>
             <TooltipTrigger
@@ -211,8 +265,8 @@ export function ToolBar({
         <Button size="sm" variant="outline" onClick={onPublish}>
           {t("editor.publish")}
         </Button>
+        <ZoomControls zoom={zoom} onSetZoom={onSetZoom} onReset={onReset} />
       </div>
-      <ZoomControls zoom={zoom} onSetZoom={onSetZoom} onReset={onReset} />
     </div>
   )
 }

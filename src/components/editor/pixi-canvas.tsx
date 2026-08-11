@@ -11,6 +11,8 @@ export interface PixiCanvasApi {
   setZoom: (z: number | ((prev: number) => number)) => void
   onReset: () => void
   onClear: () => void
+  undo: () => void
+  redo: () => void
   getCellsData: () => {
     grid: string[][]; brandCode: string; beadStats: string
   } | null
@@ -32,6 +34,8 @@ export interface PixiCanvasProps {
   onZoomChange?: (zoom: number) => void
   /** Fired whenever the painted cells change (stroke end, fill, clear, load). */
   onGridChange?: () => void
+  /** Fired with the current undo/redo availability whenever history changes. */
+  onHistoryChange?: (canUndo: boolean, canRedo: boolean) => void
   className?: string
 }
 
@@ -57,10 +61,11 @@ function PixiCanvasInner({
   apiRef,
   onZoomChange,
   onGridChange,
+  onHistoryChange,
 }: InnerProps) {
   const ctx = usePixiApp(canvasRef, "#fafafa")
-  const { zoom, setZoom, onReset, onClear, getCellsData, getBeadStats, loadGrid, resetModel } =
-    usePixiCanvas(ctx, palette, { activeTool, activeColorIndex, showLabels: label, readonly, onGridChange })
+  const { zoom, setZoom, onReset, onClear, undo, redo, getCellsData, getBeadStats, loadGrid, resetModel } =
+    usePixiCanvas(ctx, palette, { activeTool, activeColorIndex, showLabels: label, readonly, onGridChange, onHistoryChange })
 
   useEffect(() => {
     onZoomChange?.(zoom)
@@ -78,17 +83,19 @@ function PixiCanvasInner({
   useEffect(() => {
     if (prevPaletteCodeRef.current === palette.code) return
     prevPaletteCodeRef.current = palette.code
-    resetModel()
+    resetModel(true)
   }, [palette.code, resetModel])
 
   useImperativeHandle(apiRef, () => ({
     setZoom,
     onReset,
     onClear,
+    undo,
+    redo,
     getCellsData,
     getBeadStats,
     loadGrid,
-  }), [setZoom, onReset, onClear, getCellsData, getBeadStats, loadGrid])
+  }), [setZoom, onReset, onClear, undo, redo, getCellsData, getBeadStats, loadGrid])
 
   return null
 }
