@@ -36,10 +36,9 @@ export function PatternExportButton({
         size="sm"
         variant="outline"
         onClick={() => setOpen(true)}
-        aria-label={t("editor.exportAsPng")}
       >
         <Download data-icon="inline-start" />
-        {t("editor.exportAsPng")}
+        {t("editor.export")}
       </Button>
       {open && (
         <ExportDialog open={open} onClose={() => setOpen(false)} onGetCellsData={onGetCellsData} palette={palette} />

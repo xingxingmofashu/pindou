@@ -188,11 +188,11 @@ function EditForm({
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            size="icon-sm"
-            aria-label={t("editor.exportAsPng")}
+            size="sm"
             onClick={() => setExportOpen(true)}
           >
             <Download data-icon="inline-start" />
+            {t("editor.export")}
           </Button>
           <Button
             variant={showLabels ? "secondary" : "outline"}
