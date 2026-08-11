@@ -99,7 +99,7 @@
     "clearCanvasAria": "Clear canvas",
     "clearCanvasDescription": "This will remove all beads. This action cannot be undone.",
     "clear": "Clear",
-    "fromImage": "From image",
+    "import": "Import",
     "importFromImage": "Import from image",
     "export": "Export",
     "exportAsPng": "Export as PNG",
