@@ -433,10 +433,24 @@ export function usePixiCanvas(
   const fitToCanvas = useCallback(() => {
     const ctx = pixiRef.current
     if (!ctx?.app.screen) return
-    ctx.world.x = ctx.app.screen.width / 2
-    ctx.world.y = ctx.app.screen.height / 2
-    setZoom(initialZoom)
-  }, [setZoom, initialZoom])
+    const bounds = getGridBounds(cellsRef.current)
+    if (!bounds) {
+      ctx.world.x = ctx.app.screen.width / 2
+      ctx.world.y = ctx.app.screen.height / 2
+      return
+    }
+    const ww = (bounds.maxC - bounds.minC + 1) * CELL
+    const wh = (bounds.maxR - bounds.minR + 1) * CELL
+    const z = Math.max(
+      MIN_ZOOM,
+      Math.min(MAX_ZOOM, Math.min(ctx.app.screen.width / ww, ctx.app.screen.height / wh)),
+    )
+    zoomRef.current = z
+    ctx.world.scale.set(z)
+    centerViewport(ctx.world, bounds, ctx.app.screen.width, ctx.app.screen.height, z)
+    rebuildRef.current()
+    syncZoom()
+  }, [syncZoom])
 
   const getCellsData = useCallback((): {
     grid: string[][]; brandCode: string; beadStats: string
