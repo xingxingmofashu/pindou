@@ -1,32 +1,41 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 import { PixiCanvas, type PixiCanvasApi } from "@/components/editor/pixi-canvas"
-import { ZoomControls } from "@/components/editor/zoom-controls"
+import { usePatternViewerStore } from "@/hooks/use-pattern-viewer"
 import type { Palette } from "@/types"
 
-const DEFAULT_ZOOM = 3
-
-/** Interactive read-only pattern viewer: canvas + zoom controls. */
-export function PatternViewer({ grid, palette }: { grid: string[][]; palette: Palette }) {
+/**
+ * Read-only pattern canvas. Registers its imperative API and reports zoom into
+ * the shared {@link usePatternViewerStore} store, so the page can place the
+ * zoom controls in the top bar while they drive this canvas.
+ */
+export function PatternViewer({
+  grid,
+  palette,
+  className,
+}: {
+  grid: string[][]
+  palette: Palette
+  className?: string
+}) {
   const canvasApiRef = useRef<PixiCanvasApi>(null)
-  const [zoom, setZoom] = useState(DEFAULT_ZOOM)
+  const setApi = usePatternViewerStore((s) => s.setApi)
+  const setZoom = usePatternViewerStore((s) => s.setZoom)
+
+  useEffect(() => {
+    setApi(canvasApiRef.current)
+    return () => setApi(null)
+  }, [setApi])
 
   return (
-    <>
-      <ZoomControls
-        zoom={zoom}
-        onSetZoom={(z) => canvasApiRef.current?.setZoom(z)}
-        onReset={() => canvasApiRef.current?.onReset()}
-      />
-      <PixiCanvas
-        grid={grid}
-        palette={palette}
-        readonly
-        apiRef={canvasApiRef}
-        onZoomChange={setZoom}
-        className="flex-1 min-w-0 border"
-      />
-    </>
+    <PixiCanvas
+      grid={grid}
+      palette={palette}
+      readonly
+      apiRef={canvasApiRef}
+      onZoomChange={setZoom}
+      className={className}
+    />
   )
 }

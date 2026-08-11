@@ -4,8 +4,9 @@ import { notFound } from "next/navigation"
 import { headers } from "next/headers"
 import { getPattern } from "@/lib/server/patterns"
 import { getBrandPalette } from "@/lib/server/palettes"
-import { PatternDetailPanel } from "@/components/pattern/detail/panel"
 import { PatternViewer } from "@/components/pattern/detail/viewer"
+import { PatternDetailPanel } from "@/components/pattern/detail/panel"
+import { PatternZoomControls } from "@/components/pattern/detail/zoom-controls"
 import { Button } from "@/components/ui/button"
 import { parseBeadStats, totalBeadCount } from "@/lib/utils"
 import { pageMetadata } from "@/lib/server/meta"
@@ -78,8 +79,8 @@ export default async function PatternDetailPage({
 
   return (
     <div className="flex h-full flex-col gap-2 overflow-hidden">
-      <div className="flex items-center justify-between gap-2 px-3 py-2 border">
-        <h1 className="text-sm font-semibold truncate">{pattern.title}</h1>
+      <div className="flex items-center justify-between gap-2 border px-3 py-2">
+        <h1 className="min-w-0 truncate text-sm font-semibold">{pattern.title}</h1>
         <div className="flex shrink-0 items-center gap-2">
           {canEdit && (
             <Button
@@ -91,9 +92,10 @@ export default async function PatternDetailPage({
               {dict.patternDetail.edit}
             </Button>
           )}
+          <PatternZoomControls />
         </div>
       </div>
-      <div className="flex-1 min-h-0 flex gap-2">
+      <div className="flex min-h-0 flex-1 gap-2">
         <PatternDetailPanel
           authorName={pattern.authorName ?? null}
           relativeDate={relativeDate}
@@ -105,7 +107,7 @@ export default async function PatternDetailPage({
           brand={palette.name}
           sortedStats={sortedStats}
         />
-        <PatternViewer grid={grid} palette={palette} />
+        <PatternViewer grid={grid} palette={palette} className="min-h-0 flex-1 border" />
       </div>
     </div>
   )

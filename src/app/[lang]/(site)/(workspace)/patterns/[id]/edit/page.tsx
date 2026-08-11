@@ -19,6 +19,7 @@ import { localizedPath } from "@/i18n/config"
 import { useI18n } from "@/i18n/client"
 import type { PatternDetailType } from "@/db/schema"
 import type { Palette } from "@/types"
+import Loading from "./loading"
 
 export default function PatternEditPage() {
   const { id } = useParams<{ id: string }>()
@@ -32,11 +33,7 @@ export default function PatternEditPage() {
   if (error) return null
 
   if (!data || !brand) {
-    return (
-      <div className="flex h-full items-center justify-center border">
-        <Spinner />
-      </div>
-    )
+    return <Loading />
   }
 
   if (!data.canEdit) {

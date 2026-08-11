@@ -1,0 +1,28 @@
+"use client"
+
+import { create } from "zustand"
+import type { PixiCanvasApi } from "@/components/editor/pixi-canvas"
+
+const DEFAULT_ZOOM = 3
+
+interface PatternViewerStore {
+  /** Imperative canvas API, registered by the PatternViewer on mount. */
+  api: PixiCanvasApi | null
+  /** Current zoom factor (screen pixels per world unit). */
+  zoom: number
+  setApi: (api: PixiCanvasApi | null) => void
+  setZoom: (zoom: number) => void
+}
+
+/**
+ * Shared zoom state for the read-only pattern page. The canvas registers its
+ * imperative API here (via {@link PatternViewer}), and the top-bar zoom
+ * controls read the api + zoom from the same store — letting the server page
+ * compose its layout directly without a wrapper that owns both.
+ */
+export const usePatternViewerStore = create<PatternViewerStore>((set) => ({
+  api: null,
+  zoom: DEFAULT_ZOOM,
+  setApi: (api) => set({ api }),
+  setZoom: (zoom) => set({ zoom }),
+}))
