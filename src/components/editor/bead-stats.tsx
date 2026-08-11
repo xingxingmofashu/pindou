@@ -4,6 +4,7 @@ import { useMemo } from "react"
 import { useI18n } from "@/i18n/client"
 import { usePalette } from "@/hooks/use-palette"
 import type { BeadStats } from "@/lib/editor"
+import type { Palette } from "@/types"
 
 /**
  * Live bead-usage panel for the editor's right sidebar: the painted grid size,
@@ -13,10 +14,14 @@ import type { BeadStats } from "@/lib/editor"
  * `stats` is owned by the editor page and recomputed by the canvas whenever the
  * grid changes (stroke end, fill, clear, import) — the panel only resolves each
  * code against the active palette and renders.
+ *
+ * When `palette` is pinned (pattern editor), it is used directly; otherwise the
+ * active-brand store is read.
  */
-export function BeadStatsPanel({ stats }: { stats: BeadStats | null }) {
+export function BeadStatsPanel({ stats, palette: pinnedPalette }: { stats: BeadStats | null; palette?: Palette }) {
   const { t } = useI18n()
-  const { palette } = usePalette()
+  const { palette: storePalette } = usePalette()
+  const palette = pinnedPalette ?? storePalette
 
   const rows = useMemo(() => {
     if (!stats) return null

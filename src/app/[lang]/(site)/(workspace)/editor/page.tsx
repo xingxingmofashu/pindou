@@ -45,7 +45,7 @@ export default function EditorPage() {
 
   // Stable: both dialogs read the canvas grid through it, and the export dialog
   // memoizes on it, so an identity change per render would defeat the memo.
-  const getCellsData = useCallback(() => canvasApiRef.current?.getCellsData() ?? null, [])
+  const onGetCellsData = useCallback(() => canvasApiRef.current?.getCellsData() ?? null, [])
   const onGridChange = useCallback(() => {
     setBeadStats(canvasApiRef.current?.getBeadStats() ?? null)
   }, [])
@@ -108,7 +108,7 @@ export default function EditorPage() {
         <PublishDialog
           open={publishOpen}
           onClose={() => setPublishOpen(false)}
-          getCellsData={getCellsData}
+          onGetCellsData={onGetCellsData}
         />
       )}
 
@@ -124,7 +124,7 @@ export default function EditorPage() {
         <ExportDialog
           open={exportOpen}
           onClose={() => setExportOpen(false)}
-          getCellsData={getCellsData}
+          onGetCellsData={onGetCellsData}
         />
       )}
     </div>

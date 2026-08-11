@@ -99,7 +99,7 @@
     "clearCanvasAria": "清空画布",
     "clearCanvasDescription": "这将移除所有拼豆。此操作无法撤销。",
     "clear": "清空",
-    "fromImage": "从图片导入",
+    "import": "导入",
     "importFromImage": "从图片导入",
     "export": "导出",
     "exportAsPng": "导出为 PNG",

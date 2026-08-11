@@ -242,7 +242,7 @@ export function ToolBar({
               render={
                 <Button size="sm" variant="outline" onClick={onImportImage}>
                   <ImagePlus data-icon="inline-start" />
-                  {t("editor.fromImage")}
+                  {t("editor.import")}
                 </Button>
               }
             />
@@ -262,7 +262,7 @@ export function ToolBar({
             <TooltipContent side="bottom">{t("editor.exportAsPng")}</TooltipContent>
           </Tooltip>
         )}
-        <Button size="sm" variant="outline" onClick={onPublish}>
+        <Button size="sm" onClick={onPublish}>
           {t("editor.publish")}
         </Button>
         <ZoomControls zoom={zoom} onSetZoom={onSetZoom} onReset={onReset} />

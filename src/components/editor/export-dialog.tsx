@@ -17,20 +17,24 @@ import { toast } from "@/components/ui/toast"
 import { usePalette } from "@/hooks/use-palette"
 import { useI18n } from "@/i18n/client"
 import { Export, DEFAULT_EXPORT_SCALE } from "@/lib/export"
+import type { Palette } from "@/types"
 
 interface ExportDialogProps {
   open: boolean
   onClose: () => void
-  getCellsData: () => {
+  /** Reads the canvas grid — same contract as the API method. */
+  onGetCellsData: () => {
     grid: string[][]; brandCode: string; beadStats: string
   } | null
+  /** Pinned palette (pattern editor). Falls back to the active-brand store. */
+  palette?: Palette
 }
 
 /**
  * Export dialog: pick pixels-per-bead, preview the output size, then download
  * the pattern as a PNG chart (grid + coordinates in the header bands).
  */
-export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps) {
+export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPalette }: ExportDialogProps) {
   const { t } = useI18n()
   const exporter = useMemo(() => new Export(), [])
   const [scaleInput, setScaleInput] = useState(String(DEFAULT_EXPORT_SCALE))
@@ -42,12 +46,13 @@ export function ExportDialog({ open, onClose, getCellsData }: ExportDialogProps)
 
   // Snapshot the grid once when the dialog opens — it can't change behind the
   // modal, so re-serializing on every scale keystroke would be wasted work.
-  const data = useMemo(() => (open ? getCellsData() : null), [open, getCellsData])
-  // Use the same palette instance the canvas draws with (the active-brand
-  // store), so grid indices — 1-based positions in that palette — render
-  // identically on export. Fetching a fresh brand here could serve a cached
-  // palette whose colour order differs from the canvas's, shifting every bead.
-  const { palette } = usePalette()
+  const data = useMemo(() => (open ? onGetCellsData() : null), [open, onGetCellsData])
+  // Use the same palette instance the canvas draws with so grid indices —
+  // 1-based positions in that palette — render identically on export. A pinned
+  // palette (pattern editor) takes precedence; otherwise read the active-brand
+  // store like the main editor does.
+  const { palette: storePalette } = usePalette()
+  const palette = pinnedPalette ?? storePalette
   const grid = data?.grid ?? null
   const rows = grid?.length ?? 0
   const cols = grid?.[0]?.length ?? 0

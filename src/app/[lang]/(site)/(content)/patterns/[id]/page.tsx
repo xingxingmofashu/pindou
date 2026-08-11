@@ -7,6 +7,7 @@ import { getBrandPalette } from "@/lib/server/palettes"
 import { PatternViewer } from "@/components/pattern/detail/viewer"
 import { PatternDetailPanel } from "@/components/pattern/detail/panel"
 import { PatternZoomControls } from "@/components/pattern/detail/zoom-controls"
+import { PatternExportButton } from "@/components/pattern/detail/export-button"
 import { Button } from "@/components/ui/button"
 import { parseBeadStats, totalBeadCount } from "@/lib/utils"
 import { pageMetadata } from "@/lib/server/meta"
@@ -82,10 +83,10 @@ export default async function PatternDetailPage({
       <div className="flex items-center justify-between gap-2 border px-3 py-2">
         <h1 className="min-w-0 truncate text-sm font-semibold">{pattern.title}</h1>
         <div className="flex shrink-0 items-center gap-2">
+          <PatternExportButton grid={grid} palette={palette} beadStats={pattern.beadStats} />
           {canEdit && (
             <Button
               size="sm"
-              variant="outline"
               nativeButton={false}
               render={<Link href={localizedPath(locale, `/patterns/${id}/edit`)} />}
             >
