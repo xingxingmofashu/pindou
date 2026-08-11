@@ -401,7 +401,7 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
         if (!isOpen) handleClose()
       }}
     >
-      <DialogContent>
+      <DialogContent className="max-h-[85dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t("editor.importTitle")}</DialogTitle>
           <DialogDescription>
