@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import { eq } from "drizzle-orm"
-import { db } from "@/db"
-import { brands, colors } from "@/db/schema"
 import { MAX_GRID_DIMENSION } from "@/lib/editor"
 import { Transform } from "@/lib/transform"
-import type { Palette } from "@/types"
+import { rateLimit } from "@/lib/rate-limit"
+import { getPaletteByCode } from "@/lib/server/palettes"
 
 export const runtime = "nodejs"
+
+/** Per-IP budget for the CPU-heavy image transform. */
+const LIMIT = 20
+const WINDOW_MS = 60_000
 
 const ConvertRequestSchema = z.object({
   width: z.coerce.number().int().min(1).max(MAX_GRID_DIMENSION),
@@ -35,6 +37,14 @@ const ConvertRequestSchema = z.object({
 })
 
 export async function POST(request: NextRequest) {
+  // On Vercel the edge overwrites `x-forwarded-for`, so the leftmost value is
+  // trustworthy there. On other hosts (or direct access) it's client-spoofable
+  // and the budget can be bypassed by rotating values — accept as best-effort.
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"
+  if (!rateLimit(`ip:${ip}`, LIMIT, WINDOW_MS)) {
+    return NextResponse.json({ error: "Too many requests, try again later" }, { status: 429 })
+  }
+
   const formData = await request.formData().catch(() => null)
   if (!formData) return NextResponse.json({ error: "Invalid request" }, { status: 400 })
 
@@ -61,28 +71,13 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const [brand] = await db
-    .select()
-    .from(brands)
-    .where(eq(brands.code, parsed.data.brandCode))
-    .limit(1)
-  if (!brand) {
+  const palette = await getPaletteByCode(parsed.data.brandCode, parsed.data.excludedCodes)
+  if (!palette) {
     return NextResponse.json({ error: "Unknown brand" }, { status: 400 })
   }
-
-  const excluded = new Set(parsed.data.excludedCodes)
-  const colorRows = (
-    await db
-      .select()
-      .from(colors)
-      .where(eq(colors.fkBrandId, brand.id))
-      .orderBy(colors.sortOrder)
-  ).filter((c) => !excluded.has(c.code))
-  if (colorRows.length === 0) {
+  if (palette.colors.length === 0) {
     return NextResponse.json({ error: "No colours left to convert" }, { status: 400 })
   }
-
-  const palette: Palette = { ...brand, colors: colorRows }
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer())

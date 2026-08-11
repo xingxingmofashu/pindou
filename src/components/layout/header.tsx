@@ -1,17 +1,14 @@
 import Link from "next/link"
-import { headers } from "next/headers"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Logo } from "@/components/layout/logo"
-import { UserMenu } from "@/components/auth/user-menu"
-import { auth } from "@/lib/auth/server"
+import { AuthNav } from "@/components/auth/auth-nav"
 import { localizedPath } from "@/i18n/config"
 import { getDictionary, getLocale } from "@/i18n/server"
 
 const GITHUB_URL = "https://github.com/xingxingmofashu/pindou"
 
 export async function Header() {
-  const session = await auth.api.getSession({ headers: await headers() })
   const locale = await getLocale()
   const dict = await getDictionary()
 
@@ -50,17 +47,7 @@ export async function Header() {
         >
           {dict.header.github}
         </Button>
-        {session ? (
-          <UserMenu name={session.user.name} />
-        ) : (
-          <Button
-            variant="link"
-            nativeButton={false}
-            render={<Link href={localizedPath(locale, "/sign-in")} />}
-          >
-            {dict.header.signIn}
-          </Button>
-        )}
+        <AuthNav />
       </div>
     </header>
   )

@@ -5,7 +5,9 @@ import { I18nProvider } from "@/i18n/client";
 import { getDictionary } from "@/i18n/server";
 import { isLocale, locales } from "@/i18n/config";
 import { SWRProvider } from "@/components/providers/swr-provider";
+import { WebVitals } from "@/components/providers/web-vitals";
 import { Toaster } from "@/components/ui/toast";
+import { SITE_URL } from "@/lib/server/meta";
 import "../globals.css";
 
 const geistSans = Geist({
@@ -33,6 +35,23 @@ export async function generateMetadata({
   return {
     title: dict.meta.title,
     description: dict.meta.description,
+    metadataBase: new URL(SITE_URL),
+    // hreflang for the root route is added per-page (the layout cannot know
+    // its own path); pages with content override `title`/`description`/OG.
+    openGraph: {
+      title: dict.meta.title,
+      description: dict.meta.description,
+      siteName: "Pindou",
+      locale: lang,
+      type: "website",
+      images: [new URL("/og.png", SITE_URL).toString()],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: dict.meta.title,
+      description: dict.meta.description,
+      images: [new URL("/og.png", SITE_URL).toString()],
+    },
   };
 }
 
@@ -52,6 +71,7 @@ export default async function RootLayout({
       <body className="h-dvh">
         <I18nProvider locale={lang} messages={messages}>
           <SWRProvider>{children}</SWRProvider>
+          <WebVitals />
           <Toaster />
         </I18nProvider>
       </body>

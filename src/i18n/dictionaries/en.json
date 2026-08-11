@@ -21,7 +21,12 @@
   "common": {
     "cancel": "Cancel",
     "retry": "Retry",
-    "close": "Close"
+    "close": "Close",
+    "pageNotFoundTitle": "Page not found",
+    "pageNotFoundDescription": "The page you are looking for does not exist.",
+    "errorTitle": "Something went wrong",
+    "errorDescription": "An unexpected error occurred. Please try again.",
+    "goHome": "Go home"
   },
   "home": {
     "title": "Pindou",
@@ -166,5 +171,9 @@
     "exportPng": "Export PNG",
     "unknownPalette": "Unknown palette",
     "unknownPaletteDescription": "This pattern's palette could not be loaded."
+  },
+  "footer": {
+    "tagline": "Fuse bead pattern editor & community",
+    "rights": "© {year} Pindou. All rights reserved."
   }
 }

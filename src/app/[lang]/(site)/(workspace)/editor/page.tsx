@@ -1,14 +1,28 @@
 "use client"
 
 import { useCallback, useRef, useState } from "react"
+import dynamic from "next/dynamic"
 import { PixiCanvas, type PixiCanvasApi } from "@/components/editor/pixi-canvas"
 import { ToolBar } from "@/components/editor/toolbar"
 import { ColorPalette } from "@/components/editor/color-palette"
 import { BeadStatsPanel } from "@/components/editor/bead-stats"
-import { PublishDialog } from "@/components/editor/publish-dialog"
-import { ImportDialog } from "@/components/editor/import-dialog"
-import { ExportDialog } from "@/components/editor/export-dialog"
 import type { ToolKind, BeadStats } from "@/lib/editor"
+
+// Dialogs are only opened on demand — load them (and their heavy deps like
+// the export PNG canvas + image transform) lazily instead of blocking the
+// editor's initial bundle.
+const PublishDialog = dynamic(() =>
+  import("@/components/editor/publish-dialog").then((m) => m.PublishDialog),
+  { ssr: false },
+)
+const ImportDialog = dynamic(() =>
+  import("@/components/editor/import-dialog").then((m) => m.ImportDialog),
+  { ssr: false },
+)
+const ExportDialog = dynamic(() =>
+  import("@/components/editor/export-dialog").then((m) => m.ExportDialog),
+  { ssr: false },
+)
 
 const DEFAULT_ZOOM = 3
 
@@ -75,23 +89,29 @@ export default function EditorPage() {
         )}
       </div>
 
-      <PublishDialog
-        open={publishOpen}
-        onClose={() => setPublishOpen(false)}
-        getCellsData={getCellsData}
-      />
+      {publishOpen && (
+        <PublishDialog
+          open={publishOpen}
+          onClose={() => setPublishOpen(false)}
+          getCellsData={getCellsData}
+        />
+      )}
 
-      <ImportDialog
-        open={importOpen}
-        onClose={() => setImportOpen(false)}
-        onApply={(grid) => canvasApiRef.current?.loadGrid(grid)}
-      />
+      {importOpen && (
+        <ImportDialog
+          open={importOpen}
+          onClose={() => setImportOpen(false)}
+          onApply={(grid) => canvasApiRef.current?.loadGrid(grid)}
+        />
+      )}
 
-      <ExportDialog
-        open={exportOpen}
-        onClose={() => setExportOpen(false)}
-        getCellsData={getCellsData}
-      />
+      {exportOpen && (
+        <ExportDialog
+          open={exportOpen}
+          onClose={() => setExportOpen(false)}
+          getCellsData={getCellsData}
+        />
+      )}
     </div>
   )
 }

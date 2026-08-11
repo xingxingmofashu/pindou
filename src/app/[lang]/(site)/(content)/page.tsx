@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { Download, ImageUp, Palette, Share2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -10,6 +11,7 @@ import {
 import { Logo } from "@/components/layout/logo"
 import { localizedPath } from "@/i18n/config"
 import { getDictionary, getLocale } from "@/i18n/server"
+import { pageMetadata } from "@/lib/server/meta"
 
 const FEATURES = [
   { key: "import", icon: ImageUp },
@@ -17,6 +19,17 @@ const FEATURES = [
   { key: "export", icon: Download },
   { key: "share", icon: Share2 },
 ] as const
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale()
+  const dict = await getDictionary()
+  return pageMetadata({
+    locale,
+    path: "/",
+    title: dict.meta.title,
+    description: dict.meta.description,
+  })
+}
 
 export default async function HomePage() {
   const locale = await getLocale()
@@ -52,7 +65,7 @@ export default async function HomePage() {
           </section>
 
           <section className="border-t bg-muted/30">
-            <div className="mx-auto grid w-full max-w-5xl gap-4 px-4 py-16 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mx-auto grid w-full max-w-5xl gap-4 px-4 py-4 sm:grid-cols-2 lg:grid-cols-4">
               {FEATURES.map(({ key, icon: Icon }) => (
                 <Card key={key}>
                   <CardHeader>
