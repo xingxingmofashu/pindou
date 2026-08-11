@@ -56,10 +56,7 @@
   },
   "patterns": {
     "title": "图案",
-    "error": "加载图案失败。",
     "publishedCount": "已发布 {count} 个图案",
-    "loadFailedTitle": "加载图案失败",
-    "loadFailedDescription": "出错了，请重试。",
     "pageOf": "第 {page} / {total} 页",
     "empty": "还没有发布任何图案。",
     "createFirst": "创建第一个图案"

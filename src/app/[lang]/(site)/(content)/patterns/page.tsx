@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { getPatternsPage } from "@/lib/server/patterns"
 import { PatternCard } from "@/components/pattern/card"
 import {
@@ -37,10 +38,16 @@ export default async function PatternsPage({
   const dict = await getDictionary()
   const { page: pageParam } = await searchParams
   const parsed = PaginationSchema.safeParse({ page: pageParam, pageSize: PAGE_SIZE })
-  const page = parsed.success ? parsed.data.page : 1
+  const requested = parsed.success ? parsed.data.page : 1
 
-  const { rows, total } = await getPatternsPage(page, PAGE_SIZE)
-  const totalPages = Math.ceil(total / PAGE_SIZE)
+  const { rows, total } = await getPatternsPage(requested, PAGE_SIZE)
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  // Out-of-range pages (e.g. ?page=999) would otherwise render the empty state
+  // despite patterns existing — clamp to the last valid page instead.
+  const page = Math.min(requested, totalPages)
+  if (page !== requested) {
+    redirect(localizedPath(locale, page > 1 ? `/patterns?page=${page}` : "/patterns"))
+  }
   const list = rows.map((r) => ({
     ...r,
     beadStats: parseBeadStats(r.beadStats),
