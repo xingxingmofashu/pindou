@@ -1,0 +1,9 @@
+# Mirror of vercel.json: run db:migrate before the build only on production
+# (Netlify `$CONTEXT` is `production` for production deploys, `deploy-preview`
+# for PR previews, `branch-deploy` for branch deploys).
+[build]
+  command = "if [ \"$CONTEXT\" = \"production\" ]; then pnpm db:migrate && pnpm build; else pnpm build; fi"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
