@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
   // trustworthy there. On other hosts (or direct access) it's client-spoofable
   // and the budget can be bypassed by rotating values — accept as best-effort.
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"
-  if (!rateLimit(`ip:${ip}`, LIMIT, WINDOW_MS)) {
+  if (!(await rateLimit(`ip:${ip}`, LIMIT, WINDOW_MS))) {
     return NextResponse.json({ error: "Too many requests, try again later" }, { status: 429 })
   }
 
