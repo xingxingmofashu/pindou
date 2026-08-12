@@ -17,6 +17,8 @@
 
 Create pixel-art patterns, sign in with GitHub, and share them with the world.
 
+**Live:** [xingxing-pindou.vercel.app](https://xingxing-pindou.vercel.app) (Vercel) · [xingxing-pindou.netlify.app](https://xingxing-pindou.netlify.app) (Netlify — accessible from mainland China)
+
 <p align="center">
   <img src=".github/assets/en/preview.png" alt="Pindou pattern editor preview" width="800" />
 </p>
@@ -44,6 +46,7 @@ Create pixel-art patterns, sign in with GitHub, and share them with the world.
 | Auth | Better Auth (GitHub OAuth) |
 | Image conversion | sharp (server-side, Node runtime) |
 | Color math | culori |
+| Rate limiting | Upstash Redis (@upstash/ratelimit) |
 | Language | TypeScript (strict) |
 
 ## Getting Started
@@ -91,8 +94,13 @@ src/
   lib/
     auth/               # Better Auth: server.ts (config) + client.ts
     editor.ts           # Pure functions: grid math, LOD, flood fill, serialization, counting
-    image/              # Node-only: transform.ts, thumbnail.ts; client-only: export.ts
-    r2.ts               # Cloudflare R2 thumbnail upload (Node-only)
+    export.ts           # Client-only PNG chart export (never on the server)
+    transform.ts        # Node-only image → grid (sharp + OKLab)
+    thumbnail.ts        # Node-only thumbnail rendering (sharp)
+    grid-storage.ts     # R2 grid JSON storage (versioned keys)
+    r2.ts               # Generic Cloudflare R2 client (grids + thumbnails, Node-only)
+    rate-limit.ts       # Upstash sliding-window rate limiter
+    server/             # Server-only data access: palettes.ts, patterns.ts (cached), meta.ts
     utils.ts            # Shared helpers
   db/                   # Drizzle schema (auth + app tables) + Neon connection
 ```
@@ -102,12 +110,13 @@ src/
 The editor at `/editor` provides:
 
 - **Pen / Eraser / Fill** — paint with the active colour (Bresenham-interpolated drags), erase beads, or flood-fill connected regions
+- **Undo / Redo** — step back through your edits (⌘Z / ⇧⌘Z; Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y on Windows/Linux)
 - **Show colour codes** — toggle per-bead colour-code labels on the canvas
 - **Import from image** — upload an image and convert it into a bead pattern; advanced options include Photo / Illustration modes, merge similar colours, remove background, and excluding colours from the palette
 - **Export PNG** — download a printable chart with coordinates, optional colour-code labels, and a bead-usage list
 - **Bead usage panel** — a right sidebar showing grid size, total beads, and per-colour counts, updating live as you draw
 - **Zoom** — wheel zoom (cursor-centred, 0.5×–20×), percentage input, fit button
-- **Pan** — middle-button drag
+- **Pan** — middle- or right-button drag
 - **Palette sidebar** — brand switcher, swatches grouped by series
 - **Publish** — sign in with GitHub and save the pattern to the gallery with a title and description; your author name comes from your GitHub account
 
@@ -122,6 +131,8 @@ The editor at `/editor` provides:
 | `POST` | `/api/transform` | Convert an image into a bead grid (multipart `file`, `width`, `brandCode`; optional `mode`, `mergeSimilarity`, `removeBackground`, `excludedCodes`) |
 | `GET` | `/api/brands` | List all brands with their colors |
 | `GET` | `/api/brands/[id]` | Get a single brand with its colors |
+
+Request limits: uploads to `/api/transform` are capped at 10 MB and the source image at 40M pixels; publish/edit JSON bodies are capped at 20 MB. Grids are bounded to 4096 per side and 1,000,000 total cells. `/api/transform` is additionally rate-limited per IP (20 req / 60 s) via Upstash Redis.
 
 ## License
 
