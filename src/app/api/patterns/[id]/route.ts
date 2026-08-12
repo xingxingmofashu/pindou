@@ -16,6 +16,9 @@ const thumbnail = new Thumbnail()
 /** Grid JSON storage (R2) for this route. */
 const grids = new GridStorage()
 
+/** Maximum JSON body size — bounds the grid (capped by MAX_GRID_CELLS) plus text. */
+const MAX_BODY_BYTES = 20 * 1024 * 1024
+
 /**
  * Public pattern data (excluding the session-derived `canEdit`) is fetched via
  * `@/lib/server/patterns` — the grid JSON from R2 is the expensive part, so
@@ -96,7 +99,23 @@ export async function PATCH(
     return NextResponse.json({ error: "You can only edit your own patterns" }, { status: 403 })
   }
 
-  const body = await request.json().catch(() => null)
+  const contentLength = Number(request.headers.get("content-length"))
+  if (!Number.isNaN(contentLength) && contentLength > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: "Payload too large (max 20 MB)" }, { status: 413 })
+  }
+
+  const raw = await request.text()
+  if (raw.length > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: "Payload too large (max 20 MB)" }, { status: 413 })
+  }
+
+  let body: unknown
+  try {
+    body = JSON.parse(raw)
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+  }
+
   const parsed = PatternUpdateSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json(

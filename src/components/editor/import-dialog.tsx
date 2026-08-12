@@ -27,8 +27,8 @@ import { useI18n } from "@/i18n/client"
 import type { TransformMode, TransformResult } from "@/lib/transform"
 import type { Palette } from "@/types"
 
-/** Maximum accepted upload size, mirroring the serverless body limit. */
-const MAX_FILE_BYTES = 4 * 1024 * 1024
+/** Maximum accepted upload size, mirroring the server-side limit (10 MB). */
+const MAX_FILE_BYTES = 10 * 1024 * 1024
 /** Preview canvas is drawn at most this many pixels per side. */
 const PREVIEW_MAX = 320
 /** Initial grid width in beads. */

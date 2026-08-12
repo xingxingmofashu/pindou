@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { MAX_GRID_DIMENSION } from "@/lib/editor"
-import { Transform } from "@/lib/transform"
+import { Transform, InputImageTooLargeError, MAX_INPUT_PIXELS } from "@/lib/transform"
 import { rateLimit } from "@/lib/rate-limit"
 import { getPaletteByCode } from "@/lib/server/palettes"
 
@@ -10,6 +10,8 @@ export const runtime = "nodejs"
 /** Per-IP budget for the CPU-heavy image transform. */
 const LIMIT = 20
 const WINDOW_MS = 60_000
+/** Maximum upload size in bytes — reject before parsing the multipart body. */
+const MAX_FILE_BYTES = 10 * 1024 * 1024
 
 const ConvertRequestSchema = z.object({
   width: z.coerce.number().int().min(1).max(MAX_GRID_DIMENSION),
@@ -45,6 +47,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Too many requests, try again later" }, { status: 429 })
   }
 
+  const contentLength = Number(request.headers.get("content-length"))
+  if (!Number.isNaN(contentLength) && contentLength > MAX_FILE_BYTES) {
+    return NextResponse.json({ error: "File too large (max 10 MB)" }, { status: 413 })
+  }
+
   const formData = await request.formData().catch(() => null)
   if (!formData) return NextResponse.json({ error: "Invalid request" }, { status: 400 })
 
@@ -54,6 +61,9 @@ export async function POST(request: NextRequest) {
   }
   if (!file.type.startsWith("image/")) {
     return NextResponse.json({ error: "File must be an image" }, { status: 400 })
+  }
+  if (file.size > MAX_FILE_BYTES) {
+    return NextResponse.json({ error: "File too large (max 10 MB)" }, { status: 413 })
   }
 
   const parsed = ConvertRequestSchema.safeParse({
@@ -88,7 +98,13 @@ export async function POST(request: NextRequest) {
       removeBackground: parsed.data.removeBackground,
     })
     return NextResponse.json(result)
-  } catch {
+  } catch (error) {
+    if (error instanceof InputImageTooLargeError) {
+      return NextResponse.json(
+        { error: `Image is too large — max ${MAX_INPUT_PIXELS} pixels` },
+        { status: 400 },
+      )
+    }
     return NextResponse.json({ error: "Failed to convert image" }, { status: 500 })
   }
 }

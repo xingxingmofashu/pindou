@@ -15,6 +15,9 @@ const thumbnail = new Thumbnail()
 /** Grid JSON storage (R2) for this route. */
 const grids = new GridStorage()
 
+/** Maximum JSON body size — bounds the grid (capped by MAX_GRID_CELLS) plus text. */
+const MAX_BODY_BYTES = 20 * 1024 * 1024
+
 /**
  * The paginated list query lives in `@/lib/server/patterns` (shared with the
  * SSR catalog page) — cached 30s in the data cache per `page`/`pageSize`,
@@ -57,7 +60,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Sign in to publish" }, { status: 401 })
   }
 
-  const body = await request.json().catch(() => null)
+  const contentLength = Number(request.headers.get("content-length"))
+  if (!Number.isNaN(contentLength) && contentLength > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: "Payload too large (max 20 MB)" }, { status: 413 })
+  }
+
+  const raw = await request.text()
+  if (raw.length > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: "Payload too large (max 20 MB)" }, { status: 413 })
+  }
+
+  let body: unknown
+  try {
+    body = JSON.parse(raw)
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+  }
 
   const parsed = PatternInsertSchema.safeParse(body)
   if (!parsed.success) {
