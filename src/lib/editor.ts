@@ -10,6 +10,14 @@ export type ToolKind = "pen" | "eraser" | "fill"
 /** Grid dimensions are limited only to prevent memory abuse. */
 export const MAX_GRID_DIMENSION = 4096
 
+/**
+ * Hard cap on the number of grid cells a published pattern may hold (≈1000×1000).
+ * Bounds the wire JSON (~5–7 MB dense), R2 object size, and the server-side
+ * thumbnail render. `MAX_GRID_DIMENSION` stays as the per-side drawing window;
+ * this is the total-cell budget enforced on publish/edit and by the importer.
+ */
+export const MAX_GRID_CELLS = 1_000_000
+
 /** World units per data cell. */
 export const CELL = 10
 

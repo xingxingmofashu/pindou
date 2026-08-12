@@ -1,7 +1,7 @@
 import { integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core"
 import { z } from "zod"
 import { createSchemaFactory } from "drizzle-zod"
-import { MAX_GRID_DIMENSION } from "../lib/editor"
+import { MAX_GRID_CELLS, MAX_GRID_DIMENSION } from "../lib/editor"
 import { users } from "./auth-schema"
 
 export const patterns = pgTable("patterns", {
@@ -81,7 +81,8 @@ export const ColorSelectSchema = createSelectSchema(colors)
  * Shared `gridData` wire schema (used by both the select and insert schemas):
  * a rectangular `string[][]` whose rows/columns stay within
  * {@link MAX_GRID_DIMENSION}; `""` = empty cell, any other value is a brand
- * colour code (e.g. "A1").
+ * colour code (e.g. "A1"). The total cell count is additionally bounded by
+ * {@link MAX_GRID_CELLS} so a single pattern can't blow up the wire/DB payload.
  */
 const gridDataSchema = z
   .array(z.array(z.string().max(16)))
@@ -93,6 +94,9 @@ const gridDataSchema = z
   )
   .refine((rows) => rows.every((row) => row.length === rows[0].length), {
     message: "Grid must be rectangular",
+  })
+  .refine((rows) => rows.length * rows[0].length <= MAX_GRID_CELLS, {
+    message: `Grid must be at most ${MAX_GRID_CELLS} cells (rows × columns)`,
   })
 
 /**
@@ -110,11 +114,14 @@ export const PatternSelectSchema = createSelectSchema(patterns, {
 
 /**
  * Client-supplied fields for POST /api/patterns. `beadStats` is computed
-  * client-side at publish time; server-generated fields (thumbUrl, timestamps)
- * are added on the route.
+ * client-side at publish time; server-generated fields (thumbUrl, timestamps)
+ * are added on the route. Text lengths are capped so a single request can't
+ * carry an unbounded payload.
  */
 export const PatternInsertSchema = createInsertSchema(patterns, {
-  beadStats: z.string(),
+  title: z.string().max(200, "Title must be at most 200 characters"),
+  description: z.string().max(2000, "Description must be at most 2000 characters"),
+  beadStats: z.string().max(100_000, "Bead stats must be at most 100,000 characters"),
 })
   .omit({
     id: true,

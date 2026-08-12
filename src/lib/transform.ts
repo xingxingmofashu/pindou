@@ -1,6 +1,6 @@
 import sharp from "sharp"
 import { converter } from "culori"
-import { MAX_GRID_DIMENSION, countGridBeads } from "@/lib/editor"
+import { MAX_GRID_CELLS, MAX_GRID_DIMENSION, countGridBeads } from "@/lib/editor"
 import type { Palette } from "@/types"
 
 /** Pixels with alpha below this are treated as empty cells. */
@@ -12,7 +12,16 @@ const MIN_SOURCE_SIDE = 256
 /** Pre-scale keeps roughly this many sub-samples per target cell. */
 const SAMPLES_PER_CELL = 12
 
+/**
+ * Sources above this many pixels are rejected before decode (≈7071×7071, covers
+ * 48 MP phone/DSLR photos). Bounds worst-case decode memory to ~160 MB RGBA.
+ */
+export const MAX_INPUT_PIXELS = 40_000_000
+
 const toOklab = converter("oklab")
+
+/** Thrown by {@link Transform.convert} when the source exceeds {@link MAX_INPUT_PIXELS}. */
+export class InputImageTooLargeError extends Error {}
 
 /** How a cell's source pixels collapse into one representative colour. */
 export type TransformMode = "average" | "dominant"
@@ -316,12 +325,26 @@ export class Transform {
     const srcW = metadata.width ?? 0
     const srcH = metadata.height ?? 0
     if (srcW <= 0 || srcH <= 0) throw new Error("Unsupported image")
+    if (srcW * srcH > MAX_INPUT_PIXELS) {
+      throw new InputImageTooLargeError(
+        `${srcW}×${srcH} exceeds the ${MAX_INPUT_PIXELS}-pixel limit`,
+      )
+    }
 
-    const width = Math.min(Math.max(1, Math.round(opts.width)), MAX_GRID_DIMENSION)
-    const height = Math.min(
+    let width = Math.min(Math.max(1, Math.round(opts.width)), MAX_GRID_DIMENSION)
+    let height = Math.min(
       Math.max(1, Math.round((width * srcH) / srcW)),
       MAX_GRID_DIMENSION,
     )
+
+    // Keep the output within the publishable cell budget: a 4096-wide portrait
+    // could otherwise produce a grid that exceeds MAX_GRID_CELLS and then fail
+    // the schema check on publish. Scaling both sides keeps the aspect ratio.
+    if (width * height > MAX_GRID_CELLS) {
+      const scale = Math.sqrt(MAX_GRID_CELLS / (width * height))
+      width = Math.max(1, Math.floor(width * scale))
+      height = Math.max(1, Math.floor(height * scale))
+    }
 
     const mode = opts.mode ?? "average"
     const targetSide = Math.max(width, height)
@@ -329,7 +352,7 @@ export class Transform {
       MAX_SOURCE_SIDE,
       Math.max(MIN_SOURCE_SIDE, targetSide * SAMPLES_PER_CELL),
     )
-    const pipeline = sharp(image)
+    const pipeline = sharp(image, { limitInputPixels: MAX_INPUT_PIXELS })
     const preScaled =
       Math.max(srcW, srcH) > cap
         ? pipeline.resize({
