@@ -1,4 +1,5 @@
 import type { Application, Container, Graphics } from "pixi.js"
+import { CELL, MAX_GRID_DIMENSION, MIN_PX } from "@/lib/constants"
 import type { Palette } from "@/types"
 
 /** Sentinel for an unpainted cell. */
@@ -6,23 +7,6 @@ export const EMPTY = 0
 
 /** Identifies one of the drawing tools. */
 export type ToolKind = "pen" | "eraser" | "fill"
-
-/** Grid dimensions are limited only to prevent memory abuse. */
-export const MAX_GRID_DIMENSION = 4096
-
-/**
- * Hard cap on the number of grid cells a published pattern may hold (≈1000×1000).
- * Bounds the wire JSON (~5–7 MB dense), R2 object size, and the server-side
- * thumbnail render. `MAX_GRID_DIMENSION` stays as the per-side drawing window;
- * this is the total-cell budget enforced on publish/edit and by the importer.
- */
-export const MAX_GRID_CELLS = 1_000_000
-
-/** World units per data cell. */
-export const CELL = 10
-
-/** Minimum screen pixels per visual cell — drives the LOD threshold. */
-export const MIN_PX = 10
 
 /** PixiJS scene-graph objects passed between {@link usePixiApp} and {@link usePixiCanvas}. */
 export interface PixiContext {
@@ -74,6 +58,13 @@ export interface BeadStats {
   rows: { code: string; count: number }[]
 }
 
+/** The canvas snapshot contract shared by the editor, export, and publish. */
+export interface CellsData {
+  grid: string[][]
+  brandCode: string
+  beadStats: string
+}
+
 /**
  * Parse a sparse-grid key (`"c,r"`) into its cell coordinates.
  *
@@ -108,10 +99,9 @@ export function getGridBounds(cells: Map<string, number>): GridBounds | null {
 }
 
 /**
- * Per-colour bead counts for a sparse grid, computed in a single pass (no
- * dense grid allocation — unlike {@link serializeGrid} + {@link computeBeadStats}).
- * Also returns the painted bounding-box size and total bead count for the
- * stats header.
+ * Per-colour bead counts for a sparse grid (no dense grid allocation — unlike
+ * {@link serializeGrid} + {@link serializeBeadStats}). Also returns the painted
+ * bounding-box size and total bead count for the stats header.
  *
  * @param cells   - The sparse cell map.
  * @param palette - Palette used to resolve colour index → code.
@@ -122,22 +112,30 @@ export function countBeadStats(
   palette: Palette,
 ): BeadStats | null {
   if (cells.size === 0) return null
-  let minC = Infinity, maxC = -Infinity, minR = Infinity, maxR = -Infinity
+  const bounds = getGridBounds(cells)!
   const counts = new Map<string, number>()
-  for (const [key, color] of cells) {
-    const [c, r] = parseCellKey(key)
-    if (c < minC) minC = c
-    if (c > maxC) maxC = c
-    if (r < minR) minR = r
-    if (r > maxR) maxR = r
+  for (const [, color] of cells) {
     const code = palette.colors[color - 1]?.code
     if (code) counts.set(code, (counts.get(code) ?? 0) + 1)
   }
   return {
-    width: maxC - minC + 1,
-    height: maxR - minR + 1,
+    width: bounds.maxC - bounds.minC + 1,
+    height: bounds.maxR - bounds.minR + 1,
     total: cells.size,
     rows: Array.from(counts.entries(), ([code, count]) => ({ code, count })),
+  }
+}
+
+/**
+ * The world-unit extent of a painted region's bounding box.
+ *
+ * @param bounds - The bounding box of painted cells.
+ * @returns `{ ww, wh }` — the width/height in world units.
+ */
+export function boundsWorldSize(bounds: GridBounds): { ww: number; wh: number } {
+  return {
+    ww: (bounds.maxC - bounds.minC + 1) * CELL,
+    wh: (bounds.maxR - bounds.minR + 1) * CELL,
   }
 }
 
@@ -157,8 +155,7 @@ export function centerViewport(
   screenH: number,
   zoom: number,
 ): void {
-  const ww = (bounds.maxC - bounds.minC + 1) * CELL
-  const wh = (bounds.maxR - bounds.minR + 1) * CELL
+  const { ww, wh } = boundsWorldSize(bounds)
   const ox = bounds.minC * CELL
   const oy = bounds.minR * CELL
   world.x = (screenW - ww * zoom) / 2 - ox * zoom
@@ -383,14 +380,14 @@ export function countGridBeads(grid: string[][]): Map<string, number> {
 }
 
 /**
- * Count beads per colour code for a serialized code grid, as a JSON string
- * mapping colour code → bead count (e.g. `{"A1":12}`) — the stored/published
- * form of a pattern's usage stats.
+ * Count beads per colour code for a serialized code grid, serialized as a JSON
+ * string mapping colour code → bead count (e.g. `{"A1":12}`) — the
+ * stored/published form of a pattern's usage stats.
  *
  * @param grid - The rectangular `string[][]` to count ("" = empty).
  * @returns The JSON string.
  */
-export function computeBeadStats(grid: string[][]): string {
+export function serializeBeadStats(grid: string[][]): string {
   return JSON.stringify(Object.fromEntries(countGridBeads(grid)))
 }
 
@@ -404,6 +401,33 @@ export function buildHexByCode(palette: Palette): Map<string, string> {
   const hexByCode = new Map<string, string>()
   for (const color of palette.colors) hexByCode.set(color.code, color.hex)
   return hexByCode
+}
+
+/**
+ * Group items by the series letter each item maps to, preserving first-seen
+ * order. Callers pass a `seriesOf` mapper (e.g. `(c) => c.series ?? "?"`).
+ *
+ * @param items    - The items to group.
+ * @param seriesOf - Maps an item to its series key.
+ * @returns The groups in first-seen order.
+ */
+export function groupColorsBySeries<T>(
+  items: T[],
+  seriesOf: (item: T) => string,
+): { series: string; colors: T[] }[] {
+  const groups: { series: string; colors: T[] }[] = []
+  const bySeries = new Map<string, { series: string; colors: T[] }>()
+  for (const item of items) {
+    const series = seriesOf(item)
+    let group = bySeries.get(series)
+    if (!group) {
+      group = { series, colors: [] }
+      bySeries.set(series, group)
+      groups.push(group)
+    }
+    group.colors.push(item)
+  }
+  return groups
 }
 
 /**
@@ -486,18 +510,25 @@ export function computeGridLines(
 }
 
 /**
- * Return the colour with the highest frequency in a colour→count map,
- * skipping {@link EMPTY}.
+ * Return the key with the highest count in a frequency map.
  *
- * @param counts - Map from colour index to occurrence count.
- * @returns The dominant colour index, or 0 if the map is empty.
+ * @param counts - Map from key to occurrence count.
+ * @param skip   - Optional predicate for keys to ignore (e.g. {@link EMPTY}).
+ * @returns The most frequent key, or `undefined` when the map is empty (or
+ *          every entry is skipped).
  */
-function dominant(counts: Map<number, number>): number {
-  let best = 0
+export function mostFrequent<K>(
+  counts: Map<K, number>,
+  skip?: (key: K) => boolean,
+): K | undefined {
+  let best: K | undefined
   let bestN = 0
-  for (const [c, n] of counts) {
-    if (c === EMPTY) continue
-    if (n > bestN) { bestN = n; best = c }
+  for (const [key, n] of counts) {
+    if (skip?.(key)) continue
+    if (n > bestN) {
+      bestN = n
+      best = key
+    }
   }
   return best
 }
@@ -550,8 +581,8 @@ export function buildBeadEntries(
 
   const entries: BeadEntry[] = []
   for (const slot of buckets.values()) {
-    const best = dominant(slot.counts)
-    if (best === EMPTY) continue
+    const best = mostFrequent(slot.counts, (c) => c === EMPTY)
+    if (best === undefined) continue
     const c = palette.colors[best - 1]
     if (!c) continue
 

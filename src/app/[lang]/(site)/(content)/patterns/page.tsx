@@ -12,11 +12,10 @@ import {
 } from "@/components/ui/pagination"
 import { parseBeadStats } from "@/lib/utils"
 import { pageMetadata } from "@/lib/server/meta"
+import { PATTERNS_PAGE_SIZE } from "@/lib/constants"
 import { localizedPath } from "@/i18n/config"
 import { getDictionary, getLocale } from "@/i18n/server"
 import { PaginationSchema } from "@/db/schema"
-
-const PAGE_SIZE = 20
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale()
@@ -37,11 +36,11 @@ export default async function PatternsPage({
   const locale = await getLocale()
   const dict = await getDictionary()
   const { page: pageParam } = await searchParams
-  const parsed = PaginationSchema.safeParse({ page: pageParam, pageSize: PAGE_SIZE })
+  const parsed = PaginationSchema.safeParse({ page: pageParam, pageSize: PATTERNS_PAGE_SIZE })
   const requested = parsed.success ? parsed.data.page : 1
 
-  const { rows, total } = await getPatternsPage(requested, PAGE_SIZE)
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const { rows, total } = await getPatternsPage(requested, PATTERNS_PAGE_SIZE)
+  const totalPages = Math.max(1, Math.ceil(total / PATTERNS_PAGE_SIZE))
   // Out-of-range pages (e.g. ?page=999) would otherwise render the empty state
   // despite patterns existing — clamp to the last valid page instead.
   const page = Math.min(requested, totalPages)

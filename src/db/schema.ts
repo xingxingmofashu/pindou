@@ -1,7 +1,7 @@
 import { integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core"
 import { z } from "zod"
 import { createSchemaFactory } from "drizzle-zod"
-import { MAX_GRID_CELLS, MAX_GRID_DIMENSION } from "../lib/editor"
+import { MAX_GRID_CELLS, MAX_GRID_DIMENSION, PATTERNS_PAGE_SIZE } from "../lib/constants"
 import { users } from "./auth-schema"
 
 export const patterns = pgTable("patterns", {
@@ -139,7 +139,7 @@ export const PatternInsertSchema = createInsertSchema(patterns, {
 export const PaginationSchema = z.object({
   total: z.number().int().min(0).catch(0),
   page: z.coerce.number().int().min(1).catch(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20).catch(20),
+  pageSize: z.coerce.number().int().min(1).max(100).default(PATTERNS_PAGE_SIZE).catch(PATTERNS_PAGE_SIZE),
 })
 
 /** Response shape for the paginated GET /api/patterns. */

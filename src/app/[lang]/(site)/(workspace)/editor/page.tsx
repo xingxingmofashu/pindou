@@ -7,6 +7,7 @@ import { ToolBar } from "@/components/editor/toolbar"
 import { ColorPalette } from "@/components/editor/color-palette"
 import { BeadStatsPanel } from "@/components/editor/bead-stats"
 import { useToolShortcuts } from "@/hooks/use-tool-shortcuts"
+import { DEFAULT_ZOOM } from "@/lib/constants"
 import type { ToolKind, BeadStats } from "@/lib/editor"
 
 // Dialogs are only opened on demand — load them (and their heavy deps like
@@ -24,8 +25,6 @@ const ExportDialog = dynamic(() =>
   import("@/components/editor/export-dialog").then((m) => m.ExportDialog),
   { ssr: false },
 )
-
-const DEFAULT_ZOOM = 3
 
 export default function EditorPage() {
   const canvasApiRef = useRef<PixiCanvasApi>(null)
@@ -63,7 +62,7 @@ export default function EditorPage() {
         activeTool={activeTool}
         onSelectTool={setActiveTool}
         onClearCanvas={() => {
-          canvasApiRef.current?.onClear()
+          canvasApiRef.current?.clearCanvas()
         }}
         onImportImage={() => setImportOpen(true)}
         onExportImage={() => setExportOpen(true)}
@@ -74,7 +73,7 @@ export default function EditorPage() {
         onPublish={() => setPublishOpen(true)}
         zoom={zoom}
         onSetZoom={(z) => canvasApiRef.current?.setZoom(z)}
-        onReset={() => canvasApiRef.current?.onReset()}
+        onReset={() => canvasApiRef.current?.fitToCanvas()}
         canUndo={canUndo}
         canRedo={canRedo}
         onUndo={() => canvasApiRef.current?.undo()}

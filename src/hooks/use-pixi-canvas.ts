@@ -3,33 +3,36 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import { Text, type Graphics } from "pixi.js"
 import {
-  EMPTY,
   CELL,
+  DEFAULT_ZOOM,
+  MIN_ZOOM,
+  MAX_ZOOM,
+  ZOOM_FACTOR,
+} from "@/lib/constants"
+import {
+  EMPTY,
   paintBlock,
   floodFill,
   serializeGrid,
   deserializeGrid,
-  computeBeadStats,
+  serializeBeadStats,
   countBeadStats,
   walkLine,
   lodParams,
   computeGridLines,
   buildBeadEntries,
   getGridBounds,
+  boundsWorldSize,
   centerViewport,
   type ToolKind,
   type ViewRect,
   type BeadEntry,
+  type CellsData,
   type PixiContext,
   type GridRect,
 } from "@/lib/editor"
-import { hexToRgb } from "@/lib/utils"
+import { hexToRgb, isTypingTarget } from "@/lib/utils"
 import type { Palette } from "@/types"
-
-const MIN_ZOOM = 0.5
-const MAX_ZOOM = 20
-const ZOOM_FACTOR = 1.15
-const DEFAULT_ZOOM = 3
 
 /** Fraction of the viewport kept as pan slack around a padded rebuild. */
 const PAN_BUFFER = 0.5
@@ -387,12 +390,6 @@ export function usePixiCanvas(
   /** Undo/redo keyboard shortcuts (Cmd/Ctrl+Z, +Shift+Z, Cmd/Ctrl+Y). Ignored
    *  in readonly views and while typing in a text field. */
   useEffect(() => {
-    const isTypingTarget = (t: EventTarget | null) => {
-      if (!(t instanceof HTMLElement)) return false
-      const tag = t.tagName
-      return tag === "INPUT" || tag === "TEXTAREA" || t.isContentEditable
-    }
-
     const onKeyDown = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey
       if (!mod || isTypingTarget(e.target)) return
@@ -532,10 +529,10 @@ export function usePixiCanvas(
     }
   }, [canvas, toWorld, toPaintTarget, pushHistory])
 
-  /** Reset the sparse model and redraw. With `clearHistory` (brand switch) the
+  /** Clear the canvas and redraw. With `clearHistoryFlag` (brand switch) the
    *  undo/redo stacks are wiped too — cell indices change meaning across
    *  palettes, so old snapshots would render wrong colours. */
-  const resetModel = useCallback((clearHistoryFlag = false) => {
+  const clearCanvas = useCallback((clearHistoryFlag = false) => {
     const before = snapshot()
     if (clearHistoryFlag) {
       clearHistory()
@@ -557,8 +554,7 @@ export function usePixiCanvas(
       ctx.world.y = ctx.app.screen.height / 2
       return
     }
-    const ww = (bounds.maxC - bounds.minC + 1) * CELL
-    const wh = (bounds.maxR - bounds.minR + 1) * CELL
+    const { ww, wh } = boundsWorldSize(bounds)
     const z = Math.max(
       MIN_ZOOM,
       Math.min(MAX_ZOOM, Math.min(ctx.app.screen.width / ww, ctx.app.screen.height / wh)),
@@ -570,15 +566,13 @@ export function usePixiCanvas(
     syncZoom()
   }, [syncZoom])
 
-  const getCellsData = useCallback((): {
-    grid: string[][]; brandCode: string; beadStats: string
-  } | null => {
+  const getCellsData = useCallback((): CellsData | null => {
     const grid = serializeGrid(cellsRef.current, palette)
     if (!grid) return null
     return {
       grid,
       brandCode: palette.code,
-      beadStats: computeBeadStats(grid),
+      beadStats: serializeBeadStats(grid),
     }
   }, [palette])
 
@@ -607,14 +601,12 @@ export function usePixiCanvas(
   return {
     zoom,
     setZoom,
-    onReset: fitToCanvas,
-    onClear: resetModel,
+    fitToCanvas,
+    clearCanvas,
     undo,
     redo,
-    clearHistory,
     getCellsData,
     getBeadStats,
     loadGrid,
-    resetModel,
   }
 }

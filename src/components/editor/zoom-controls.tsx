@@ -1,12 +1,10 @@
 "use client"
 
 import { ZoomIn, ZoomOut, Maximize } from "lucide-react"
+import { ZOOM_STEP } from "@/lib/constants"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useI18n } from "@/i18n/client"
-
-/** Multiplicative step for the zoom-in / zoom-out buttons. */
-const ZOOM_STEP = 1.3
 
 interface ZoomControlsProps {
   /** Current zoom factor (screen pixels per world unit). */

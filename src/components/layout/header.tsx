@@ -3,10 +3,9 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Logo } from "@/components/layout/logo"
 import { AuthNav } from "@/components/auth/auth-nav"
+import { GITHUB_URL } from "@/lib/constants"
 import { localizedPath } from "@/i18n/config"
 import { getDictionary, getLocale } from "@/i18n/server"
-
-const GITHUB_URL = "https://github.com/xingxingmofashu/pindou"
 
 export async function Header() {
   const locale = await getLocale()

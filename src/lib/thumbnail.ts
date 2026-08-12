@@ -1,5 +1,6 @@
 import sharp from "sharp"
-import { MIN_PX, buildHexByCode, gridSize } from "@/lib/editor"
+import { buildHexByCode, gridSize } from "@/lib/editor"
+import { MIN_PX, EDITOR_BG } from "@/lib/constants"
 import { hexToRgb } from "@/lib/utils"
 import { R2 } from "@/lib/r2"
 import type { Palette } from "@/types"
@@ -26,7 +27,7 @@ export class Thumbnail {
    * Every thumbnail is {@link SIZE}×{@link SIZE} pixels. The grid is
    * nearest-neighbour downsampled if it exceeds {@link MAX_CELLS} cells
    * per axis; otherwise each cell is scaled up to fill the canvas.
-   * Background is #fafafa (editor canvas colour).
+   * Background is the editor canvas colour ({@link EDITOR_BG}).
    *
    * @param grid    - The serialized code grid (`grid[row][col]`, "" = empty).
    * @param palette - Palette used to resolve colour code → hex.
@@ -51,10 +52,11 @@ export class Thumbnail {
     const offsetY = Math.floor((SIZE - totalH) / 2)
 
     const rgba = Buffer.alloc(SIZE * SIZE * 4)
+    const bg = hexToRgb(EDITOR_BG)
     for (let i = 0; i < rgba.length; i += 4) {
-      rgba[i] = 0xfa
-      rgba[i + 1] = 0xfa
-      rgba[i + 2] = 0xfa
+      rgba[i] = (bg >> 16) & 0xff
+      rgba[i + 1] = (bg >> 8) & 0xff
+      rgba[i + 2] = bg & 0xff
       rgba[i + 3] = 0xff
     }
 
