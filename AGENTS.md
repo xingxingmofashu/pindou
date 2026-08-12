@@ -222,6 +222,7 @@ src/db/                                Drizzle schema + Neon Postgres Pool (@neo
 - Linear history on `main`, Conventional commits (`feat:`, `fix:`, `chore:`)
 - One commit per feature
 - Commit message format: `feat: <imperative description>`
+- Merge PRs with rebase (`gh pr merge --rebase`), never merge commits
 
 ## Key constraints
 
