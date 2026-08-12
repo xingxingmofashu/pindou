@@ -4,7 +4,7 @@ import { useCallback, useRef, useState } from "react"
 import Link from "next/link"
 import useSWR from "swr"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, CaseSensitive, Download, List } from "lucide-react"
+import { ArrowLeft, CaseSensitive, Download, List, Palette as PaletteIcon } from "lucide-react"
 import { PixiCanvas, type PixiCanvasApi } from "@/components/editor/pixi-canvas"
 import { ColorPalette } from "@/components/editor/color-palette"
 import { BeadStatsPanel } from "@/components/editor/bead-stats"
@@ -13,8 +13,10 @@ import { ExportDialog } from "@/components/editor/export-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { toast } from "@/components/ui/toast"
 import { PatternUpdateSchema } from "@/db/schema"
 import { fetcher, postJson } from "@/lib/utils"
@@ -81,6 +83,188 @@ export default function PatternEditPage() {
   return <EditForm key={data.id} id={id} pattern={data} palette={brand} />
 }
 
+interface EditToolbarProps {
+  id: string
+  showLabels: boolean
+  onToggleLabels: () => void
+  showLeftPanel: boolean
+  onToggleLeftPanel: () => void
+  showBeadStats: boolean
+  onToggleBeadStats: () => void
+  zoom: number
+  onSetZoom: (z: number | ((prev: number) => number)) => void
+  onReset: () => void
+  onExport: () => void
+  saving: boolean
+  onSave: () => void
+}
+
+/** Pattern-editor toolbar: back + title on the left, view toggles and actions on the right. */
+function EditToolbar({
+  id,
+  showLabels,
+  onToggleLabels,
+  showLeftPanel,
+  onToggleLeftPanel,
+  showBeadStats,
+  onToggleBeadStats,
+  zoom,
+  onSetZoom,
+  onReset,
+  onExport,
+  saving,
+  onSave,
+}: EditToolbarProps) {
+  const { locale, t } = useI18n()
+  return (
+    <div className="flex items-center justify-between gap-2 border px-3 py-2">
+      <div className="flex min-w-0 items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          nativeButton={false}
+          render={<Link href={localizedPath(locale, `/patterns/${id}`)} />}
+        >
+          <ArrowLeft data-icon="inline-start" />
+          {t("patternDetail.backToPattern")}
+        </Button>
+        <h1 className="truncate text-sm font-semibold">{t("patternDetail.editTitle")}</h1>
+      </div>
+      <div className="flex items-center gap-2">
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant={showLabels ? "secondary" : "outline"}
+                size="icon-sm"
+                aria-label={t("editor.showLabels")}
+              >
+                <CaseSensitive data-icon="inline-start" />
+              </Button>
+            }
+            onClick={onToggleLabels}
+          />
+          <TooltipContent side="bottom">{t("editor.labels")}</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant={showLeftPanel ? "secondary" : "outline"}
+                size="icon-sm"
+                aria-label={t("editor.showColorPaletteToggle")}
+              >
+                <PaletteIcon data-icon="inline-start" />
+              </Button>
+            }
+            onClick={onToggleLeftPanel}
+          />
+          <TooltipContent side="bottom">{t("editor.colorPalette")}</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant={showBeadStats ? "secondary" : "outline"}
+                size="icon-sm"
+                aria-label={t("editor.showBeadStatsToggle")}
+              >
+                <List data-icon="inline-start" />
+              </Button>
+            }
+            onClick={onToggleBeadStats}
+          />
+          <TooltipContent side="bottom">{t("editor.beadStats")}</TooltipContent>
+        </Tooltip>
+        <Separator orientation="vertical" className="mx-1 h-5" />
+        <ZoomControls zoom={zoom} onSetZoom={onSetZoom} onReset={onReset} />
+        <Button variant="outline" size="sm" onClick={onExport}>
+          <Download data-icon="inline-start" />
+          {t("editor.export")}
+        </Button>
+        <Button size="sm" onClick={onSave} disabled={saving}>
+          {saving && <Spinner data-icon="inline-start" />}
+          {t("patternDetail.save")}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+interface EditFieldsPanelProps {
+  title: string
+  onTitleChange: (value: string) => void
+  description: string
+  onDescriptionChange: (value: string) => void
+  palette: Palette
+  activeColorIndex: number
+  onColorPick: (index: number) => void
+}
+
+/** Collapsible left panel: title/description fields plus the colour palette. */
+function EditFieldsPanel({
+  title,
+  onTitleChange,
+  description,
+  onDescriptionChange,
+  palette,
+  activeColorIndex,
+  onColorPick,
+}: EditFieldsPanelProps) {
+  const { t } = useI18n()
+  return (
+    <div className="flex w-56 shrink-0 min-h-0 flex-col gap-3 overflow-hidden">
+      <div className="space-y-1.5 border p-3">
+        <div className="grid gap-1.5">
+          <Label htmlFor="edit-title">
+            {t("editor.title")} <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="edit-title"
+            type="text"
+            maxLength={100}
+            value={title}
+            onChange={(e) => onTitleChange(e.target.value)}
+          />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="edit-description">{t("editor.description")}</Label>
+          <Textarea
+            id="edit-description"
+            maxLength={280}
+            rows={2}
+            value={description}
+            onChange={(e) => onDescriptionChange(e.target.value)}
+            className="resize-none"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">{t("patternDetail.editHint")}</p>
+      </div>
+      <div className="flex-1 min-h-0">
+        <ColorPalette
+          palette={palette}
+          activeColorIndex={activeColorIndex}
+          onColorPick={onColorPick}
+        />
+      </div>
+    </div>
+  )
+}
+
+interface EditBeadStatsPanelProps {
+  stats: BeadStats | null
+  palette: Palette
+}
+
+/** Collapsible right panel: live bead-usage counts. */
+function EditBeadStatsPanel({ stats, palette }: EditBeadStatsPanelProps) {
+  return (
+    <div className="w-56 shrink-0 min-h-0 overflow-hidden">
+      <BeadStatsPanel stats={stats} palette={palette} />
+    </div>
+  )
+}
+
 /** Editable form + canvas for an owned pattern (lazy-inits from the loaded pattern). */
 function EditForm({
   id,
@@ -98,6 +282,7 @@ function EditForm({
   const [description, setDescription] = useState(pattern.description ?? "")
   const [activeColorIndex, setActiveColorIndex] = useState(1)
   const [showLabels, setShowLabels] = useState(false)
+  const [showLeftPanel, setShowLeftPanel] = useState(true)
   const [showBeadStats, setShowBeadStats] = useState(true)
   const [zoom, setZoom] = useState(DEFAULT_ZOOM)
   const [beadStats, setBeadStats] = useState<BeadStats | null>(null)
@@ -175,89 +360,35 @@ function EditForm({
 
   return (
     <div className="flex h-full flex-col gap-2 overflow-hidden">
-      <div className="flex items-center justify-between gap-2 px-3 py-2 border">
-        <Button
-          variant="outline"
-          size="sm"
-          nativeButton={false}
-          render={<Link href={localizedPath(locale, `/patterns/${id}`)} />}
-        >
-          <ArrowLeft data-icon="inline-start" />
-          {t("patternDetail.backToPattern")}
-        </Button>
-        <h1 className="text-sm font-semibold truncate">{t("patternDetail.editTitle")}</h1>
-        <div className="flex items-center gap-2">
-          <Button
-            variant={showLabels ? "secondary" : "outline"}
-            size="icon-sm"
-            aria-label={t("editor.showLabels")}
-            onClick={() => setShowLabels((v) => !v)}
-          >
-            <CaseSensitive data-icon="inline-start" />
-          </Button>
-          <Button
-            variant={showBeadStats ? "secondary" : "outline"}
-            size="icon-sm"
-            aria-label={t("editor.showBeadStatsToggle")}
-            onClick={() => setShowBeadStats((v) => !v)}
-          >
-            <List data-icon="inline-start" />
-          </Button>
-          <ZoomControls
-            zoom={zoom}
-            onSetZoom={(z) => canvasApiRef.current?.setZoom(z)}
-            onReset={() => canvasApiRef.current?.fitToCanvas()}
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setExportOpen(true)}
-          >
-            <Download data-icon="inline-start" />
-            {t("editor.export")}
-          </Button>
-          <Button size="sm" onClick={handleSave} disabled={saving}>
-            {saving && <Spinner data-icon="inline-start" />}
-            {t("patternDetail.save")}
-          </Button>
-        </div>
-      </div>
+      <EditToolbar
+        id={id}
+        showLabels={showLabels}
+        onToggleLabels={() => setShowLabels((v) => !v)}
+        showLeftPanel={showLeftPanel}
+        onToggleLeftPanel={() => setShowLeftPanel((v) => !v)}
+        showBeadStats={showBeadStats}
+        onToggleBeadStats={() => setShowBeadStats((v) => !v)}
+        zoom={zoom}
+        onSetZoom={(z) => canvasApiRef.current?.setZoom(z)}
+        onReset={() => canvasApiRef.current?.fitToCanvas()}
+        onExport={() => setExportOpen(true)}
+        saving={saving}
+        onSave={handleSave}
+      />
+
+      {/* Left panel (collapsible), canvas, right bead-usage panel (collapsible). */}
       <div className="flex-1 min-h-0 flex gap-2">
-        <div className="w-56 shrink-0 min-h-0 flex flex-col gap-3">
-          <div className="space-y-1.5 border p-3">
-            <div className="grid gap-1.5">
-              <Label htmlFor="edit-title">
-                {t("editor.title")} <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="edit-title"
-                type="text"
-                maxLength={100}
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="edit-description">{t("editor.description")}</Label>
-              <Textarea
-                id="edit-description"
-                maxLength={280}
-                rows={2}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="resize-none"
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">{t("patternDetail.editHint")}</p>
-          </div>
-          <div className="flex-1 min-h-0">
-            <ColorPalette
-              palette={palette}
-              activeColorIndex={activeColorIndex}
-              onColorPick={setActiveColorIndex}
-            />
-          </div>
-        </div>
+        {showLeftPanel && (
+          <EditFieldsPanel
+            title={title}
+            onTitleChange={setTitle}
+            description={description}
+            onDescriptionChange={setDescription}
+            palette={palette}
+            activeColorIndex={activeColorIndex}
+            onColorPick={setActiveColorIndex}
+          />
+        )}
         <PixiCanvas
           palette={palette}
           grid={pattern.gridData}
@@ -269,9 +400,7 @@ function EditForm({
           className="flex-1 min-w-0 border"
         />
         {showBeadStats && (
-          <div className="w-56 shrink-0 min-h-0 overflow-hidden">
-            <BeadStatsPanel stats={beadStats} palette={palette} />
-          </div>
+          <EditBeadStatsPanel stats={beadStats} palette={palette} />
         )}
       </div>
 
