@@ -1,8 +1,9 @@
 import { buildHexByCode, countGridBeads, forEachPaintedCell, gridSize } from "@/lib/editor"
+import { MAJOR_GRID_STEP } from "@/lib/constants"
 import type { Palette } from "@/types"
 
 /** Default pixels per bead when the caller doesn't specify a scale. */
-export const DEFAULT_EXPORT_SCALE = 128
+export const DEFAULT_EXPORT_SCALE = 64
 
 /**
  * Largest canvas dimension in pixels. Caps memory on pathological grids
@@ -12,7 +13,13 @@ export const DEFAULT_EXPORT_SCALE = 128
 const MAX_EXPORT_DIM = 16384
 
 /** Grid-line colour between beads. */
-const GRID_LINE_COLOR = "#d4d4d8"
+const GRID_LINE_COLOR = "#a1a1aa"
+
+/** Major grid-line colour — darker than the per-bead grid lines. */
+const MAJOR_GRID_COLOR = "#71717a"
+
+/** Major grid-line width in pixels — thicker than the per-bead lines. */
+const MAJOR_GRID_LINE_WIDTH = 2
 
 /** Axis-label colour. */
 const LABEL_COLOR = "#52525b"
@@ -29,7 +36,7 @@ const HEADER_DIVIDER = "#a1a1aa"
 /**
  * Base geometry of the bead-usage section, defined at a 20px swatch. The real
  * geometry is derived from the pattern's bead size, so the list scales up with
- * the grid — at the default 128px-per-bead export the swatches are bead-sized.
+ * the grid — at the default 64px-per-bead export the swatches are bead-sized.
  */
 const STATS_SWATCH = 20
 const STATS_TITLE_FONT = 18
@@ -72,6 +79,10 @@ export interface ExportGridOptions {
   showBeadStats?: boolean
   /** Title of the bead-usage list; falls back to "Beads used". */
   beadStatsTitle?: string
+  /** Draw thicker, darker grid lines every {@link majorGridStep} cells. */
+  showMajorGrid?: boolean
+  /** Step (in data cells) of the major grid; defaults to {@link MAJOR_GRID_STEP}. */
+  majorGridStep?: number
 }
 
 /** Rendered output size plus the effective (clamped) pixels-per-bead. */
@@ -88,7 +99,9 @@ export interface ExportSize {
  * 1‑based row/column coordinates in shaded header bands along the top and left
  * edges. Header cells match a bead's size, so coordinates align with the beads
  * they label. Beads are drawn as solid `scale × scale` squares with no canvas
- * scaling, keeping them pixel-perfect. With {@link ExportGridOptions.showLabels}
+ * scaling, keeping them pixel-perfect. With {@link ExportGridOptions.showMajorGrid}
+ * a thicker, darker grid is drawn every `majorGridStep` cells, grouping the
+ * beads into blocks (8×8 by default). With {@link ExportGridOptions.showLabels}
  * each bead gets its colour code centred on it. The effective scale is clamped
  * so the full canvas never exceeds {@link MAX_EXPORT_DIM} on either side.
  */
@@ -273,6 +286,29 @@ export class Export {
     }
     ctx.stroke()
 
+    // Major grid lines every `step` cells — thicker and darker, grouping the
+    // beads into blocks (8×8 by default). Drawn in their own stroke pass
+    // because they use a different style; the boundary lines at step multiples
+    // overlay the per-bead lines, so blocks stay fully closed.
+    if (opts.showMajorGrid) {
+      const requested = Math.floor(opts.majorGridStep ?? MAJOR_GRID_STEP)
+      const step = Number.isFinite(requested) && requested > 0 ? requested : MAJOR_GRID_STEP
+      ctx.strokeStyle = MAJOR_GRID_COLOR
+      ctx.lineWidth = MAJOR_GRID_LINE_WIDTH
+      ctx.beginPath()
+      for (let c = 0; c <= cols; c += step) {
+        const x = headerW + c * s + 0.5
+        ctx.moveTo(x, 0)
+        ctx.lineTo(x, headerH + rows * s)
+      }
+      for (let r = 0; r <= rows; r += step) {
+        const y = headerH + r * s + 0.5
+        ctx.moveTo(0, y)
+        ctx.lineTo(headerW + cols * s, y)
+      }
+      ctx.stroke()
+    }
+
     // A slightly darker divider separates the coordinate bands from the beads.
     ctx.strokeStyle = HEADER_DIVIDER
     ctx.beginPath()
@@ -302,17 +338,25 @@ export class Export {
     }
 
     // Column numbers centred in their header cells along the top, row numbers
-    // centred in theirs down the left. Column labels are skipped when they can't
-    // fit one per column (they'd overlap).
+    // centred in theirs down the left. Every column gets a label: the font
+    // shrinks just enough for the widest number (the last column) to fit ~72%
+    // of its `s`-wide header cell — the same share two-digit labels already
+    // occupy at numFont (2 × 0.6 × 0.6s = 0.72s) — so wide grids read uniformly
+    // instead of cramped, and coordinates never silently stop at 99.
     ctx.fillStyle = LABEL_COLOR
-    ctx.font = `${numFont}px ui-monospace, monospace`
     ctx.textBaseline = "middle"
     ctx.textAlign = "center"
-    for (let c = 0; c < cols; c++) {
-      const label = String(c + 1)
-      if (ctx.measureText(label).width > s) continue
-      ctx.fillText(label, headerW + (c + 0.5) * s, headerH / 2)
+    const colLabelBudget = s * 0.72
+    let colFont = numFont
+    ctx.font = `${colFont}px ui-monospace, monospace`
+    while (colFont > 4 && ctx.measureText(String(cols)).width > colLabelBudget) {
+      colFont--
+      ctx.font = `${colFont}px ui-monospace, monospace`
     }
+    for (let c = 0; c < cols; c++) {
+      ctx.fillText(String(c + 1), headerW + (c + 0.5) * s, headerH / 2)
+    }
+    ctx.font = `${numFont}px ui-monospace, monospace`
     for (let r = 0; r < rows; r++) {
       ctx.fillText(String(r + 1), headerW / 2, headerH + (r + 0.5) * s)
     }
