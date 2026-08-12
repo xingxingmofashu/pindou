@@ -38,6 +38,9 @@ export const ZOOM_STEP = 1.3
 /** Number of patterns per page in the catalog. */
 export const PATTERNS_PAGE_SIZE = 20
 
+/** Default step (in data cells) of the export major grid that groups beads in blocks. */
+export const MAJOR_GRID_STEP = 8
+
 /** Repository URL used in the layout footer/header links. */
 export const GITHUB_URL = "https://github.com/xingxingmofashu/pindou"
 

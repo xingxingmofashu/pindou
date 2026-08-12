@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch"
 import { toast } from "@/components/ui/toast"
 import { usePalette } from "@/hooks/use-palette"
 import { useI18n } from "@/i18n/client"
+import { MAJOR_GRID_STEP } from "@/lib/constants"
 import { Export, DEFAULT_EXPORT_SCALE } from "@/lib/export"
 import { gridSize, type CellsData } from "@/lib/editor"
 import type { Palette } from "@/types"
@@ -42,6 +43,11 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
   const [labelsOn, setLabelsOn] = useState(true)
   // Whether to append the bead-usage list to the exported PNG. Defaults to on.
   const [beadStatsOn, setBeadStatsOn] = useState(true)
+  // Whether to draw the major grid (thicker lines every `majorGridStep` cells).
+  // Defaults to on so exported charts group the beads into blocks.
+  const [majorGridOn, setMajorGridOn] = useState(true)
+  // Step (in data cells) of the major grid; defaults to MAJOR_GRID_STEP (8).
+  const [majorGridStep, setMajorGridStep] = useState(String(MAJOR_GRID_STEP))
 
   // Snapshot the grid once when the dialog opens — it can't change behind the
   // modal, so re-serializing on every scale keystroke would be wasted work.
@@ -55,6 +61,7 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
   const grid = data?.grid ?? null
   const { rows, cols } = (grid ? gridSize(grid) : null) ?? { rows: 0, cols: 0 }
   const scale = Math.max(1, Math.floor(Number(scaleInput)) || 1)
+  const majorStep = Math.max(1, Math.floor(Number(majorGridStep)) || MAJOR_GRID_STEP)
   const size = grid ? exporter.size(grid, scale, { showBeadStats: beadStatsOn }) : null
 
   const handleExport = useCallback(() => {
@@ -81,11 +88,13 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
       {
         showLabels: labelsOn,
         showBeadStats: beadStatsOn,
+        showMajorGrid: majorGridOn,
+        majorGridStep: majorStep,
         beadStatsTitle: t("editor.beadStatsTitle"),
       },
     )
     onClose()
-  }, [data, palette, scale, labelsOn, beadStatsOn, exporter, onClose, t])
+  }, [data, palette, scale, labelsOn, beadStatsOn, majorGridOn, majorStep, exporter, onClose, t])
 
   return (
     <Dialog
@@ -119,6 +128,32 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
             onCheckedChange={(checked) => setBeadStatsOn(checked)}
           />
         </div>
+
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="export-major-grid">{t("editor.showMajorGrid")}</Label>
+          <Switch
+            id="export-major-grid"
+            checked={majorGridOn}
+            onCheckedChange={(checked) => setMajorGridOn(checked)}
+          />
+        </div>
+
+        {majorGridOn && (
+          <div className="grid gap-1.5">
+            <Label htmlFor="export-major-grid-step">{t("editor.majorGridStep")}</Label>
+            <Input
+              id="export-major-grid-step"
+              type="number"
+              min={1}
+              step={1}
+              value={majorGridStep}
+              onChange={(e) => setMajorGridStep(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              {t("editor.majorGridHint", { step: majorStep })}
+            </p>
+          </div>
+        )}
 
         <div className="grid gap-1.5">
           <Label htmlFor="export-scale">{t("editor.pixelsPerBead")}</Label>
