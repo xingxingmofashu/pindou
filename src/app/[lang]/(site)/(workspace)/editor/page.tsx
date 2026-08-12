@@ -32,6 +32,7 @@ export default function EditorPage() {
   const [activeColorIndex, setActiveColorIndex] = useState(1)
   const [toggleLabels, setToggleLabels] = useState(false)
   const [showBeadStats, setShowBeadStats] = useState(true)
+  const [showColorPalette, setShowColorPalette] = useState(true)
   // Recomputed by the canvas whenever the grid changes, so the panel renders
   // live without the canvas pushing state per pointermove.
   const [beadStats, setBeadStats] = useState<BeadStats | null>(null)
@@ -70,6 +71,8 @@ export default function EditorPage() {
         onToggleLabels={() => setToggleLabels((v) => !v)}
         showBeadStats={showBeadStats}
         onToggleBeadStats={() => setShowBeadStats((v) => !v)}
+        showColorPalette={showColorPalette}
+        onToggleColorPalette={() => setShowColorPalette((v) => !v)}
         onPublish={() => setPublishOpen(true)}
         zoom={zoom}
         onSetZoom={(z) => canvasApiRef.current?.setZoom(z)}
@@ -80,12 +83,14 @@ export default function EditorPage() {
         onRedo={() => canvasApiRef.current?.redo()}
       />
       <div className="flex-1 min-h-0 flex gap-2">
-        <div className="w-56 shrink-0 overflow-hidden">
-          <ColorPalette
-            activeColorIndex={activeColorIndex}
-            onColorPick={setActiveColorIndex}
-          />
-        </div>
+        {showColorPalette && (
+          <div className="w-56 shrink-0 overflow-hidden">
+            <ColorPalette
+              activeColorIndex={activeColorIndex}
+              onColorPick={setActiveColorIndex}
+            />
+          </div>
+        )}
         <PixiCanvas
           className="flex-1 min-w-0 border p-2"
           activeTool={activeTool}
