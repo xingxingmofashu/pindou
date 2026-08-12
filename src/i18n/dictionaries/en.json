@@ -99,6 +99,8 @@
     "labels": "Labels",
     "showBeadStatsToggle": "Show bead usage",
     "beadStats": "Bead usage",
+    "showColorPaletteToggle": "Show palette",
+    "colorPalette": "Color palette",
     "clearCanvas": "Clear Canvas",
     "clearCanvasAria": "Clear canvas",
     "clearCanvasDescription": "This will remove all beads from the canvas.",

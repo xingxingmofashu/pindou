@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Pencil, Eraser, PaintBucket, Trash2, CaseSensitive, ImagePlus, Download, List, Undo2, Redo2 } from "lucide-react"
+import { Pencil, Eraser, PaintBucket, Trash2, CaseSensitive, ImagePlus, Download, List, Palette, Undo2, Redo2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -45,6 +45,10 @@ interface ToolBarProps {
   showBeadStats?: boolean
   /** Called when the user toggles the bead-usage panel. */
   onToggleBeadStats?: () => void
+  /** Whether the colour palette panel is shown. */
+  showColorPalette?: boolean
+  /** Called when the user toggles the colour palette panel. */
+  onToggleColorPalette?: () => void
   /** Called when the user clicks the publish button. */
   onPublish: () => void
   /** Current zoom factor (screen pixels per world unit). */
@@ -81,6 +85,8 @@ export function ToolBar({
   onToggleLabels,
   showBeadStats,
   onToggleBeadStats,
+  showColorPalette,
+  onToggleColorPalette,
   onPublish,
   zoom,
   onSetZoom,
@@ -175,6 +181,26 @@ export function ToolBar({
               />
               <TooltipContent side="bottom">{t("editor.labels")}</TooltipContent>
             </Tooltip>
+          )}
+          {onToggleColorPalette && (
+            <>
+              <Separator orientation="vertical" className="mx-1 h-5" />
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant={showColorPalette ? "secondary" : "outline"}
+                      size="icon-xs"
+                      aria-label={t("editor.showColorPaletteToggle")}
+                    >
+                      <Palette data-icon="inline-start" />
+                    </Button>
+                  }
+                  onClick={onToggleColorPalette}
+                />
+                <TooltipContent side="bottom">{t("editor.colorPalette")}</TooltipContent>
+              </Tooltip>
+            </>
           )}
           {onToggleBeadStats && (
             <Tooltip>
