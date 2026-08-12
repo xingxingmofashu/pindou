@@ -26,7 +26,7 @@ export const MIN_PX = 10
 export const DEFAULT_ZOOM = 3
 
 /** Clamp range for the editor zoom (screen pixels per world unit). */
-export const MIN_ZOOM = 0.5
+export const MIN_ZOOM = 0.1
 export const MAX_ZOOM = 20
 
 /** Multiplicative zoom step for the mouse wheel. */
