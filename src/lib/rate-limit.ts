@@ -42,6 +42,12 @@ function limiterFor(limit: number, windowMs: number): Ratelimit {
  * @returns A promise resolving to `true` when allowed, `false` when over the limit.
  */
 export async function rateLimit(key: string, limit: number, windowMs: number): Promise<boolean> {
-  const { success } = await limiterFor(limit, windowMs).limit(key)
-  return success
+  try {
+    const { success } = await limiterFor(limit, windowMs).limit(key)
+    return success
+  } catch {
+    // Fail open: a Redis outage/misconfiguration must never 500 the route it
+    // protects — losing rate limiting is preferable to taking the feature down.
+    return true
+  }
 }
