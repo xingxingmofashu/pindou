@@ -3,6 +3,7 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { getPatternsPage } from "@/lib/server/patterns"
 import { PatternCard } from "@/components/pattern/card"
+import { PatternSearch } from "@/components/pattern/pattern-search"
 import {
   Pagination,
   PaginationContent,
@@ -35,17 +36,23 @@ export default async function PatternsPage({
 }) {
   const locale = await getLocale()
   const dict = await getDictionary()
-  const { page: pageParam } = await searchParams
+  const { page: pageParam, q: qParam } = await searchParams
   const parsed = PaginationSchema.safeParse({ page: pageParam, pageSize: PATTERNS_PAGE_SIZE })
   const requested = parsed.success ? parsed.data.page : 1
+  const q = typeof qParam === "string" ? qParam.trim().slice(0, 100) : ""
+  // Query-string suffix appended to pagination links so the search term
+  // survives page navigation.
+  const searchSuffix = q ? `&q=${encodeURIComponent(q)}` : ""
 
-  const { rows, total } = await getPatternsPage(requested, PATTERNS_PAGE_SIZE)
+  const { rows, total } = await getPatternsPage(requested, PATTERNS_PAGE_SIZE, q || undefined)
   const totalPages = Math.max(1, Math.ceil(total / PATTERNS_PAGE_SIZE))
   // Out-of-range pages (e.g. ?page=999) would otherwise render the empty state
   // despite patterns existing — clamp to the last valid page instead.
   const page = Math.min(requested, totalPages)
   if (page !== requested) {
-    redirect(localizedPath(locale, page > 1 ? `/patterns?page=${page}` : "/patterns"))
+    const params = new URLSearchParams(q ? { q } : {})
+    params.set("page", String(page))
+    redirect(localizedPath(locale, `/patterns?${params}`))
   }
   const list = rows.map((r) => ({
     ...r,
@@ -57,9 +64,17 @@ export default async function PatternsPage({
       <div className="flex-1 min-h-0 flex flex-col border">
         <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
           <h1 className="text-sm font-semibold">{dict.patterns.title}</h1>
-          <p className="text-[10px] text-muted-foreground">
-            {dict.patterns.publishedCount.replace("{count}", total.toLocaleString())}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-[10px] text-muted-foreground">
+              {dict.patterns.publishedCount.replace("{count}", total.toLocaleString())}
+            </p>
+            <PatternSearch
+              locale={locale}
+              initialQuery={q}
+              placeholder={dict.patterns.searchPlaceholder}
+              ariaLabel={dict.patterns.searchAria}
+            />
+          </div>
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto p-3">
@@ -84,7 +99,7 @@ export default async function PatternsPage({
                   <PaginationContent>
                     <PaginationItem>
                       <PaginationPrevious
-                        href={page > 1 ? `?page=${page - 1}` : undefined}
+                        href={page > 1 ? `?page=${page - 1}${searchSuffix}` : undefined}
                         aria-disabled={page <= 1}
                         className={page <= 1 ? "pointer-events-none opacity-50" : undefined}
                       />
@@ -98,7 +113,7 @@ export default async function PatternsPage({
 
                     <PaginationItem>
                       <PaginationNext
-                        href={page < totalPages ? `?page=${page + 1}` : undefined}
+                        href={page < totalPages ? `?page=${page + 1}${searchSuffix}` : undefined}
                         aria-disabled={page >= totalPages}
                         className={page >= totalPages ? "pointer-events-none opacity-50" : undefined}
                       />
@@ -110,13 +125,24 @@ export default async function PatternsPage({
           ) : (
             <div className="flex h-full items-center justify-center text-center">
               <div>
-                <p className="text-sm text-muted-foreground">{dict.patterns.empty}</p>
-                <Link
-                  href={localizedPath(locale, "/editor")}
-                  className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
-                >
-                  {dict.patterns.createFirst}
-                </Link>
+                <p className="text-sm text-muted-foreground">
+                  {q ? dict.patterns.noResults : dict.patterns.empty}
+                </p>
+                {q ? (
+                  <Link
+                    href={localizedPath(locale, "/patterns")}
+                    className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
+                  >
+                    {dict.patterns.clearSearch}
+                  </Link>
+                ) : (
+                  <Link
+                    href={localizedPath(locale, "/editor")}
+                    className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
+                  >
+                    {dict.patterns.createFirst}
+                  </Link>
+                )}
               </div>
             </div>
           )}

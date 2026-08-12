@@ -59,7 +59,11 @@
     "publishedCount": "{count} patterns published",
     "pageOf": "Page {page} of {total}",
     "empty": "No patterns published yet.",
-    "createFirst": "Create the first one"
+    "createFirst": "Create the first one",
+    "searchPlaceholder": "Search patterns",
+    "searchAria": "Search patterns",
+    "noResults": "No patterns match your search.",
+    "clearSearch": "Clear search"
   },
   "patternDetail": {
     "loadFailedTitle": "Failed to load pattern",

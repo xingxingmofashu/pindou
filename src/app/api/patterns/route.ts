@@ -29,7 +29,11 @@ export async function GET(request: NextRequest) {
     pageSize: request.nextUrl.searchParams.get("pageSize"),
   })
 
-  const { rows, total } = await getPatternsPage(page, pageSize)
+  // Same 100-char cap as the SSR catalog page so both consumers of the
+  // shared cache key agree on the search term.
+  const q = request.nextUrl.searchParams.get("q")?.trim().slice(0, 100)
+
+  const { rows, total } = await getPatternsPage(page, pageSize, q || undefined)
 
   return NextResponse.json(
     {
