@@ -53,6 +53,30 @@ export function hexToRgb(hex: string): number {
   return parseInt(hex.replace("#", ""), 16)
 }
 
+/**
+ * Parse a JSON string, falling back to a default when it is missing or
+ * malformed. The type parameter is a promise, not a guarantee — the fallback
+ * is returned only on parse failure, callers still validate the shape.
+ *
+ * @param raw      - The JSON string to parse.
+ * @param fallback - Value returned when parsing fails.
+ * @returns The parsed value, or `fallback`.
+ */
+export function safeParseJson<T>(raw: string, fallback: T): T {
+  try {
+    return JSON.parse(raw) as T
+  } catch {
+    return fallback
+  }
+}
+
+/** Whether the event target is a text field (input, textarea, contenteditable). */
+export function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+  const tag = target.tagName
+  return tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable
+}
+
 export function totalBeadCount(stats: Record<string, number>): number {
   let sum = 0
   for (const v of Object.values(stats)) sum += v
@@ -60,9 +84,5 @@ export function totalBeadCount(stats: Record<string, number>): number {
 }
 
 export function parseBeadStats(raw: string): Record<string, number> {
-  try {
-    return JSON.parse(raw) as Record<string, number>
-  } catch {
-    return {}
-  }
+  return safeParseJson(raw, {})
 }

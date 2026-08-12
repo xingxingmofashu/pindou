@@ -6,6 +6,7 @@ import { patterns } from "@/db/schema"
 import { PatternUpdateSchema } from "@/db/schema"
 import { getPattern } from "@/lib/server/patterns"
 import { getPaletteById } from "@/lib/server/palettes"
+import { MAX_BODY_BYTES } from "@/lib/constants"
 import { auth } from "@/lib/auth/server"
 import { Thumbnail } from "@/lib/thumbnail"
 import { GridStorage } from "@/lib/grid-storage"
@@ -15,9 +16,6 @@ const thumbnail = new Thumbnail()
 
 /** Grid JSON storage (R2) for this route. */
 const grids = new GridStorage()
-
-/** Maximum JSON body size — bounds the grid (capped by MAX_GRID_CELLS) plus text. */
-const MAX_BODY_BYTES = 20 * 1024 * 1024
 
 /**
  * Public pattern data (excluding the session-derived `canEdit`) is fetched via

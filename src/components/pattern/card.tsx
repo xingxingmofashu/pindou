@@ -3,10 +3,9 @@
 import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { formatDistanceToNow, parseISO, isValid } from "date-fns"
-import { zhCN } from "date-fns/locale"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { totalBeadCount } from "@/lib/utils"
+import { formatRelativeDate } from "@/lib/date"
 import { localizedPath } from "@/i18n/config"
 import { useI18n } from "@/i18n/client"
 
@@ -21,10 +20,8 @@ interface PatternCardProps {
 
 export function PatternCard({ id, title, authorName, beadStats, createdAt, thumbUrl }: PatternCardProps) {
   const { locale, t } = useI18n()
-  const dateLocale = locale === "zh" ? zhCN : undefined
   const totalBeads = totalBeadCount(beadStats)
-  const date = parseISO(createdAt)
-  const relativeDate = isValid(date) ? formatDistanceToNow(date, { addSuffix: true, locale: dateLocale }) : ""
+  const relativeDate = formatRelativeDate(createdAt, locale)
   // If the thumbnail fails to load (e.g. a network/proxy blocks the R2 host),
   // fall back to the same muted placeholder used for missing thumbnails instead
   // of rendering a broken image icon.

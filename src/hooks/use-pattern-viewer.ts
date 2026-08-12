@@ -1,9 +1,8 @@
 "use client"
 
 import { create } from "zustand"
+import { DEFAULT_ZOOM } from "@/lib/constants"
 import type { PixiCanvasApi } from "@/components/editor/pixi-canvas"
-
-const DEFAULT_ZOOM = 3
 
 interface PatternViewerStore {
   /** Imperative canvas API, registered by the PatternViewer on mount. */

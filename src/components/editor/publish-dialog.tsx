@@ -21,6 +21,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { toast } from "@/components/ui/toast"
 import { PatternInsertSchema } from "@/db/schema"
 import { postJson } from "@/lib/utils"
+import type { CellsData } from "@/lib/editor"
 import { GithubIcon } from "@/components/icon/github"
 import { useSession } from "@/lib/auth/client"
 import { localizedPath } from "@/i18n/config"
@@ -32,9 +33,7 @@ interface PublishDialogProps {
   /** Called after a successful publish (e.g. to clear the editor draft). */
   onPublished?: () => void
   /** Reads the canvas grid — same contract as the API method. */
-  onGetCellsData: () => {
-    grid: string[][]; brandCode: string; beadStats: string
-  } | null
+  onGetCellsData: () => CellsData | null
 }
 
 export function PublishDialog({ open, onClose, onPublished, onGetCellsData }: PublishDialogProps) {

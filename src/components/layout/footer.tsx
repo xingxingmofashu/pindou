@@ -1,9 +1,8 @@
 import Link from "next/link"
 import { Logo } from "@/components/layout/logo"
+import { GITHUB_URL } from "@/lib/constants"
 import { localizedPath } from "@/i18n/config"
 import { getDictionary, getLocale } from "@/i18n/server"
-
-const GITHUB_URL = "https://github.com/xingxingmofashu/pindou"
 
 export async function Footer() {
   const locale = await getLocale()

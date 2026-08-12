@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/toast"
 import { PatternUpdateSchema } from "@/db/schema"
 import { fetcher, postJson } from "@/lib/utils"
+import { DEFAULT_ZOOM } from "@/lib/constants"
 import { localizedPath } from "@/i18n/config"
 import { useI18n } from "@/i18n/client"
 import type { BeadStats } from "@/lib/editor"
@@ -98,7 +99,7 @@ function EditForm({
   const [activeColorIndex, setActiveColorIndex] = useState(1)
   const [showLabels, setShowLabels] = useState(false)
   const [showBeadStats, setShowBeadStats] = useState(true)
-  const [zoom, setZoom] = useState(3)
+  const [zoom, setZoom] = useState(DEFAULT_ZOOM)
   const [beadStats, setBeadStats] = useState<BeadStats | null>(null)
   const [exportOpen, setExportOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -205,7 +206,7 @@ function EditForm({
           <ZoomControls
             zoom={zoom}
             onSetZoom={(z) => canvasApiRef.current?.setZoom(z)}
-            onReset={() => canvasApiRef.current?.onReset()}
+            onReset={() => canvasApiRef.current?.fitToCanvas()}
           />
           <Button
             variant="outline"

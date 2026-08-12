@@ -16,7 +16,7 @@ export function PatternZoomControls() {
     <ZoomControls
       zoom={zoom}
       onSetZoom={(z) => api?.setZoom(z)}
-      onReset={() => api?.onReset()}
+      onReset={() => api?.fitToCanvas()}
     />
   )
 }

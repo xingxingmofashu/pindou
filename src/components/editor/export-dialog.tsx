@@ -17,15 +17,14 @@ import { toast } from "@/components/ui/toast"
 import { usePalette } from "@/hooks/use-palette"
 import { useI18n } from "@/i18n/client"
 import { Export, DEFAULT_EXPORT_SCALE } from "@/lib/export"
+import { gridSize, type CellsData } from "@/lib/editor"
 import type { Palette } from "@/types"
 
 interface ExportDialogProps {
   open: boolean
   onClose: () => void
   /** Reads the canvas grid — same contract as the API method. */
-  onGetCellsData: () => {
-    grid: string[][]; brandCode: string; beadStats: string
-  } | null
+  onGetCellsData: () => CellsData | null
   /** Pinned palette (pattern editor). Falls back to the active-brand store. */
   palette?: Palette
 }
@@ -54,8 +53,7 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
   const { palette: storePalette } = usePalette()
   const palette = pinnedPalette ?? storePalette
   const grid = data?.grid ?? null
-  const rows = grid?.length ?? 0
-  const cols = grid?.[0]?.length ?? 0
+  const { rows, cols } = (grid ? gridSize(grid) : null) ?? { rows: 0, cols: 0 }
   const scale = Math.max(1, Math.floor(Number(scaleInput)) || 1)
   const size = grid ? exporter.size(grid, scale, { showBeadStats: beadStatsOn }) : null
 

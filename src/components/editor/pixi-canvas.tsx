@@ -1,21 +1,22 @@
 "use client"
 
 import { useEffect, useRef, useImperativeHandle, type RefObject } from "react"
+import { EDITOR_BG } from "@/lib/constants"
 import { usePixiApp } from "@/hooks/use-pixi-app"
 import { usePixiCanvas } from "@/hooks/use-pixi-canvas"
 import { usePalette } from "@/hooks/use-palette"
-import type { ToolKind, BeadStats } from "@/lib/editor"
+import type { ToolKind, BeadStats, CellsData } from "@/lib/editor"
 import type { Palette } from "@/types"
 
 export interface PixiCanvasApi {
   setZoom: (z: number | ((prev: number) => number)) => void
-  onReset: () => void
-  onClear: () => void
+  /** Fit the view to the painted grid's bounding box. */
+  fitToCanvas: () => void
+  /** Empty the canvas (undoable). */
+  clearCanvas: () => void
   undo: () => void
   redo: () => void
-  getCellsData: () => {
-    grid: string[][]; brandCode: string; beadStats: string
-  } | null
+  getCellsData: () => CellsData | null
   /** Live per-colour bead counts + painted dims (null when the grid is empty). */
   getBeadStats: () => BeadStats | null
   /** Replace the canvas contents with a serialized code grid. */
@@ -63,8 +64,8 @@ function PixiCanvasInner({
   onGridChange,
   onHistoryChange,
 }: InnerProps) {
-  const ctx = usePixiApp(canvasRef, "#fafafa")
-  const { zoom, setZoom, onReset, onClear, undo, redo, getCellsData, getBeadStats, loadGrid, resetModel } =
+  const ctx = usePixiApp(canvasRef, EDITOR_BG)
+  const { zoom, setZoom, fitToCanvas, clearCanvas, undo, redo, getCellsData, getBeadStats, loadGrid } =
     usePixiCanvas(ctx, palette, { activeTool, activeColorIndex, showLabels: label, readonly, onGridChange, onHistoryChange })
 
   useEffect(() => {
@@ -83,19 +84,19 @@ function PixiCanvasInner({
   useEffect(() => {
     if (prevPaletteCodeRef.current === palette.code) return
     prevPaletteCodeRef.current = palette.code
-    resetModel(true)
-  }, [palette.code, resetModel])
+    clearCanvas(true)
+  }, [palette.code, clearCanvas])
 
   useImperativeHandle(apiRef, () => ({
     setZoom,
-    onReset,
-    onClear,
+    fitToCanvas,
+    clearCanvas,
     undo,
     redo,
     getCellsData,
     getBeadStats,
     loadGrid,
-  }), [setZoom, onReset, onClear, undo, redo, getCellsData, getBeadStats, loadGrid])
+  }), [setZoom, fitToCanvas, clearCanvas, undo, redo, getCellsData, getBeadStats, loadGrid])
 
   return null
 }

@@ -20,15 +20,14 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Spinner } from "@/components/ui/spinner"
 import { toast } from "@/components/ui/toast"
-import { MAX_GRID_DIMENSION } from "@/lib/editor"
+import { MAX_FILE_BYTES, MAX_GRID_DIMENSION } from "@/lib/constants"
+import { buildHexByCode, gridSize, mostFrequent, groupColorsBySeries } from "@/lib/editor"
 import { postJson } from "@/lib/utils"
 import { usePalette } from "@/hooks/use-palette"
 import { useI18n } from "@/i18n/client"
 import type { TransformMode, TransformResult } from "@/lib/transform"
 import type { Palette } from "@/types"
 
-/** Maximum accepted upload size, mirroring the server-side limit (10 MB). */
-const MAX_FILE_BYTES = 10 * 1024 * 1024
 /** Preview canvas is drawn at most this many pixels per side. */
 const PREVIEW_MAX = 320
 /** Initial grid width in beads. */
@@ -57,12 +56,10 @@ function drawGridToCanvas(
   grid: string[][],
   palette: Palette,
 ): void {
-  const rows = grid.length
-  const cols = grid[0]?.length ?? 0
+  const { rows, cols } = gridSize(grid) ?? { rows: 0, cols: 0 }
   if (rows === 0 || cols === 0) return
 
-  const hexByCode = new Map<string, string>()
-  for (const color of palette.colors) hexByCode.set(color.code, color.hex)
+  const hexByCode = buildHexByCode(palette)
 
   const scale = Math.min(1, PREVIEW_MAX / Math.max(rows, cols))
   const pw = Math.max(1, Math.round(cols * scale))
@@ -106,14 +103,8 @@ function drawGridToCanvas(
     }
   }
   for (const [key, bucket] of freq) {
-    let best = ""
-    let bestN = 0
-    for (const [code, n] of bucket) {
-      if (n > bestN) {
-        bestN = n
-        best = code
-      }
-    }
+    const best = mostFrequent(bucket)
+    if (!best) continue
     const hex = hexByCode.get(best)
     if (!hex) continue
     ctx.fillStyle = hex
@@ -148,18 +139,7 @@ function ExcludeColours({ palette, excluded, onToggle, onToggleGroup, onReset }:
       )
     : palette.colors
 
-  const groups: { series: string; colors: Palette["colors"] }[] = []
-  const bySeries = new Map<string, (typeof groups)[number]>()
-  for (const color of filtered) {
-    const series = color.series ?? "?"
-    let group = bySeries.get(series)
-    if (!group) {
-      group = { series, colors: [] }
-      bySeries.set(series, group)
-      groups.push(group)
-    }
-    group.colors.push(color)
-  }
+  const groups = groupColorsBySeries(filtered, (c) => c.series ?? "?")
 
   const toggleOpen = (series: string) =>
     setOpenSeries((prev) => {

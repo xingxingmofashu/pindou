@@ -4,6 +4,7 @@ import { useEffect, useMemo } from "react"
 import useSWR from "swr"
 import { ChevronDown } from "lucide-react"
 import { usePalette } from "@/hooks/use-palette"
+import { groupColorsBySeries } from "@/lib/editor"
 import { cn, fetcher } from "@/lib/utils"
 import { useI18n } from "@/i18n/client"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -71,17 +72,11 @@ export function ColorPalette({
   /** Colours grouped by series letter, with 1‑based palette indices. */
   const seriesGroups = useMemo(() => {
     if (!palette) return []
-    const map = new Map<string, { series: string; colors: { index: number; hex: string; code: string }[] }>()
-    palette.colors.forEach((color, i) => {
-      const series = color.series ?? "?"
-      let group = map.get(series)
-      if (!group) {
-        group = { series, colors: [] }
-        map.set(series, group)
-      }
-      group.colors.push({ index: i + 1, hex: color.hex, code: color.code })
-    })
-    return Array.from(map.values())
+    // Indices are palette-wide (1..N), so decorate colors before grouping.
+    return groupColorsBySeries(
+      palette.colors.map((color, i) => ({ ...color, index: i + 1 })),
+      (c) => c.series ?? "?",
+    )
   }, [palette])
 
   /**

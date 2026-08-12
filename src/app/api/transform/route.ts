@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import { MAX_GRID_DIMENSION } from "@/lib/editor"
+import { MAX_GRID_DIMENSION, MAX_FILE_BYTES } from "@/lib/constants"
 import { Transform, InputImageTooLargeError, MAX_INPUT_PIXELS } from "@/lib/transform"
 import { rateLimit } from "@/lib/rate-limit"
+import { safeParseJson } from "@/lib/utils"
 import { getPaletteByCode } from "@/lib/server/palettes"
 
 export const runtime = "nodejs"
@@ -10,8 +11,6 @@ export const runtime = "nodejs"
 /** Per-IP budget for the CPU-heavy image transform. */
 const LIMIT = 20
 const WINDOW_MS = 60_000
-/** Maximum upload size in bytes — reject before parsing the multipart body. */
-const MAX_FILE_BYTES = 10 * 1024 * 1024
 
 const ConvertRequestSchema = z.object({
   width: z.coerce.number().int().min(1).max(MAX_GRID_DIMENSION),
@@ -27,14 +26,10 @@ const ConvertRequestSchema = z.object({
     .string()
     .default("[]")
     .transform((v) => {
-      try {
-        const arr = JSON.parse(v)
-        return Array.isArray(arr)
-          ? arr.filter((x): x is string => typeof x === "string")
-          : []
-      } catch {
-        return []
-      }
+      const arr = safeParseJson<unknown>(v, [])
+      return Array.isArray(arr)
+        ? arr.filter((x): x is string => typeof x === "string")
+        : []
     }),
 })
 

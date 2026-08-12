@@ -11,11 +11,11 @@ import { PatternExportButton } from "@/components/pattern/detail/export-button"
 import { Button } from "@/components/ui/button"
 import { parseBeadStats, totalBeadCount } from "@/lib/utils"
 import { pageMetadata } from "@/lib/server/meta"
+import { gridSize } from "@/lib/editor"
+import { formatAbsoluteDate, formatRelativeDate } from "@/lib/date"
 import { localizedPath, isLocale } from "@/i18n/config"
 import { getDictionary, getLocale } from "@/i18n/server"
 import { auth } from "@/lib/auth/server"
-import { format, formatDistanceToNow, parseISO, isValid } from "date-fns"
-import { zhCN } from "date-fns/locale"
 
 export async function generateMetadata({
   params,
@@ -43,7 +43,6 @@ export default async function PatternDetailPage({
 }) {
   const [{ id }, locale] = await Promise.all([params, getLocale()])
   const dict = await getDictionary()
-  const dateLocale = locale === "zh" ? zhCN : undefined
 
   const [pattern, session] = await Promise.all([
     getPattern(id),
@@ -57,8 +56,7 @@ export default async function PatternDetailPage({
 
   const grid = pattern.grid
   const beadStats = parseBeadStats(pattern.beadStats)
-  const rows = grid.length
-  const cols = grid[0]?.length ?? 0
+  const { rows, cols } = gridSize(grid) ?? { rows: 0, cols: 0 }
   const totalBeads = totalBeadCount(beadStats)
 
   const sortedStats = Object.entries(beadStats)
@@ -68,13 +66,8 @@ export default async function PatternDetailPage({
       return { code, count, name: color?.name, hex: color?.hex }
     })
 
-  const createdAt = parseISO(pattern.createdAt)
-  const absoluteDate = isValid(createdAt)
-    ? format(createdAt, dict.patternDetail.dateFormat, { locale: dateLocale })
-    : ""
-  const relativeDate = isValid(createdAt)
-    ? formatDistanceToNow(createdAt, { addSuffix: true, locale: dateLocale })
-    : ""
+  const absoluteDate = formatAbsoluteDate(pattern.createdAt, locale, dict.patternDetail.dateFormat)
+  const relativeDate = formatRelativeDate(pattern.createdAt, locale)
 
   const canEdit = Boolean(session && session.user.id === pattern.fkUserId)
 

@@ -1,6 +1,7 @@
 import sharp from "sharp"
 import { converter } from "culori"
-import { MAX_GRID_CELLS, MAX_GRID_DIMENSION, countGridBeads } from "@/lib/editor"
+import { MAX_GRID_CELLS, MAX_GRID_DIMENSION } from "@/lib/constants"
+import { countGridBeads, mostFrequent } from "@/lib/editor"
 import type { Palette } from "@/types"
 
 /** Pixels with alpha below this are treated as empty cells. */
@@ -191,14 +192,8 @@ export class Transform {
    * @param grid      - The code grid to rewrite in place ("" = empty).
    * @param threshold - Maximum OKLab distance between the merged pair.
    */
-  private mergeSimilarColours(grid: string[][], threshold: number): void {
-    const counts = new Map<string, number>()
-    for (const row of grid) {
-      for (const code of row) {
-        if (code === "") continue
-        counts.set(code, (counts.get(code) ?? 0) + 1)
-      }
-    }
+  private mergeSimilarColors(grid: string[][], threshold: number): void {
+    const counts = countGridBeads(grid)
     if (counts.size < 2) return
 
     const codes = Array.from(counts.entries())
@@ -240,7 +235,7 @@ export class Transform {
    *
    * @param grid - The code grid to rewrite in place ("" = empty).
    */
-  private removeBackgroundColour(grid: string[][]): void {
+  private removeBackgroundColor(grid: string[][]): void {
     const h = grid.length
     const w = grid[0]?.length ?? 0
     if (h === 0 || w === 0) return
@@ -259,14 +254,7 @@ export class Transform {
       count(grid[r][w - 1])
     }
 
-    let bg = ""
-    let bgCount = 0
-    for (const [code, n] of borderCounts) {
-      if (n > bgCount) {
-        bgCount = n
-        bg = code
-      }
-    }
+    const bg = mostFrequent(borderCounts)
     if (!bg) return
 
     const visited = new Uint8Array(w * h)
@@ -392,10 +380,10 @@ export class Transform {
 
     const mergeSimilarity = opts.mergeSimilarity ?? 0
     if (mergeSimilarity > 0) {
-      this.mergeSimilarColours(grid, mergeSimilarity)
+      this.mergeSimilarColors(grid, mergeSimilarity)
     }
     if (opts.removeBackground) {
-      this.removeBackgroundColour(grid)
+      this.removeBackgroundColor(grid)
     }
 
     return { grid, width, height, beadCount: countGridBeads(grid).size }
