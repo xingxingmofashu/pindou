@@ -70,6 +70,15 @@ export function safeParseJson<T>(raw: string, fallback: T): T {
   }
 }
 
+/**
+ * Escape `\`, `%` and `_` for use inside a SQL `LIKE` pattern so user input is
+ * matched literally rather than as wildcards. Postgres uses backslash as the
+ * default escape character, so each special char becomes a backslash-pair.
+ */
+export function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (c) => `\\${c}`)
+}
+
 /** Whether the event target is a text field (input, textarea, contenteditable). */
 export function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false

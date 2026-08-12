@@ -1,9 +1,10 @@
 import "server-only"
 import { unstable_cache } from "next/cache"
-import { desc, eq, sql } from "drizzle-orm"
+import { desc, eq, ilike, or, sql } from "drizzle-orm"
 import { db } from "@/db"
 import { brands, patterns } from "@/db/schema"
 import { GridStorage } from "@/lib/grid-storage"
+import { escapeLike } from "@/lib/utils"
 
 /** Grid JSON storage (R2) shared by the data-access functions below. */
 const grids = new GridStorage()
@@ -19,12 +20,21 @@ function isoDate(value: Date | string): string {
 
 /**
  * The paginated pattern list, cached in the data cache (30s) per
- * `page`/`pageSize`. Publishing or editing invalidates it on-demand via
+ * `page`/`pageSize`/`query`. Publishing or editing invalidates it on-demand via
  * {@link revalidateTag}. Used by both GET /api/patterns and the SSR catalog
  * page so a single cached copy serves both.
+ *
+ * @param query - Optional search term matched case-insensitively against the
+ *                pattern title, author name, and brand code. `undefined` or a
+ *                blank string returns all patterns.
  */
 export const getPatternsPage = unstable_cache(
-  async (page: number, pageSize: number) => {
+  async (page: number, pageSize: number, query?: string) => {
+    const q = query?.trim()
+    const like = q ? `%${escapeLike(q)}%` : undefined
+    const where = like
+      ? or(ilike(patterns.title, like), ilike(patterns.authorName, like), ilike(brands.code, like))
+      : undefined
     const rows = await db
       .select({
         id: patterns.id,
@@ -38,6 +48,7 @@ export const getPatternsPage = unstable_cache(
       })
       .from(patterns)
       .innerJoin(brands, eq(patterns.fkBrandId, brands.id))
+      .where(where)
       .orderBy(desc(patterns.createdAt))
       .limit(pageSize)
       .offset((page - 1) * pageSize)
