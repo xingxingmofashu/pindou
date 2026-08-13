@@ -22,7 +22,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
  * Ignored while typing in a text field (dialogs) or when a modifier is held
  * (Cmd/Ctrl+Z, Cmd/Ctrl+Y, …).
  */
-export function useToolShortcuts(onSelectTool: (tool: ToolKind) => void) {
+export function useShortcuts(onSelectTool: (tool: ToolKind) => void) {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return

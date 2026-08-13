@@ -23,12 +23,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { useToolShortcuts } from "@/hooks/use-tool-shortcuts"
+import { useShortcuts } from "@/hooks/use-shortcuts"
 import { usePalette } from "@/hooks/use-palette"
+import { useEditorStore } from "@/hooks/use-editor"
 import { useI18n } from "@/i18n/client"
 import { fetcher } from "@/lib/utils"
-import { DEFAULT_ZOOM } from "@/lib/constants"
-import type { ToolKind, BeadStats } from "@/lib/editor"
+import type { ToolKind, CellsData } from "@/lib/editor"
 import type { Palette } from "@/types"
 
 // Dialogs are only opened on demand — load them (and their heavy deps like
@@ -72,178 +72,86 @@ export default function EditorPage() {
   return <EditorContent />
 }
 
-/** Editor body: owns the editor state and composes the toolbar, panels, and canvas. */
+/**
+ * Editor body: registers the canvas API into the shared store and composes the
+ * toolbar, panels, canvas, and dialogs. Cross-cutting state lives in
+ * {@link useEditorStore}; this component only wires the imperative canvas ref.
+ */
 function EditorContent() {
   const canvasApiRef = useRef<PixiCanvasApi>(null)
-  const [activeTool, setActiveTool] = useState<ToolKind>("pen")
-  const [activeColorIndex, setActiveColorIndex] = useState(1)
-  const [toggleLabels, setToggleLabels] = useState(false)
-  const [showBeadStats, setShowBeadStats] = useState(true)
-  const [showColorPalette, setShowColorPalette] = useState(true)
-  // Recomputed by the canvas whenever the grid changes, so the panel renders
-  // live without the canvas pushing state per pointermove.
-  const [beadStats, setBeadStats] = useState<BeadStats | null>(null)
-  const [publishOpen, setPublishOpen] = useState(false)
-  const [importOpen, setImportOpen] = useState(false)
-  const [exportOpen, setExportOpen] = useState(false)
-  const [zoom, setZoom] = useState(DEFAULT_ZOOM)
-  const [canUndo, setCanUndo] = useState(false)
-  const [canRedo, setCanRedo] = useState(false)
+  const setApi = useEditorStore((s) => s.setApi)
+  const setZoom = useEditorStore((s) => s.setZoom)
+  const setActiveTool = useEditorStore((s) => s.setActiveTool)
+  const activeTool = useEditorStore((s) => s.activeTool)
+  const activeColorIndex = useEditorStore((s) => s.activeColorIndex)
+  const showLabels = useEditorStore((s) => s.showLabels)
+  const showColorPalette = useEditorStore((s) => s.showColorPalette)
+  const showBeadStats = useEditorStore((s) => s.showBeadStats)
+
+  // Registers the canvas's imperative API into the shared store so the toolbar
+  // and dialogs can drive it.
+  useEffect(() => {
+    setApi(canvasApiRef.current)
+    return () => setApi(null)
+  }, [setApi])
 
   // Stable: both dialogs read the canvas grid through it, and the export dialog
   // memoizes on it, so an identity change per render would defeat the memo.
   const onGetCellsData = useCallback(() => canvasApiRef.current?.getCellsData() ?? null, [])
+  // Recomputed by the canvas whenever the grid changes, so the panel renders
+  // live without the canvas pushing state per pointermove.
   const onGridChange = useCallback(() => {
-    setBeadStats(canvasApiRef.current?.getBeadStats() ?? null)
+    useEditorStore.getState().setBeadStats(canvasApiRef.current?.getBeadStats() ?? null)
   }, [])
   const onHistoryChange = useCallback((canUndo: boolean, canRedo: boolean) => {
-    setCanUndo(canUndo)
-    setCanRedo(canRedo)
+    useEditorStore.getState().setHistory(canUndo, canRedo)
   }, [])
 
   // Tool shortcuts (B/E/G) advertised in the toolbar tooltips.
-  useToolShortcuts(setActiveTool)
+  useShortcuts(setActiveTool)
 
   return (
     <div className="flex h-full flex-col gap-2 overflow-hidden">
-      <EditorToolbar
-        activeTool={activeTool}
-        onSelectTool={setActiveTool}
-        onClearCanvas={() => {
-          canvasApiRef.current?.clearCanvas()
-        }}
-        onImportImage={() => setImportOpen(true)}
-        onExportImage={() => setExportOpen(true)}
-        showLabels={toggleLabels}
-        onToggleLabels={() => setToggleLabels((v) => !v)}
-        showBeadStats={showBeadStats}
-        onToggleBeadStats={() => setShowBeadStats((v) => !v)}
-        showColorPalette={showColorPalette}
-        onToggleColorPalette={() => setShowColorPalette((v) => !v)}
-        onPublish={() => setPublishOpen(true)}
-        zoom={zoom}
-        onSetZoom={(z) => canvasApiRef.current?.setZoom(z)}
-        onReset={() => canvasApiRef.current?.fitToCanvas()}
-        canUndo={canUndo}
-        canRedo={canRedo}
-        onUndo={() => canvasApiRef.current?.undo()}
-        onRedo={() => canvasApiRef.current?.redo()}
-      />
+      <EditorToolbar />
       <div className="flex-1 min-h-0 flex gap-2">
-        {showColorPalette && (
-          <EditorColorPalettePanel
-            activeColorIndex={activeColorIndex}
-            onColorPick={setActiveColorIndex}
-          />
-        )}
+        {showColorPalette && <EditorColorPalettePanel />}
         <PixiCanvas
           className="flex-1 min-w-0 border p-2"
           activeTool={activeTool}
           activeColorIndex={activeColorIndex}
-          label={toggleLabels}
+          label={showLabels}
           apiRef={canvasApiRef}
           onZoomChange={setZoom}
           onGridChange={onGridChange}
           onHistoryChange={onHistoryChange}
         />
-        {showBeadStats && <EditorBeadStatsPanel stats={beadStats} />}
+        {showBeadStats && <EditorBeadStatsPanel />}
       </div>
-
-      {publishOpen && (
-        <PublishDialog
-          open={publishOpen}
-          onClose={() => setPublishOpen(false)}
-          onGetCellsData={onGetCellsData}
-        />
-      )}
-
-      {importOpen && (
-        <ImportDialog
-          open={importOpen}
-          onClose={() => setImportOpen(false)}
-          onApply={(grid) => canvasApiRef.current?.loadGrid(grid)}
-        />
-      )}
-
-      {exportOpen && (
-        <ExportDialog
-          open={exportOpen}
-          onClose={() => setExportOpen(false)}
-          onGetCellsData={onGetCellsData}
-        />
-      )}
+      <EditorDialogs onGetCellsData={onGetCellsData} />
     </div>
   )
 }
 
-interface EditorToolbarProps {
-  /** Currently active tool. */
-  activeTool: ToolKind
-  /** Called when the user switches tools. */
-  onSelectTool: (tool: ToolKind) => void
-  /** Called when the user clicks the clear-canvas button. */
-  onClearCanvas: () => void
-  /** Called when the user clicks the import-from-image button. */
-  onImportImage: () => void
-  /** Called when the user clicks the export button (opens the export dialog). */
-  onExportImage: () => void
-  /** Whether colour codes are shown on the canvas. */
-  showLabels: boolean
-  /** Called when the user toggles colour-code labels. */
-  onToggleLabels: () => void
-  /** Whether the bead-usage panel is shown. */
-  showBeadStats: boolean
-  /** Called when the user toggles the bead-usage panel. */
-  onToggleBeadStats: () => void
-  /** Whether the colour palette panel is shown. */
-  showColorPalette: boolean
-  /** Called when the user toggles the colour palette panel. */
-  onToggleColorPalette: () => void
-  /** Called when the user clicks the publish button. */
-  onPublish: () => void
-  /** Current zoom factor (screen pixels per world unit). */
-  zoom: number
-  /**
-   * Set or adjust the zoom level.
-   * Accepts an absolute value or an updater function `(prev: number) => number`.
-   */
-  onSetZoom: (z: number | ((prev: number) => number)) => void
-  /** Reset zoom to default and centre the view. */
-  onReset: () => void
-  /** Whether the user can undo/redo the last canvas edit. */
-  canUndo: boolean
-  /** Whether the user can redo a previously undone canvas edit. */
-  canRedo: boolean
-  /** Called when the user clicks the undo button. */
-  onUndo: () => void
-  /** Called when the user clicks the redo button. */
-  onRedo: () => void
-}
-
 /** Editor top bar: drawing tools, publish button, and zoom controls. */
-function EditorToolbar({
-  activeTool,
-  onSelectTool,
-  onClearCanvas,
-  onImportImage,
-  onExportImage,
-  showLabels,
-  onToggleLabels,
-  showBeadStats,
-  onToggleBeadStats,
-  showColorPalette,
-  onToggleColorPalette,
-  onPublish,
-  zoom,
-  onSetZoom,
-  onReset,
-  canUndo,
-  canRedo,
-  onUndo,
-  onRedo,
-}: EditorToolbarProps) {
+function EditorToolbar() {
   const { t } = useI18n()
   const [clearOpen, setClearOpen] = useState(false)
+
+  const activeTool = useEditorStore((s) => s.activeTool)
+  const setActiveTool = useEditorStore((s) => s.setActiveTool)
+  const showLabels = useEditorStore((s) => s.showLabels)
+  const toggleLabels = useEditorStore((s) => s.toggleLabels)
+  const showBeadStats = useEditorStore((s) => s.showBeadStats)
+  const toggleBeadStats = useEditorStore((s) => s.toggleBeadStats)
+  const showColorPalette = useEditorStore((s) => s.showColorPalette)
+  const toggleColorPalette = useEditorStore((s) => s.toggleColorPalette)
+  const zoom = useEditorStore((s) => s.zoom)
+  const canUndo = useEditorStore((s) => s.canUndo)
+  const canRedo = useEditorStore((s) => s.canRedo)
+  const api = useEditorStore((s) => s.api)
+  const openImport = useEditorStore((s) => s.openImport)
+  const openExport = useEditorStore((s) => s.openExport)
+  const openPublish = useEditorStore((s) => s.openPublish)
 
   return (
     <div className="flex items-center justify-between px-3 py-2 border">
@@ -261,7 +169,7 @@ function EditorToolbar({
                   <Undo2 data-icon="inline-start" />
                 </Button>
               }
-              onClick={onUndo}
+              onClick={() => api?.undo()}
             />
             <TooltipContent side="bottom">
               {t("editor.undo")} (⌘Z)
@@ -279,7 +187,7 @@ function EditorToolbar({
                   <Redo2 data-icon="inline-start" />
                 </Button>
               }
-              onClick={onRedo}
+              onClick={() => api?.redo()}
             />
             <TooltipContent side="bottom">
               {t("editor.redo")} (⇧⌘Z)
@@ -299,7 +207,7 @@ function EditorToolbar({
                       <Icon data-icon="inline-start" />
                     </Button>
                   }
-                  onClick={() => onSelectTool(value)}
+                  onClick={() => setActiveTool(value)}
                 />
                 <TooltipContent side="bottom">
                   {label} ({shortcut})
@@ -318,7 +226,7 @@ function EditorToolbar({
                   <CaseSensitive data-icon="inline-start" />
                 </Button>
               }
-              onClick={onToggleLabels}
+              onClick={toggleLabels}
             />
             <TooltipContent side="bottom">{t("editor.labels")}</TooltipContent>
           </Tooltip>
@@ -334,7 +242,7 @@ function EditorToolbar({
                   <PaletteIcon data-icon="inline-start" />
                 </Button>
               }
-              onClick={onToggleColorPalette}
+              onClick={toggleColorPalette}
             />
             <TooltipContent side="bottom">{t("editor.colorPalette")}</TooltipContent>
           </Tooltip>
@@ -349,7 +257,7 @@ function EditorToolbar({
                   <List data-icon="inline-start" />
                 </Button>
               }
-              onClick={onToggleBeadStats}
+              onClick={toggleBeadStats}
             />
             <TooltipContent side="bottom">{t("editor.beadStats")}</TooltipContent>
           </Tooltip>
@@ -380,7 +288,7 @@ function EditorToolbar({
                 <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => {
-                    onClearCanvas()
+                    api?.clearCanvas()
                     setClearOpen(false)
                   }}
                 >
@@ -395,7 +303,7 @@ function EditorToolbar({
         <Tooltip>
           <TooltipTrigger
             render={
-              <Button size="sm" variant="outline" onClick={onImportImage}>
+              <Button size="sm" variant="outline" onClick={openImport}>
                 <ImagePlus data-icon="inline-start" />
                 {t("editor.import")}
               </Button>
@@ -406,7 +314,7 @@ function EditorToolbar({
         <Tooltip>
           <TooltipTrigger
             render={
-              <Button size="sm" variant="outline" onClick={onExportImage}>
+              <Button size="sm" variant="outline" onClick={openExport}>
                 <Download data-icon="inline-start" />
                 {t("editor.export")}
               </Button>
@@ -414,36 +322,74 @@ function EditorToolbar({
           />
           <TooltipContent side="bottom">{t("editor.exportAsPng")}</TooltipContent>
         </Tooltip>
-        <Button size="sm" onClick={onPublish}>
+        <Button size="sm" onClick={openPublish}>
           {t("editor.publish")}
         </Button>
-        <ZoomControls zoom={zoom} onSetZoom={onSetZoom} onReset={onReset} />
+        <ZoomControls
+          zoom={zoom}
+          onSetZoom={(z) => api?.setZoom(z)}
+          onReset={() => api?.fitToCanvas()}
+        />
       </div>
     </div>
   )
 }
 
 /** Left sidebar: the colour palette with brand switcher. */
-function EditorColorPalettePanel({
-  activeColorIndex,
-  onColorPick,
-}: {
-  activeColorIndex: number
-  onColorPick: (index: number) => void
-}) {
+function EditorColorPalettePanel() {
+  const activeColorIndex = useEditorStore((s) => s.activeColorIndex)
+  const setActiveColorIndex = useEditorStore((s) => s.setActiveColorIndex)
   return (
     <div className="w-56 shrink-0 overflow-hidden">
-      <ColorPalette activeColorIndex={activeColorIndex} onColorPick={onColorPick} />
+      <ColorPalette activeColorIndex={activeColorIndex} onColorPick={setActiveColorIndex} />
     </div>
   )
 }
 
 /** Right sidebar: live bead-usage counts. */
-function EditorBeadStatsPanel({ stats }: { stats: BeadStats | null }) {
+function EditorBeadStatsPanel() {
+  const beadStats = useEditorStore((s) => s.beadStats)
   return (
     <div className="w-56 shrink-0 overflow-hidden">
-      <BeadStatsPanel stats={stats} />
+      <BeadStatsPanel stats={beadStats} />
     </div>
+  )
+}
+
+/** Publish / import / export dialogs, driven by the shared store. */
+function EditorDialogs({ onGetCellsData }: { onGetCellsData: () => CellsData | null }) {
+  const publishOpen = useEditorStore((s) => s.publishOpen)
+  const closePublish = useEditorStore((s) => s.closePublish)
+  const importOpen = useEditorStore((s) => s.importOpen)
+  const closeImport = useEditorStore((s) => s.closeImport)
+  const exportOpen = useEditorStore((s) => s.exportOpen)
+  const closeExport = useEditorStore((s) => s.closeExport)
+  const api = useEditorStore((s) => s.api)
+
+  return (
+    <>
+      {publishOpen && (
+        <PublishDialog
+          open={publishOpen}
+          onClose={closePublish}
+          onGetCellsData={onGetCellsData}
+        />
+      )}
+      {importOpen && (
+        <ImportDialog
+          open={importOpen}
+          onClose={closeImport}
+          onApply={(grid) => api?.loadGrid(grid)}
+        />
+      )}
+      {exportOpen && (
+        <ExportDialog
+          open={exportOpen}
+          onClose={closeExport}
+          onGetCellsData={onGetCellsData}
+        />
+      )}
+    </>
   )
 }
 

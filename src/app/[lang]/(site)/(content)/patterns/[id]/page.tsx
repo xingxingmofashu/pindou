@@ -15,7 +15,7 @@ import { gridSize } from "@/lib/editor"
 import { formatAbsoluteDate, formatRelativeDate } from "@/lib/date"
 import { localizedPath } from "@/i18n/config"
 import { useI18n } from "@/i18n/client"
-import { usePatternViewerStore } from "@/hooks/use-pattern-viewer"
+import { usePatternStore } from "@/hooks/use-pattern"
 import type { PatternDetailType } from "@/db/schema"
 import type { Palette } from "@/types"
 
@@ -54,8 +54,8 @@ function PatternDetailContent({
   // Registers the canvas's imperative API into the shared store so the
   // toolbar's zoom controls can drive it.
   const canvasApiRef = useRef<PixiCanvasApi>(null)
-  const setApi = usePatternViewerStore((s) => s.setApi)
-  const setZoom = usePatternViewerStore((s) => s.setZoom)
+  const setApi = usePatternStore((s) => s.setApi)
+  const setZoom = usePatternStore((s) => s.setZoom)
   useEffect(() => {
     setApi(canvasApiRef.current)
     return () => setApi(null)
@@ -129,8 +129,8 @@ function PatternToolbar({
 }) {
   const { locale, t } = useI18n()
   const [exportOpen, setExportOpen] = useState(false)
-  const api = usePatternViewerStore((s) => s.api)
-  const zoom = usePatternViewerStore((s) => s.zoom)
+  const api = usePatternStore((s) => s.api)
+  const zoom = usePatternStore((s) => s.zoom)
 
   // Stable: the export dialog memoizes on it, so an identity change per render
   // would defeat the memo.
