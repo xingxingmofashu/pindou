@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useRef } from "react"
 import Link from "next/link"
 import useSWR from "swr"
 import { useParams, useRouter } from "next/navigation"
@@ -14,20 +14,18 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { toast } from "@/components/ui/toast"
 import { PatternUpdateSchema } from "@/db/schema"
 import { fetcher, postJson } from "@/lib/utils"
-import { DEFAULT_ZOOM } from "@/lib/constants"
 import { localizedPath } from "@/i18n/config"
 import { useI18n } from "@/i18n/client"
-import type { BeadStats } from "@/lib/editor"
+import { useEditStore } from "@/hooks/use-edit"
 import type { PatternDetailType } from "@/db/schema"
 import type { Palette } from "@/types"
-import Loading from "./loading"
-import Error from "./error"
 
 export default function PatternEditPage() {
   const { id } = useParams<{ id: string }>()
@@ -41,7 +39,7 @@ export default function PatternEditPage() {
   // Pattern fetch failed — show an error state instead of a blank page.
   if (error) {
     return (
-      <Error
+      <PatternEditError
         title={t("patternDetail.loadFailedTitle")}
         description={t("patternDetail.loadFailedDescription")}
         onRetry={() => mutate()}
@@ -53,7 +51,7 @@ export default function PatternEditPage() {
   // distinct error instead of spinning forever.
   if (brandError) {
     return (
-      <Error
+      <PatternEditError
         title={t("patternDetail.paletteFailedTitle")}
         description={t("patternDetail.paletteFailedDescription")}
         onRetry={() => mutateBrand()}
@@ -62,7 +60,7 @@ export default function PatternEditPage() {
   }
 
   if (!data || !brand) {
-    return <Loading />
+    return <PatternEditLoading />
   }
 
   if (!data.canEdit) {
@@ -80,193 +78,15 @@ export default function PatternEditPage() {
     )
   }
 
-  return <EditForm key={data.id} id={id} pattern={data} palette={brand} />
+  return <PatternEditForm key={data.id} id={id} pattern={data} palette={brand} />
 }
 
-interface EditToolbarProps {
-  id: string
-  showLabels: boolean
-  onToggleLabels: () => void
-  showLeftPanel: boolean
-  onToggleLeftPanel: () => void
-  showBeadStats: boolean
-  onToggleBeadStats: () => void
-  zoom: number
-  onSetZoom: (z: number | ((prev: number) => number)) => void
-  onReset: () => void
-  onExport: () => void
-  saving: boolean
-  onSave: () => void
-}
-
-/** Pattern-editor toolbar: back + title on the left, view toggles and actions on the right. */
-function EditToolbar({
-  id,
-  showLabels,
-  onToggleLabels,
-  showLeftPanel,
-  onToggleLeftPanel,
-  showBeadStats,
-  onToggleBeadStats,
-  zoom,
-  onSetZoom,
-  onReset,
-  onExport,
-  saving,
-  onSave,
-}: EditToolbarProps) {
-  const { locale, t } = useI18n()
-  return (
-    <div className="flex items-center justify-between gap-2 border px-3 py-2">
-      <div className="flex min-w-0 items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          nativeButton={false}
-          render={<Link href={localizedPath(locale, `/patterns/${id}`)} />}
-        >
-          <ArrowLeft data-icon="inline-start" />
-          {t("patternDetail.backToPattern")}
-        </Button>
-        <h1 className="truncate text-sm font-semibold">{t("patternDetail.editTitle")}</h1>
-      </div>
-      <div className="flex items-center gap-2">
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant={showLabels ? "secondary" : "outline"}
-                size="icon-sm"
-                aria-label={t("editor.showLabels")}
-              >
-                <CaseSensitive data-icon="inline-start" />
-              </Button>
-            }
-            onClick={onToggleLabels}
-          />
-          <TooltipContent side="bottom">{t("editor.labels")}</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant={showLeftPanel ? "secondary" : "outline"}
-                size="icon-sm"
-                aria-label={t("editor.showColorPaletteToggle")}
-              >
-                <PaletteIcon data-icon="inline-start" />
-              </Button>
-            }
-            onClick={onToggleLeftPanel}
-          />
-          <TooltipContent side="bottom">{t("editor.colorPalette")}</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant={showBeadStats ? "secondary" : "outline"}
-                size="icon-sm"
-                aria-label={t("editor.showBeadStatsToggle")}
-              >
-                <List data-icon="inline-start" />
-              </Button>
-            }
-            onClick={onToggleBeadStats}
-          />
-          <TooltipContent side="bottom">{t("editor.beadStats")}</TooltipContent>
-        </Tooltip>
-        <Separator orientation="vertical" className="mx-1 h-5" />
-        <ZoomControls zoom={zoom} onSetZoom={onSetZoom} onReset={onReset} />
-        <Button variant="outline" size="sm" onClick={onExport}>
-          <Download data-icon="inline-start" />
-          {t("editor.export")}
-        </Button>
-        <Button size="sm" onClick={onSave} disabled={saving}>
-          {saving && <Spinner data-icon="inline-start" />}
-          {t("patternDetail.save")}
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-interface EditFieldsPanelProps {
-  title: string
-  onTitleChange: (value: string) => void
-  description: string
-  onDescriptionChange: (value: string) => void
-  palette: Palette
-  activeColorIndex: number
-  onColorPick: (index: number) => void
-}
-
-/** Collapsible left panel: title/description fields plus the colour palette. */
-function EditFieldsPanel({
-  title,
-  onTitleChange,
-  description,
-  onDescriptionChange,
-  palette,
-  activeColorIndex,
-  onColorPick,
-}: EditFieldsPanelProps) {
-  const { t } = useI18n()
-  return (
-    <div className="flex w-56 shrink-0 min-h-0 flex-col gap-3 overflow-hidden">
-      <div className="space-y-1.5 border p-3">
-        <div className="grid gap-1.5">
-          <Label htmlFor="edit-title">
-            {t("editor.title")} <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="edit-title"
-            type="text"
-            maxLength={100}
-            value={title}
-            onChange={(e) => onTitleChange(e.target.value)}
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="edit-description">{t("editor.description")}</Label>
-          <Textarea
-            id="edit-description"
-            maxLength={280}
-            rows={2}
-            value={description}
-            onChange={(e) => onDescriptionChange(e.target.value)}
-            className="resize-none"
-          />
-        </div>
-        <p className="text-xs text-muted-foreground">{t("patternDetail.editHint")}</p>
-      </div>
-      <div className="flex-1 min-h-0">
-        <ColorPalette
-          palette={palette}
-          activeColorIndex={activeColorIndex}
-          onColorPick={onColorPick}
-        />
-      </div>
-    </div>
-  )
-}
-
-interface EditBeadStatsPanelProps {
-  stats: BeadStats | null
-  palette: Palette
-}
-
-/** Collapsible right panel: live bead-usage counts. */
-function EditBeadStatsPanel({ stats, palette }: EditBeadStatsPanelProps) {
-  return (
-    <div className="w-56 shrink-0 min-h-0 overflow-hidden">
-      <BeadStatsPanel stats={stats} palette={palette} />
-    </div>
-  )
-}
-
-/** Editable form + canvas for an owned pattern (lazy-inits from the loaded pattern). */
-function EditForm({
+/**
+ * Editable form + canvas for an owned pattern. Registers the canvas API and
+ * seeds the shared store from the loaded pattern; the toolbar, panels, and
+ * export dialog all read/write {@link useEditStore}.
+ */
+function PatternEditForm({
   id,
   pattern,
   palette,
@@ -278,32 +98,42 @@ function EditForm({
   const router = useRouter()
   const { locale, t } = useI18n()
   const canvasApiRef = useRef<PixiCanvasApi>(null)
-  const [title, setTitle] = useState(pattern.title)
-  const [description, setDescription] = useState(pattern.description ?? "")
-  const [activeColorIndex, setActiveColorIndex] = useState(1)
-  const [showLabels, setShowLabels] = useState(false)
-  const [showLeftPanel, setShowLeftPanel] = useState(true)
-  const [showBeadStats, setShowBeadStats] = useState(true)
-  const [zoom, setZoom] = useState(DEFAULT_ZOOM)
-  const [beadStats, setBeadStats] = useState<BeadStats | null>(null)
-  const [exportOpen, setExportOpen] = useState(false)
-  const [saving, setSaving] = useState(false)
+  const setApi = useEditStore((s) => s.setApi)
+  const setZoom = useEditStore((s) => s.setZoom)
+  const activeColorIndex = useEditStore((s) => s.activeColorIndex)
+  const showLabels = useEditStore((s) => s.showLabels)
+  const showLeftPanel = useEditStore((s) => s.showLeftPanel)
+  const showBeadStats = useEditStore((s) => s.showBeadStats)
+  const exportOpen = useEditStore((s) => s.exportOpen)
+  const closeExport = useEditStore((s) => s.closeExport)
+
+  // Seed the draft fields + reset per-instance state on mount (the `key` above
+  // remounts this form when the pattern changes).
+  useEffect(() => {
+    useEditStore.getState().reset(pattern.title, pattern.description ?? "")
+  }, [pattern])
+
+  // Registers the canvas's imperative API into the shared store.
+  useEffect(() => {
+    setApi(canvasApiRef.current)
+    return () => setApi(null)
+  }, [setApi])
+
+  // Stable so the export dialog's memoized grid snapshot stays valid.
+  const onGetCellsData = useCallback(() => canvasApiRef.current?.getCellsData() ?? null, [])
+  // Recomputed by the canvas whenever the grid changes (stroke end, fill,
+  // clear, import) so the bead-usage panel stays live.
+  const onGridChange = useCallback(() => {
+    useEditStore.getState().setBeadStats(canvasApiRef.current?.getBeadStats() ?? null)
+  }, [])
 
   const backToPattern = useCallback(
     () => router.push(localizedPath(locale, `/patterns/${id}`)),
     [router, locale, id],
   )
 
-  // Recomputed by the canvas whenever the grid changes (stroke end, fill,
-  // clear, import) so the bead-usage panel stays live.
-  const onGridChange = useCallback(() => {
-    setBeadStats(canvasApiRef.current?.getBeadStats() ?? null)
-  }, [])
-
-  // Stable so the export dialog's memoized grid snapshot stays valid.
-  const onGetCellsData = useCallback(() => canvasApiRef.current?.getCellsData() ?? null, [])
-
   const handleSave = useCallback(async () => {
+    const { title, description } = useEditStore.getState()
     if (!title.trim()) {
       toast.add({
         type: "error",
@@ -337,7 +167,7 @@ function EditForm({
       return
     }
 
-    setSaving(true)
+    useEditStore.getState().setSaving(true)
     try {
       await postJson<{ id: string }>(
         `/api/patterns/${id}`,
@@ -354,41 +184,15 @@ function EditForm({
         description: e instanceof globalThis.Error ? e.message : t("editor.networkError"),
       })
     } finally {
-      setSaving(false)
+      useEditStore.getState().setSaving(false)
     }
-  }, [title, description, id, t, backToPattern])
+  }, [id, t, backToPattern])
 
   return (
     <div className="flex h-full flex-col gap-2 overflow-hidden">
-      <EditToolbar
-        id={id}
-        showLabels={showLabels}
-        onToggleLabels={() => setShowLabels((v) => !v)}
-        showLeftPanel={showLeftPanel}
-        onToggleLeftPanel={() => setShowLeftPanel((v) => !v)}
-        showBeadStats={showBeadStats}
-        onToggleBeadStats={() => setShowBeadStats((v) => !v)}
-        zoom={zoom}
-        onSetZoom={(z) => canvasApiRef.current?.setZoom(z)}
-        onReset={() => canvasApiRef.current?.fitToCanvas()}
-        onExport={() => setExportOpen(true)}
-        saving={saving}
-        onSave={handleSave}
-      />
-
-      {/* Left panel (collapsible), canvas, right bead-usage panel (collapsible). */}
+      <PatternEditToolbar id={id} onSave={handleSave} />
       <div className="flex-1 min-h-0 flex gap-2">
-        {showLeftPanel && (
-          <EditFieldsPanel
-            title={title}
-            onTitleChange={setTitle}
-            description={description}
-            onDescriptionChange={setDescription}
-            palette={palette}
-            activeColorIndex={activeColorIndex}
-            onColorPick={setActiveColorIndex}
-          />
-        )}
+        {showLeftPanel && <PatternEditFieldsPanel palette={palette} />}
         <PixiCanvas
           palette={palette}
           grid={pattern.gridData}
@@ -399,19 +203,217 @@ function EditForm({
           onGridChange={onGridChange}
           className="flex-1 min-w-0 border"
         />
-        {showBeadStats && (
-          <EditBeadStatsPanel stats={beadStats} palette={palette} />
-        )}
+        {showBeadStats && <PatternEditBeadStatsPanel palette={palette} />}
       </div>
+      <ExportDialog
+        open={exportOpen}
+        onClose={closeExport}
+        onGetCellsData={onGetCellsData}
+        palette={palette}
+      />
+    </div>
+  )
+}
 
-      {exportOpen && (
-        <ExportDialog
-          open={exportOpen}
-          onClose={() => setExportOpen(false)}
-          onGetCellsData={onGetCellsData}
-          palette={palette}
+/** Pattern-editor toolbar: back + title on the left, view toggles and actions on the right. */
+function PatternEditToolbar({ id, onSave }: { id: string; onSave: () => void }) {
+  const { locale, t } = useI18n()
+  const showLabels = useEditStore((s) => s.showLabels)
+  const toggleLabels = useEditStore((s) => s.toggleLabels)
+  const showLeftPanel = useEditStore((s) => s.showLeftPanel)
+  const toggleLeftPanel = useEditStore((s) => s.toggleLeftPanel)
+  const showBeadStats = useEditStore((s) => s.showBeadStats)
+  const toggleBeadStats = useEditStore((s) => s.toggleBeadStats)
+  const zoom = useEditStore((s) => s.zoom)
+  const api = useEditStore((s) => s.api)
+  const openExport = useEditStore((s) => s.openExport)
+  const saving = useEditStore((s) => s.saving)
+
+  return (
+    <div className="flex items-center justify-between gap-2 border px-3 py-2">
+      <div className="flex min-w-0 items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          nativeButton={false}
+          render={<Link href={localizedPath(locale, `/patterns/${id}`)} />}
+        >
+          <ArrowLeft data-icon="inline-start" />
+          {t("patternDetail.backToPattern")}
+        </Button>
+        <h1 className="truncate text-sm font-semibold">{t("patternDetail.editTitle")}</h1>
+      </div>
+      <div className="flex items-center gap-2">
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant={showLabels ? "secondary" : "outline"}
+                size="icon-sm"
+                aria-label={t("editor.showLabels")}
+              >
+                <CaseSensitive data-icon="inline-start" />
+              </Button>
+            }
+            onClick={toggleLabels}
+          />
+          <TooltipContent side="bottom">{t("editor.labels")}</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant={showLeftPanel ? "secondary" : "outline"}
+                size="icon-sm"
+                aria-label={t("editor.showColorPaletteToggle")}
+              >
+                <PaletteIcon data-icon="inline-start" />
+              </Button>
+            }
+            onClick={toggleLeftPanel}
+          />
+          <TooltipContent side="bottom">{t("editor.colorPalette")}</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant={showBeadStats ? "secondary" : "outline"}
+                size="icon-sm"
+                aria-label={t("editor.showBeadStatsToggle")}
+              >
+                <List data-icon="inline-start" />
+              </Button>
+            }
+            onClick={toggleBeadStats}
+          />
+          <TooltipContent side="bottom">{t("editor.beadStats")}</TooltipContent>
+        </Tooltip>
+        <Separator orientation="vertical" className="mx-1 h-5" />
+        <ZoomControls
+          zoom={zoom}
+          onSetZoom={(z) => api?.setZoom(z)}
+          onReset={() => api?.fitToCanvas()}
         />
-      )}
+        <Button variant="outline" size="sm" onClick={openExport}>
+          <Download data-icon="inline-start" />
+          {t("editor.export")}
+        </Button>
+        <Button size="sm" onClick={onSave} disabled={saving}>
+          {saving && <Spinner data-icon="inline-start" />}
+          {t("patternDetail.save")}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+/** Collapsible left panel: title/description fields plus the colour palette. */
+function PatternEditFieldsPanel({ palette }: { palette: Palette }) {
+  const { t } = useI18n()
+  const title = useEditStore((s) => s.title)
+  const setTitle = useEditStore((s) => s.setTitle)
+  const description = useEditStore((s) => s.description)
+  const setDescription = useEditStore((s) => s.setDescription)
+  const activeColorIndex = useEditStore((s) => s.activeColorIndex)
+  const setActiveColorIndex = useEditStore((s) => s.setActiveColorIndex)
+
+  return (
+    <div className="flex w-56 shrink-0 min-h-0 flex-col gap-3 overflow-hidden">
+      <div className="space-y-1.5 border p-3">
+        <div className="grid gap-1.5">
+          <Label htmlFor="edit-title">
+            {t("editor.title")} <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="edit-title"
+            type="text"
+            maxLength={100}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="edit-description">{t("editor.description")}</Label>
+          <Textarea
+            id="edit-description"
+            maxLength={280}
+            rows={2}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="resize-none"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">{t("patternDetail.editHint")}</p>
+      </div>
+      <div className="flex-1 min-h-0">
+        <ColorPalette
+          palette={palette}
+          activeColorIndex={activeColorIndex}
+          onColorPick={setActiveColorIndex}
+        />
+      </div>
+    </div>
+  )
+}
+
+/** Collapsible right panel: live bead-usage counts. */
+function PatternEditBeadStatsPanel({ palette }: { palette: Palette }) {
+  const beadStats = useEditStore((s) => s.beadStats)
+  return (
+    <div className="w-56 shrink-0 min-h-0 overflow-hidden">
+      <BeadStatsPanel stats={beadStats} palette={palette} />
+    </div>
+  )
+}
+
+/** Skeleton shown while the pattern + palette load. */
+function PatternEditLoading() {
+  return (
+    <div className="flex h-full flex-col gap-2 overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-3 py-2 border">
+        <Skeleton className="h-8 w-24" />
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="h-8 w-16" />
+      </div>
+      <div className="flex-1 min-h-0 flex gap-2">
+        <div className="w-56 shrink-0 flex flex-col gap-3">
+          <div className="space-y-1.5 border p-3">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-16 w-full" />
+          </div>
+          <div className="flex-1 min-h-0">
+            <Skeleton className="h-full w-full rounded-none border" />
+          </div>
+        </div>
+        <Skeleton className="flex-1 min-w-0 rounded-none border" />
+      </div>
+    </div>
+  )
+}
+
+/** Centered error panel with a retry button. */
+function PatternEditError({
+  title,
+  description,
+  onRetry,
+}: {
+  title: string
+  description: string
+  onRetry: () => void
+}) {
+  const { t } = useI18n()
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-3 border p-6 text-center">
+      <div>
+        <p className="text-sm font-medium">{title}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+      </div>
+      <Button variant="outline" onClick={onRetry}>
+        {t("common.retry")}
+      </Button>
     </div>
   )
 }
