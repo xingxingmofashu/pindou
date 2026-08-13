@@ -1,4 +1,4 @@
-import { Footer } from "@/components/layout/footer";
+import { Footer } from "@/components/footer";
 
 /** Content pages (home, pattern list, pattern detail) get a footer; the
  * editor lives outside this route group so it stays a full-screen workspace. */

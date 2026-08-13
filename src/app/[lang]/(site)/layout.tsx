@@ -1,5 +1,5 @@
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Header } from "@/components/layout/header";
+import { Header } from "@/components/header";
 
 export default function SiteLayout({ children }: LayoutProps<"/[lang]">) {
   return (

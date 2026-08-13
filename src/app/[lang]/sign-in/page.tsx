@@ -1,7 +1,7 @@
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
-import { GitHubButton } from "@/components/auth/github-button"
-import { Logo } from "@/components/layout/logo"
+import { GitHubButton } from "@/components/github-button"
+import { Logo } from "@/components/logo"
 import { auth } from "@/lib/auth/server"
 import { getLocale } from "@/i18n/server"
 
