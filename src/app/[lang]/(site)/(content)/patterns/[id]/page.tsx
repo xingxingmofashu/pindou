@@ -4,12 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import useSWR from "swr"
-import { Download } from "lucide-react"
+import { Download, Info, List } from "lucide-react"
 import { PixiCanvas, type PixiCanvasApi } from "@/components/pixi-canvas"
 import { ZoomControls } from "@/components/zoom-controls"
 import { ExportDialog } from "@/components/dialogs/export-dialog"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { fetcher, parseBeadStats, totalBeadCount } from "@/lib/utils"
 import { gridSize } from "@/lib/editor"
 import { formatAbsoluteDate, formatRelativeDate } from "@/lib/date"
@@ -56,6 +57,8 @@ function PatternDetailContent({
   const canvasApiRef = useRef<PixiCanvasApi>(null)
   const setApi = usePatternStore((s) => s.setApi)
   const setZoom = usePatternStore((s) => s.setZoom)
+  const showInfoPanel = usePatternStore((s) => s.showInfoPanel)
+  const showBeadStats = usePatternStore((s) => s.showBeadStats)
   useEffect(() => {
     setApi(canvasApiRef.current)
     return () => setApi(null)
@@ -87,25 +90,27 @@ function PatternDetailContent({
         canEdit={pattern.canEdit}
       />
       <div className="flex min-h-0 flex-1 gap-2">
-        <PatternInfoPanel
-          authorName={pattern.authorName ?? null}
-          relativeDate={relativeDate}
-          absoluteDate={absoluteDate}
-          description={pattern.description || null}
-          cols={cols}
-          rows={rows}
-          totalBeads={totalBeads}
-          brand={palette.name}
-        />
+        {showInfoPanel && (
+          <PatternInfoPanel
+            authorName={pattern.authorName ?? null}
+            relativeDate={relativeDate}
+            absoluteDate={absoluteDate}
+            description={pattern.description || null}
+            cols={cols}
+            rows={rows}
+            totalBeads={totalBeads}
+            brand={palette.name}
+          />
+        )}
         <PixiCanvas
           grid={grid}
           palette={palette}
           readonly
           apiRef={canvasApiRef}
           onZoomChange={setZoom}
-          className="min-h-0 flex-1 border"
+          className="min-h-0 min-w-0 flex-1 border"
         />
-        <PatternBeadStatsPanel sortedStats={sortedStats} />
+        {showBeadStats && <PatternBeadStatsPanel sortedStats={sortedStats} />}
       </div>
     </div>
   )
@@ -131,6 +136,10 @@ function PatternToolbar({
   const [exportOpen, setExportOpen] = useState(false)
   const api = usePatternStore((s) => s.api)
   const zoom = usePatternStore((s) => s.zoom)
+  const showInfoPanel = usePatternStore((s) => s.showInfoPanel)
+  const toggleInfoPanel = usePatternStore((s) => s.toggleInfoPanel)
+  const showBeadStats = usePatternStore((s) => s.showBeadStats)
+  const toggleBeadStats = usePatternStore((s) => s.toggleBeadStats)
 
   // Stable: the export dialog memoizes on it, so an identity change per render
   // would defeat the memo.
@@ -143,6 +152,36 @@ function PatternToolbar({
     <div className="flex items-center justify-between gap-2 border px-3 py-2">
       <h1 className="min-w-0 truncate text-sm font-semibold">{title}</h1>
       <div className="flex shrink-0 items-center gap-2">
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant={showInfoPanel ? "secondary" : "outline"}
+                size="icon-sm"
+                aria-label={t("patternDetail.infoPanel")}
+              >
+                <Info data-icon="inline-start" />
+              </Button>
+            }
+            onClick={toggleInfoPanel}
+          />
+          <TooltipContent side="bottom">{t("patternDetail.infoPanel")}</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant={showBeadStats ? "secondary" : "outline"}
+                size="icon-sm"
+                aria-label={t("patternDetail.beadsUsed")}
+              >
+                <List data-icon="inline-start" />
+              </Button>
+            }
+            onClick={toggleBeadStats}
+          />
+          <TooltipContent side="bottom">{t("patternDetail.beadsUsed")}</TooltipContent>
+        </Tooltip>
         <Button
           size="sm"
           variant="outline"

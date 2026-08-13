@@ -77,6 +77,7 @@
     "anonymous": "Anonymous",
     "published": "Published",
     "beadsUsed": "Beads Used",
+    "infoPanel": "Pattern info",
     "edit": "Edit",
     "editTitle": "Edit Pattern",
     "editHint": "Edit the pattern on the canvas, then save.",
