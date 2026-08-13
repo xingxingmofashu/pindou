@@ -9,11 +9,9 @@ export const MAX_GRID_DIMENSION = 4096
  */
 export const MAX_GRID_CELLS = 1_000_000
 
-/**
- * Hard cap on a single image upload (the import dialog mirrors it) and on a
- * publish/edit JSON body — both stay within the grid budget above.
- */
-export const MAX_FILE_BYTES = 10 * 1024 * 1024
+/** Hard cap on a single image upload (the import dialog mirrors it). */
+export const MAX_FILE_BYTES = 40 * 1024 * 1024
+/** Hard cap on a publish/edit JSON body — stays within the grid budget above. */
 export const MAX_BODY_BYTES = 20 * 1024 * 1024
 
 /** Per-user budget for publish/edit — both render a thumbnail and upload to R2. */

@@ -164,7 +164,7 @@
     "unsupportedFile": "Unsupported file",
     "unsupportedFileDescription": "Please choose an image file.",
     "fileTooLarge": "File too large",
-    "fileTooLargeDescription": "File must be 10MB or smaller.",
+    "fileTooLargeDescription": "File must be 40MB or smaller.",
     "exportTitle": "Export Pattern",
     "exportDescription": "Download the pattern as a high-resolution PNG with grid and coordinates.",
     "showColourCodes": "Show colour codes",
