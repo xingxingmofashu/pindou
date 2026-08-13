@@ -63,6 +63,20 @@ export const getPatternsPage = unstable_cache(
 )
 
 /**
+ * Every published pattern id, cached in the data cache (5m). The sitemap needs
+ * only the ids (not the full rows or their R2 grids), so this is a cheap
+ * id-only query — publishing/editing invalidates it via {@link revalidateTag}.
+ */
+export const getAllPatternIds = unstable_cache(
+  async (): Promise<string[]> => {
+    const rows = await db.select({ id: patterns.id }).from(patterns)
+    return rows.map((r) => r.id)
+  },
+  ["pattern-ids"],
+  { revalidate: 300, tags: ["patterns"] },
+)
+
+/**
  * Public pattern data (row + R2 grid JSON) cached via the data cache — the
  * grid fetch from R2 is the expensive part, so it's cached across requests.
  * Edits invalidate every pattern entry via {@link revalidateTag} on PATCH,

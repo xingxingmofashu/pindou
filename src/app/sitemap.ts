@@ -1,13 +1,12 @@
 import type { MetadataRoute } from "next"
-import { db } from "@/db"
-import { patterns } from "@/db/schema"
+import { getAllPatternIds } from "@/lib/server/patterns"
 import { SITE_URL } from "@/lib/server/meta"
 import { localizedPath, locales } from "@/i18n/config"
 
 const STATIC_PATHS = ["/", "/patterns", "/editor"] as const
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const rows = await db.select({ id: patterns.id }).from(patterns)
+  const ids = await getAllPatternIds()
 
   const entries: MetadataRoute.Sitemap = []
   for (const locale of locales) {
@@ -18,7 +17,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: path === "/" ? 1 : 0.8,
       })
     }
-    for (const { id } of rows) {
+    for (const id of ids) {
       entries.push({
         url: new URL(localizedPath(locale, `/patterns/${id}`), SITE_URL).toString(),
         changeFrequency: "monthly",
