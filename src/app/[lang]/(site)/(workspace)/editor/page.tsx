@@ -25,6 +25,7 @@ import {
 import { useShortcuts } from "@/hooks/use-shortcuts"
 import { useEditorStore } from "@/hooks/use-editor"
 import { usePalette } from "@/hooks/use-palette"
+import { UnsavedChangesGuard } from "@/components/unsaved-changes-guard"
 import { useI18n } from "@/i18n/client"
 import type { ToolKind, CellsData } from "@/lib/editor"
 
@@ -65,6 +66,7 @@ export default function EditorContent() {
   const showLabels = useEditorStore((s) => s.showLabels)
   const showColorPalette = useEditorStore((s) => s.showColorPalette)
   const showBeadStats = useEditorStore((s) => s.showBeadStats)
+  const beadStats = useEditorStore((s) => s.beadStats)
   const { palette } = usePalette()
 
   // Registers the canvas's imperative API into the shared store so the toolbar
@@ -97,6 +99,7 @@ export default function EditorContent() {
 
   return (
     <div className="flex h-full flex-col gap-2 overflow-hidden">
+      <UnsavedChangesGuard dirty={beadStats !== null} />
       <EditorToolbar />
       <div className="flex-1 min-h-0 flex gap-2">
         {showColorPalette && <EditorColorPalettePanel />}
