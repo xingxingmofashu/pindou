@@ -16,7 +16,9 @@
     "continueWithGitHub": "使用 GitHub 继续",
     "signInPrompt": "使用 GitHub 登录，你的名字会显示在图案上。",
     "signInToPublish": "登录后发布",
-    "publishedAs": "以 {name} 发布。"
+    "publishedAs": "以 {name} 发布。",
+    "signInFailed": "登录失败",
+    "signInFailedDescription": "无法连接到 GitHub，请重试。"
   },
   "common": {
     "cancel": "取消",

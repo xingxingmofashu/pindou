@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
+import { toast } from "@/components/ui/toast"
 import { signIn } from "@/lib/auth/client"
 import { GithubIcon } from "@/components/icon/github"
 import { useI18n } from "@/i18n/client"
@@ -10,8 +11,8 @@ import { useI18n } from "@/i18n/client"
 interface GitHubButtonProps {
   label?: string
   className?: string
-  /** URL to return to after OAuth; defaults to the current page. */
-  callbackURL?: string
+  /** URL to return to after OAuth. */
+  callbackURL: string
 }
 
 export function GitHubButton({
@@ -23,13 +24,26 @@ export function GitHubButton({
   const [pending, setPending] = useState(false)
 
   const handleSignIn = useCallback(async () => {
+    if (pending) return
     setPending(true)
-    await signIn.social({
+    const { error } = await signIn.social({
       provider: "github",
-      callbackURL: callbackURL ?? window.location.href,
+      callbackURL,
     })
-    setPending(false)
-  }, [callbackURL])
+    // On success the client redirects to GitHub (full page load), so keep
+    // `pending` true — resetting it here would re-enable the button during
+    // the navigation gap and allow a second click that overwrites the OAuth
+    // state cookie, breaking the callback.
+    if (error) {
+      setPending(false)
+      toast.add({
+        id: "sign-in-failed",
+        type: "error",
+        title: t("auth.signInFailed"),
+        description: t("auth.signInFailedDescription"),
+      })
+    }
+  }, [callbackURL, pending, t])
 
   return (
     <Button

@@ -16,7 +16,9 @@
     "continueWithGitHub": "Continue with GitHub",
     "signInPrompt": "Sign in with GitHub so your name appears on the pattern.",
     "signInToPublish": "Sign in to publish",
-    "publishedAs": "Published as {name}."
+    "publishedAs": "Published as {name}.",
+    "signInFailed": "Sign in failed",
+    "signInFailedDescription": "Could not reach GitHub. Please try again."
   },
   "common": {
     "cancel": "Cancel",
