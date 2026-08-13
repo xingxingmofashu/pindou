@@ -1,322 +1,66 @@
-"use client"
-
-import { useCallback, useEffect, useRef, useState } from "react"
-import Link from "next/link"
-import { useParams } from "next/navigation"
-import useSWR from "swr"
-import { Download, Info, List } from "lucide-react"
-import { PixiCanvas, type PixiCanvasApi } from "@/components/pixi-canvas"
-import { ZoomControls } from "@/components/zoom-controls"
-import { ExportDialog } from "@/components/dialogs/export-dialog"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { fetcher, parseBeadStats, totalBeadCount } from "@/lib/utils"
-import { gridSize } from "@/lib/editor"
-import { formatAbsoluteDate, formatRelativeDate } from "@/lib/date"
-import { localizedPath } from "@/i18n/config"
-import { useI18n } from "@/i18n/client"
-import { usePatternStore } from "@/hooks/use-pattern"
+import type { Metadata } from "next"
+import { notFound } from "next/navigation"
+import { headers } from "next/headers"
+import { getPattern } from "@/lib/server/patterns"
+import { getBrandPalette } from "@/lib/server/palettes"
+import { pageMetadata } from "@/lib/server/meta"
+import { getDictionary, getLocale } from "@/i18n/server"
+import { isLocale } from "@/i18n/config"
+import { auth } from "@/lib/auth/server"
+import { PatternDetailClient } from "./detail"
 import type { PatternDetailType } from "@/db/schema"
-import type { Palette } from "@/types"
 
-/** Fetches the pattern + palette and renders the detail layout once both are ready. */
-export default function PatternDetailPage() {
-  const { id } = useParams<{ id: string }>()
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string; id: string }>
+}): Promise<Metadata> {
+  const [{ lang, id }, locale] = await Promise.all([params, getLocale()])
+  const dict = await getDictionary(isLocale(lang) ? lang : undefined)
+  const pattern = await getPattern(id)
+  if (!pattern || !pattern.grid) return {}
 
-  const { data: pattern, isLoading, error } = useSWR<PatternDetailType>(
-    `/api/patterns/${id}`,
-    fetcher,
-  )
-  const { data: palette } = useSWR<Palette>(
-    pattern?.brandId ? `/api/brands/${pattern.brandId}` : null,
-    fetcher,
-  )
+  return pageMetadata({
+    locale,
+    path: `/patterns/${id}`,
+    title: `${pattern.title} — ${dict.meta.title}`,
+    description: pattern.description || dict.meta.description,
+    image: pattern.thumbUrl || undefined,
+  })
+}
 
-  if (isLoading || !pattern || !palette) {
-    return <PatternDetailLoading error={error ?? undefined} />
+export default async function PatternDetailPage({
+  params,
+}: {
+  params: Promise<{ lang: string; id: string }>
+}) {
+  const { id } = await params
+
+  const [pattern, session] = await Promise.all([
+    getPattern(id),
+    auth.api.getSession({ headers: await headers() }),
+  ])
+  if (!pattern || !pattern.grid) notFound()
+
+  const palette = await getBrandPalette(pattern.brandId)
+  if (!palette) notFound()
+
+  const canEdit = Boolean(session && session.user.id === pattern.fkUserId)
+
+  const detail: PatternDetailType = {
+    id: pattern.id,
+    title: pattern.title,
+    description: pattern.description,
+    authorName: pattern.authorName,
+    brandCode: pattern.brandCode,
+    brandId: pattern.brandId,
+    gridData: pattern.grid,
+    beadStats: pattern.beadStats,
+    thumbUrl: pattern.thumbUrl,
+    createdAt: pattern.createdAt,
+    updatedAt: pattern.updatedAt,
+    canEdit,
   }
 
-  return <PatternDetailContent id={id} pattern={pattern} palette={palette} />
-}
-
-/** Editor-like layout: toolbar, info panel, canvas, and bead-usage panel. */
-function PatternDetailContent({
-  id,
-  pattern,
-  palette,
-}: {
-  id: string
-  pattern: PatternDetailType
-  palette: Palette
-}) {
-  const { locale, t } = useI18n()
-
-  // Registers the canvas's imperative API into the shared store so the
-  // toolbar's zoom controls can drive it.
-  const canvasApiRef = useRef<PixiCanvasApi>(null)
-  const setApi = usePatternStore((s) => s.setApi)
-  const setZoom = usePatternStore((s) => s.setZoom)
-  const showInfoPanel = usePatternStore((s) => s.showInfoPanel)
-  const showBeadStats = usePatternStore((s) => s.showBeadStats)
-  useEffect(() => {
-    setApi(canvasApiRef.current)
-    return () => setApi(null)
-  }, [setApi])
-
-  const grid = pattern.gridData
-  const beadStats = parseBeadStats(pattern.beadStats)
-  const { rows, cols } = gridSize(grid) ?? { rows: 0, cols: 0 }
-  const totalBeads = totalBeadCount(beadStats)
-
-  const sortedStats = Object.entries(beadStats)
-    .sort(([, a], [, b]) => b - a)
-    .map(([code, count]) => {
-      const color = palette.colors.find((c) => c.code === code)
-      return { code, count, name: color?.name, hex: color?.hex }
-    })
-
-  const absoluteDate = formatAbsoluteDate(pattern.createdAt, locale, t("patternDetail.dateFormat"))
-  const relativeDate = formatRelativeDate(pattern.createdAt, locale)
-
-  return (
-    <div className="flex h-full flex-col gap-2 overflow-hidden">
-      <PatternToolbar
-        id={id}
-        title={pattern.title}
-        grid={grid}
-        palette={palette}
-        beadStats={pattern.beadStats}
-        canEdit={pattern.canEdit}
-      />
-      <div className="flex min-h-0 flex-1 gap-2">
-        {showInfoPanel && (
-          <PatternInfoPanel
-            authorName={pattern.authorName ?? null}
-            relativeDate={relativeDate}
-            absoluteDate={absoluteDate}
-            description={pattern.description || null}
-            cols={cols}
-            rows={rows}
-            totalBeads={totalBeads}
-            brand={palette.name}
-          />
-        )}
-        <PixiCanvas
-          grid={grid}
-          palette={palette}
-          readonly
-          apiRef={canvasApiRef}
-          onZoomChange={setZoom}
-          className="min-h-0 min-w-0 flex-1 border"
-        />
-        {showBeadStats && <PatternBeadStatsPanel sortedStats={sortedStats} />}
-      </div>
-    </div>
-  )
-}
-
-/** Top bar: title, export, edit (owner only), and zoom controls. */
-function PatternToolbar({
-  id,
-  title,
-  grid,
-  palette,
-  beadStats,
-  canEdit,
-}: {
-  id: string
-  title: string
-  grid: string[][]
-  palette: Palette
-  beadStats: string
-  canEdit: boolean
-}) {
-  const { locale, t } = useI18n()
-  const [exportOpen, setExportOpen] = useState(false)
-  const api = usePatternStore((s) => s.api)
-  const zoom = usePatternStore((s) => s.zoom)
-  const showInfoPanel = usePatternStore((s) => s.showInfoPanel)
-  const toggleInfoPanel = usePatternStore((s) => s.toggleInfoPanel)
-  const showBeadStats = usePatternStore((s) => s.showBeadStats)
-  const toggleBeadStats = usePatternStore((s) => s.toggleBeadStats)
-
-  // Stable: the export dialog memoizes on it, so an identity change per render
-  // would defeat the memo.
-  const onGetCellsData = useCallback(
-    () => ({ grid, brandCode: palette.code, beadStats }),
-    [grid, palette.code, beadStats],
-  )
-
-  return (
-    <div className="flex items-center justify-between gap-2 border px-3 py-2">
-      <h1 className="min-w-0 truncate text-sm font-semibold">{title}</h1>
-      <div className="flex shrink-0 items-center gap-2">
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant={showInfoPanel ? "secondary" : "outline"}
-                size="icon-sm"
-                aria-label={t("patternDetail.infoPanel")}
-              >
-                <Info data-icon="inline-start" />
-              </Button>
-            }
-            onClick={toggleInfoPanel}
-          />
-          <TooltipContent side="bottom">{t("patternDetail.infoPanel")}</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant={showBeadStats ? "secondary" : "outline"}
-                size="icon-sm"
-                aria-label={t("patternDetail.beadsUsed")}
-              >
-                <List data-icon="inline-start" />
-              </Button>
-            }
-            onClick={toggleBeadStats}
-          />
-          <TooltipContent side="bottom">{t("patternDetail.beadsUsed")}</TooltipContent>
-        </Tooltip>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setExportOpen(true)}
-        >
-          <Download data-icon="inline-start" />
-          {t("editor.export")}
-        </Button>
-        {canEdit && (
-          <Button
-            size="sm"
-            nativeButton={false}
-            render={<Link href={localizedPath(locale, `/patterns/${id}/edit`)} />}
-          >
-            {t("patternDetail.edit")}
-          </Button>
-        )}
-        <ZoomControls
-          zoom={zoom}
-          onSetZoom={(z) => api?.setZoom(z)}
-          onReset={() => api?.fitToCanvas()}
-        />
-      </div>
-      {exportOpen && (
-        <ExportDialog
-          open={exportOpen}
-          onClose={() => setExportOpen(false)}
-          onGetCellsData={onGetCellsData}
-          palette={palette}
-        />
-      )}
-    </div>
-  )
-}
-
-/** Left panel: grid dims, brand, author, dates, and description. */
-function PatternInfoPanel({
-  authorName,
-  relativeDate,
-  absoluteDate,
-  description,
-  cols,
-  rows,
-  totalBeads,
-  brand,
-}: {
-  authorName: string | null
-  relativeDate: string
-  absoluteDate: string
-  description: string | null
-  cols: number
-  rows: number
-  totalBeads: number
-  brand: string
-}) {
-  const { t } = useI18n()
-
-  return (
-    <div className="w-56 shrink-0 overflow-auto flex flex-col gap-4 border p-3">
-      <div>
-        <span className="text-xs text-muted-foreground">{t("patternDetail.grid")}</span>
-        <p className="text-sm tabular-nums">
-          {cols} × {rows} · {t("patternCard.beads", { count: totalBeads.toLocaleString() })}
-        </p>
-      </div>
-      <div>
-        <span className="text-xs text-muted-foreground">{t("patternDetail.brand")}</span>
-        <p className="text-sm">{brand}</p>
-      </div>
-      <div>
-        <span className="text-xs text-muted-foreground">{t("patternDetail.author")}</span>
-        <p className="text-sm truncate">{authorName ?? t("patternDetail.anonymous")}</p>
-      </div>
-      {relativeDate && (
-        <div>
-          <span className="text-xs text-muted-foreground">{t("patternDetail.published")}</span>
-          <p className="text-sm" title={absoluteDate}>
-            {relativeDate}
-          </p>
-        </div>
-      )}
-      {description && (
-        <p className="text-sm leading-relaxed pt-1 border-t">{description}</p>
-      )}
-    </div>
-  )
-}
-
-/** Right panel: per-colour bead usage, ordered by count descending. */
-function PatternBeadStatsPanel({
-  sortedStats,
-}: {
-  sortedStats: { code: string; count: number; name?: string; hex?: string }[]
-}) {
-  const { t } = useI18n()
-  if (sortedStats.length === 0) return null
-
-  return (
-    <div className="w-56 shrink-0 overflow-auto border p-3">
-      <h2 className="mb-2 text-sm font-semibold">{t("patternDetail.beadsUsed")}</h2>
-      <div className="space-y-1">
-        {sortedStats.map(({ code, count, name, hex }) => (
-          <div key={code} className="flex items-center gap-2 text-sm">
-            <span
-              className="inline-block h-3.5 w-3.5 shrink-0 rounded-sm border"
-              style={{ backgroundColor: hex ?? "#ccc" }}
-            />
-            <span className="truncate flex-1">{name ?? code}</span>
-            <span className="text-muted-foreground tabular-nums text-xs">{count}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-/** Skeleton while the pattern + palette load; shows a short error on failure. */
-function PatternDetailLoading({ error }: { error?: Error }) {
-  const { t } = useI18n()
-  return (
-    <div className="flex h-full flex-col gap-2 overflow-hidden">
-      <div className="flex items-center justify-between gap-2 border px-3 py-2">
-        <Skeleton className="h-4 w-40" />
-        <Skeleton className="h-8 w-24" />
-      </div>
-      <div className="flex min-h-0 flex-1 gap-2">
-        <Skeleton className="w-56 shrink-0" />
-        <Skeleton className="min-h-0 flex-1" />
-        <Skeleton className="w-56 shrink-0" />
-      </div>
-      {error && (
-        <p className="px-3 pb-2 text-xs text-destructive">
-          {t("patternDetail.loadFailedTitle")}: {error.message}
-        </p>
-      )}
-    </div>
-  )
+  return <PatternDetailClient id={id} pattern={detail} palette={palette} />
 }
