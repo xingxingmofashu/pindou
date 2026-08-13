@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
-import useSWR from "swr"
 import { Pencil, Eraser, PaintBucket, Trash2, CaseSensitive, ImagePlus, Download, List, Palette as PaletteIcon, Undo2, Redo2 } from "lucide-react"
 import { PixiCanvas, type PixiCanvasApi } from "@/components/pixi-canvas"
 import { ColorPalette } from "@/components/color-palette"
@@ -10,7 +9,6 @@ import { BeadStatsPanel } from "@/components/bead-stats"
 import { ZoomControls } from "@/components/zoom-controls"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   AlertDialog,
@@ -24,12 +22,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useShortcuts } from "@/hooks/use-shortcuts"
-import { usePalette } from "@/hooks/use-palette"
 import { useEditorStore } from "@/hooks/use-editor"
 import { useI18n } from "@/i18n/client"
-import { fetcher } from "@/lib/utils"
 import type { ToolKind, CellsData } from "@/lib/editor"
-import type { Palette } from "@/types"
 
 // Dialogs are only opened on demand — load them (and their heavy deps like
 // the export PNG canvas + image transform) lazily instead of blocking the
@@ -54,30 +49,11 @@ const TOOLS: { value: ToolKind; icon: typeof Pencil; shortcut: string }[] = [
 ]
 
 /**
- * Editor entry: resolves the active palette (seeding it from the catalog on
- * first load) and renders the editor once it's ready.
- */
-export default function EditorPage() {
-  const { palette, setActivePalette } = usePalette()
-
-  // Seed the active palette once the catalog arrives — same flow ColorPalette
-  // uses, hoisted so the canvas only mounts after a palette exists.
-  const { data: brands } = useSWR<Array<Palette>>("/api/brands", fetcher)
-  useEffect(() => {
-    if (!palette && brands?.[0]) setActivePalette(brands[0])
-  }, [brands, palette, setActivePalette])
-
-  if (!palette) return <EditorLoading />
-
-  return <EditorContent />
-}
-
-/**
  * Editor body: registers the canvas API into the shared store and composes the
  * toolbar, panels, canvas, and dialogs. Cross-cutting state lives in
  * {@link useEditorStore}; this component only wires the imperative canvas ref.
  */
-function EditorContent() {
+export default function EditorContent() {
   const canvasApiRef = useRef<PixiCanvasApi>(null)
   const setApi = useEditorStore((s) => s.setApi)
   const setZoom = useEditorStore((s) => s.setZoom)
@@ -399,26 +375,5 @@ function EditorDialogs({
         />
       )}
     </>
-  )
-}
-
-/** Skeleton shown while the palette loads. */
-function EditorLoading() {
-  return (
-    <div className="flex h-full flex-col gap-2 overflow-hidden">
-      <div className="flex items-center justify-between gap-2 border px-3 py-2">
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-8 w-28" />
-          <Skeleton className="h-8 w-28" />
-          <Skeleton className="h-8 w-28" />
-        </div>
-        <Skeleton className="h-8 w-40" />
-      </div>
-      <div className="flex min-h-0 flex-1 gap-2">
-        <Skeleton className="w-56 shrink-0" />
-        <Skeleton className="min-h-0 flex-1" />
-        <Skeleton className="w-56 shrink-0" />
-      </div>
-    </div>
   )
 }
