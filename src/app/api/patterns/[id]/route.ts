@@ -6,8 +6,9 @@ import { patterns } from "@/db/schema"
 import { PatternUpdateSchema } from "@/db/schema"
 import { getPattern } from "@/lib/server/patterns"
 import { getPaletteById } from "@/lib/server/palettes"
-import { MAX_BODY_BYTES } from "@/lib/constants"
+import { MAX_BODY_BYTES, PATTERN_WRITE_LIMIT, PATTERN_WRITE_WINDOW_MS } from "@/lib/constants"
 import { auth } from "@/lib/auth/server"
+import { rateLimit } from "@/lib/rate-limit"
 import { Thumbnail } from "@/lib/thumbnail"
 import { GridStorage } from "@/lib/grid-storage"
 
@@ -75,6 +76,10 @@ export async function PATCH(
   const session = await auth.api.getSession({ headers: request.headers })
   if (!session) {
     return NextResponse.json({ error: "Sign in to edit" }, { status: 401 })
+  }
+
+  if (!(await rateLimit(`user:${session.user.id}`, PATTERN_WRITE_LIMIT, PATTERN_WRITE_WINDOW_MS))) {
+    return NextResponse.json({ error: "Too many requests, try again later" }, { status: 429 })
   }
 
   const { id } = await params

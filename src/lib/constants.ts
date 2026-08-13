@@ -16,6 +16,19 @@ export const MAX_GRID_CELLS = 1_000_000
 export const MAX_FILE_BYTES = 10 * 1024 * 1024
 export const MAX_BODY_BYTES = 20 * 1024 * 1024
 
+/** Per-user budget for publish/edit — both render a thumbnail and upload to R2. */
+export const PATTERN_WRITE_LIMIT = 20
+export const PATTERN_WRITE_WINDOW_MS = 60_000
+
+/**
+ * Sources above this many pixels are rejected by the import worker. The browser
+ * has no header-only metadata API, so the image is decoded first and this check
+ * bounds the downstream quantization work (~160 MB RGBA worst case), not the
+ * decode itself — the browser's own decoder limits guard against decompression
+ * bombs.
+ */
+export const MAX_INPUT_PIXELS = 40_000_000
+
 /** World units per data cell. */
 export const CELL = 10
 

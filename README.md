@@ -27,7 +27,7 @@ Create pixel-art patterns, sign in with GitHub, and share them with the world.
 
 - **Canvas editor** — WebGL-powered (PixiJS v8) with an infinite sparse grid, cursor-centred zoom, pan, and pen / eraser / fill tools
 - **Fixed grid resolution** — grid lines and beads always render at data-cell resolution, so an imported pattern keeps its exact cell count at any zoom (LOD only controls paint-brush block size)
-- **Image to pattern** — convert any image into a bead pattern with the active brand's palette (server-side sharp + perceptual OKLab colour matching); Photo / Illustration modes, merge similar colours, remove background, and exclude specific colours from the conversion
+- **Image to pattern** — convert any image into a bead pattern in your browser (Web Worker + canvas, perceptual OKLab colour matching); Photo / Illustration modes, merge similar colours, remove background, and exclude specific colours from the conversion
 - **Live bead usage** — the editor shows the painted grid size, total beads, and per-colour counts that update as you draw
 - **Export PNG chart** — download the pattern as a printable chart with coordinates, optional colour-code labels, and a scaled bead-usage list
 - **Multi-brand palettes** — MARD (漫漫), Perler, Hama, Artkal with switchable series
@@ -44,7 +44,8 @@ Create pixel-art patterns, sign in with GitHub, and share them with the world.
 | Styling | Tailwind CSS v4 + shadcn/ui (Base UI) |
 | Database | PostgreSQL (Neon) via @neondatabase/serverless + Drizzle ORM |
 | Auth | Better Auth (GitHub OAuth) |
-| Image conversion | sharp (server-side, Node runtime) |
+| Image conversion | In-browser (Web Worker + canvas, perceptual OKLab) |
+| Thumbnails | sharp (server-side, Node runtime) |
 | Color math | culori |
 | Rate limiting | Upstash Redis (@upstash/ratelimit) |
 | Language | TypeScript (strict) |
@@ -69,17 +70,23 @@ pnpm lint
 
 ```
 src/
-  app/                  # Next.js App Router pages
+  app/                  # Next.js App Router routes — server pages fetch data and render a
+                        # client.tsx content component, each route with loading.tsx (skeleton)
+                        # and error.tsx (error boundary)
     [lang]/             # Locale-prefixed routes (en / zh)
       (site)/           # Main site layout (header + footer chrome)
         (content)/      # Home + pattern gallery + pattern detail
+          patterns/     # Gallery: page.tsx (server) + client.tsx + loading.tsx + error.tsx
+          patterns/[id]/# Detail: page.tsx (server) + client.tsx + loading.tsx + error.tsx
         (workspace)/    # Editor + pattern edit pages
+          editor/       # Editor: page.tsx (client canvas) + loading.tsx + error.tsx
+          patterns/[id]/edit/ # Edit: page.tsx (server) + client.tsx + loading.tsx + error.tsx
       sign-in/          # GitHub sign-in page
-    api/auth/           # Better Auth route handlers
+    api/auth/[...all]/  # Better Auth route handlers
     api/patterns/       # REST API (GET list, POST publish)
     api/patterns/[id]/  # GET single pattern, PATCH update
-    api/transform/      # POST image → bead grid conversion (Node runtime)
     api/brands/         # GET palette catalog (all brands + colors)
+    api/brands/[id]/    # GET one brand + colors
   components/
     auth-nav.tsx        # Header auth area (sign-in link / user menu)
     github-button.tsx   # GitHub OAuth sign-in button
@@ -102,11 +109,15 @@ src/
     use-shortcuts.ts    # B/E/G tool-switching keybindings
     use-pixi-app.ts     # PixiJS Application lifecycle (WebGL context management)
     use-pixi-canvas.ts  # Zoom/pan/draw pointer events, fixed-resolution rebuild
+  workers/
+    transform.worker.ts # In-browser image decode + pre-scale (createImageBitmap/OffscreenCanvas)
   lib/
     auth/               # Better Auth: server.ts (config) + client.ts
     editor.ts           # Pure functions: grid math, LOD, flood fill, serialization, counting
+    constants.ts        # Shared limits: grid dimensions, upload/body caps, zoom, page size
+    date.ts             # Localized date formatting (date-fns, relative + absolute)
     export.ts           # Client-only PNG chart export (never on the server)
-    transform.ts        # Node-only image → grid (sharp + OKLab)
+    transform.ts        # Pure image→grid quantization (perceptual OKLab), shared by the import worker
     thumbnail.ts        # Node-only thumbnail rendering (sharp)
     grid-storage.ts     # R2 grid JSON storage (versioned keys)
     r2.ts               # Generic Cloudflare R2 client (grids + thumbnails, Node-only)
@@ -136,14 +147,13 @@ The editor at `/editor` provides:
 | Method | Route | Description |
 |---|---|---|
 | `GET` | `/api/patterns?page=1` | List published patterns (paginated) |
-| `POST` | `/api/patterns` | Publish a new pattern (GitHub sign-in required) |
+| `POST` | `/api/patterns` | Publish a new pattern (GitHub sign-in required, rate limited) |
 | `GET` | `/api/patterns/[id]` | Get a single pattern |
-| `PATCH` | `/api/patterns/[id]` | Update a pattern's title, description, or grid (author only) |
-| `POST` | `/api/transform` | Convert an image into a bead grid (multipart `file`, `width`, `brandCode`; optional `mode`, `mergeSimilarity`, `removeBackground`, `excludedCodes`) |
+| `PATCH` | `/api/patterns/[id]` | Update a pattern's title, description, or grid (author only, rate limited) |
 | `GET` | `/api/brands` | List all brands with their colors |
 | `GET` | `/api/brands/[id]` | Get a single brand with its colors |
 
-Request limits: uploads to `/api/transform` are capped at 10 MB and the source image at 40M pixels; publish/edit JSON bodies are capped at 20 MB. Grids are bounded to 4096 per side and 1,000,000 total cells. `/api/transform` is additionally rate-limited per IP (20 req / 60 s) via Upstash Redis.
+Image-to-pattern conversion happens entirely in the browser (no `/api/transform`); the uploaded image never leaves the client. Publish/edit JSON bodies are capped at 20 MB; grids are bounded to 4096 per side and 1,000,000 total cells. Publish and edit are rate-limited per user (20 requests / 60 s) via Upstash Redis.
 
 ## License
 

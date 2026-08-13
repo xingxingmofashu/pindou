@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import useSWRMutation from "swr/mutation"
 import { ChevronDown, ChevronRight, Search, Upload } from "lucide-react"
 import {
   Dialog,
@@ -22,10 +21,10 @@ import { Spinner } from "@/components/ui/spinner"
 import { toast } from "@/components/ui/toast"
 import { MAX_FILE_BYTES, MAX_GRID_DIMENSION } from "@/lib/constants"
 import { buildHexByCode, gridSize, mostFrequent, groupColorsBySeries } from "@/lib/editor"
-import { postJson } from "@/lib/utils"
 import { usePalette } from "@/hooks/use-palette"
 import { useI18n } from "@/i18n/client"
 import type { TransformMode, TransformResult } from "@/lib/transform"
+import type { TransformRequest, TransformResponse } from "@/workers/transform.worker"
 import type { Palette } from "@/types"
 
 /** Preview canvas is drawn at most this many pixels per side. */
@@ -264,6 +263,7 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
   const [file, setFile] = useState<File | null>(null)
   const [widthInput, setWidthInput] = useState(String(DEFAULT_WIDTH))
   const [result, setResult] = useState<TransformResult | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
   // Advanced conversion options, hidden by default.
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [mode, setMode] = useState<TransformMode>("average")
@@ -274,15 +274,26 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const reqId = useRef(0)
-  const { trigger, isMutating } = useSWRMutation(
-    "/api/transform",
-    (url, { arg }: { arg: FormData }) =>
-      postJson<TransformResult>(url, arg, t("editor.conversionFailed")),
-  )
+  const workerRef = useRef<Worker | null>(null)
+  // Latest `t`, so the one-time worker handlers don't capture a stale locale.
+  const tRef = useRef(t)
+
+  useEffect(() => {
+    tRef.current = t
+  }, [t])
+
+  // Terminate the worker when the dialog unmounts.
+  useEffect(() => {
+    return () => {
+      workerRef.current?.terminate()
+      workerRef.current = null
+    }
+  }, [])
 
   // Convert when a file is chosen or the width changes (debounced). Each
   // trigger bumps `reqId` so a stale response from an earlier width edit is
-  // dropped instead of overwriting a newer result.
+  // dropped instead of overwriting a newer result. The conversion runs in a
+  // Web Worker to avoid blocking the editor's main thread.
   useEffect(() => {
     if (!file || !palette) return
     const w = Math.round(Number(widthInput))
@@ -290,32 +301,63 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
     const clamped = Math.min(MAX_GRID_DIMENSION, w)
     const timeout = setTimeout(() => {
       const id = ++reqId.current
-      const formData = new FormData()
-      formData.append("file", file)
-      formData.append("width", String(clamped))
-      formData.append("brandCode", palette.code)
-      formData.append("mode", mode)
-      formData.append("mergeSimilarity", mergeOn ? String(mergeSimilarity) : "0")
-      formData.append("removeBackground", String(removeBg))
-      formData.append("excludedCodes", JSON.stringify(excludedCodes))
-      trigger(formData)
-        .then((converted) => {
-          if (id !== reqId.current) return
-          setResult(converted)
-        })
-        .catch((e) => {
-          if (id !== reqId.current) return
+      if (!workerRef.current) {
+        let worker: Worker
+        try {
+          worker = new Worker(new URL("../../workers/transform.worker.ts", import.meta.url))
+        } catch {
+          setIsProcessing(false)
+          toast.add({
+            id: "import-conversion-failed",
+            type: "error",
+            title: tRef.current("editor.conversionFailed"),
+            description: tRef.current("editor.networkError"),
+          })
+          return
+        }
+        worker.onmessage = (event: MessageEvent<TransformResponse>) => {
+          const message = event.data
+          if (message.id !== reqId.current) return
+          setIsProcessing(false)
+          if (message.ok) {
+            setResult(message.result)
+          } else {
+            setResult(null)
+            toast.add({
+              id: "import-conversion-failed",
+              type: "error",
+              title: tRef.current("editor.conversionFailed"),
+              description: message.error,
+            })
+          }
+        }
+        worker.onerror = () => {
+          setIsProcessing(false)
           setResult(null)
           toast.add({
             id: "import-conversion-failed",
             type: "error",
-            title: t("editor.conversionFailed"),
-            description: e instanceof Error ? e.message : t("editor.networkError"),
+            title: tRef.current("editor.conversionFailed"),
+            description: tRef.current("editor.networkError"),
           })
-        })
+        }
+        workerRef.current = worker
+      }
+      const request: TransformRequest = {
+        id,
+        file,
+        width: clamped,
+        mode,
+        mergeSimilarity: mergeOn ? mergeSimilarity : 0,
+        removeBackground: removeBg,
+        excludedCodes,
+        palette,
+      }
+      setIsProcessing(true)
+      workerRef.current.postMessage(request)
     }, DEBOUNCE_MS)
     return () => clearTimeout(timeout)
-  }, [file, widthInput, palette, trigger, t, mode, mergeOn, mergeSimilarity, removeBg, excludedCodes])
+  }, [file, widthInput, palette, mode, mergeOn, mergeSimilarity, removeBg, excludedCodes])
 
   // Render the preview whenever a result arrives.
   useEffect(() => {
@@ -365,6 +407,7 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
     setFile(null)
     setWidthInput(String(DEFAULT_WIDTH))
     setResult(null)
+    setIsProcessing(false)
     onClose()
   }, [onClose])
 
@@ -528,14 +571,14 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
           )}
         </div>
 
-        {isMutating && (
+        {isProcessing && (
           <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Spinner className="size-3.5" />
             {t("editor.processing")}
           </p>
         )}
 
-        {result && !isMutating && (
+        {result && !isProcessing && (
           <div className="flex flex-col items-center gap-2">
             <div className="rounded-lg border bg-muted/30 p-2">
               <canvas
@@ -558,7 +601,7 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
           <Button variant="outline" onClick={handleClose}>
             {t("common.cancel")}
           </Button>
-          <Button onClick={handleApply} disabled={!result || isMutating}>
+          <Button onClick={handleApply} disabled={!result || isProcessing}>
             {t("editor.apply")}
           </Button>
         </DialogFooter>
