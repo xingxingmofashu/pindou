@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -42,6 +42,7 @@ export default function PatternsPage() {
 function PatternsContent() {
   const { locale, t } = useI18n()
   const searchParams = useSearchParams()
+  const router = useRouter()
 
   const pageParam = searchParams.get("page")
   const qParam = searchParams.get("q")
@@ -61,19 +62,31 @@ function PatternsContent() {
     fetcher,
   )
 
-  if (isLoading || !data) {
-    return <PatternsLoading />
-  }
-
-  const total = data.pagination.total
-  const list = data.patterns.map((p) => ({
-    ...p,
-    beadStats: parseBeadStats(p.beadStats),
-  }))
+  const total = data?.pagination.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PATTERNS_PAGE_SIZE))
   // Out-of-range pages (e.g. ?page=999) would otherwise render the empty state
   // despite patterns existing — clamp to the last valid page instead.
   const page = Math.min(requested, totalPages)
+
+  // The fetch above uses `requested`, so correct the URL to the clamped page —
+  // otherwise the rendered pagination ("page 3 of 3") would disagree with the
+  // empty page that was actually fetched.
+  useEffect(() => {
+    if (!data || requested === page) return
+    const corrected = new URLSearchParams()
+    corrected.set("page", String(page))
+    if (q) corrected.set("q", q)
+    router.replace(`${localizedPath(locale, "/patterns")}?${corrected.toString()}`)
+  }, [data, requested, page, q, locale, router])
+
+  if (isLoading || !data) {
+    return <PatternsLoading />
+  }
+
+  const list = data.patterns.map((p) => ({
+    ...p,
+    beadStats: parseBeadStats(p.beadStats),
+  }))
 
   return (
     <div className="flex h-full flex-col overflow-hidden">

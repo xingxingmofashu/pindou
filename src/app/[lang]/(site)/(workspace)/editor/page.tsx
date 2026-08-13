@@ -98,6 +98,10 @@ function EditorContent() {
   // Stable: both dialogs read the canvas grid through it, and the export dialog
   // memoizes on it, so an identity change per render would defeat the memo.
   const onGetCellsData = useCallback(() => canvasApiRef.current?.getCellsData() ?? null, [])
+  // `loadGrid` closes over the palette, so it must read the live ref — the
+  // store's `api` handle goes stale after a brand switch (the canvas rebuilds
+  // its handle when the palette changes).
+  const onLoadGrid = useCallback((grid: string[][]) => canvasApiRef.current?.loadGrid(grid), [])
   // Recomputed by the canvas whenever the grid changes, so the panel renders
   // live without the canvas pushing state per pointermove.
   const onGridChange = useCallback(() => {
@@ -127,7 +131,7 @@ function EditorContent() {
         />
         {showBeadStats && <EditorBeadStatsPanel />}
       </div>
-      <EditorDialogs onGetCellsData={onGetCellsData} />
+      <EditorDialogs onGetCellsData={onGetCellsData} onLoadGrid={onLoadGrid} />
     </div>
   )
 }
@@ -357,14 +361,19 @@ function EditorBeadStatsPanel() {
 }
 
 /** Publish / import / export dialogs, driven by the shared store. */
-function EditorDialogs({ onGetCellsData }: { onGetCellsData: () => CellsData | null }) {
+function EditorDialogs({
+  onGetCellsData,
+  onLoadGrid,
+}: {
+  onGetCellsData: () => CellsData | null
+  onLoadGrid: (grid: string[][]) => void
+}) {
   const publishOpen = useEditorStore((s) => s.publishOpen)
   const closePublish = useEditorStore((s) => s.closePublish)
   const importOpen = useEditorStore((s) => s.importOpen)
   const closeImport = useEditorStore((s) => s.closeImport)
   const exportOpen = useEditorStore((s) => s.exportOpen)
   const closeExport = useEditorStore((s) => s.closeExport)
-  const api = useEditorStore((s) => s.api)
 
   return (
     <>
@@ -379,7 +388,7 @@ function EditorDialogs({ onGetCellsData }: { onGetCellsData: () => CellsData | n
         <ImportDialog
           open={importOpen}
           onClose={closeImport}
-          onApply={(grid) => api?.loadGrid(grid)}
+          onApply={onLoadGrid}
         />
       )}
       {exportOpen && (

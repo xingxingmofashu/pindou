@@ -78,7 +78,7 @@ export default function PatternEditPage() {
     )
   }
 
-  return <PatternEditForm key={data.id} id={id} pattern={data} palette={brand} />
+  return <PatternEditContent key={data.id} id={id} pattern={data} palette={brand} />
 }
 
 /**
@@ -86,7 +86,7 @@ export default function PatternEditPage() {
  * seeds the shared store from the loaded pattern; the toolbar, panels, and
  * export dialog all read/write {@link useEditStore}.
  */
-function PatternEditForm({
+function PatternEditContent({
   id,
   pattern,
   palette,
@@ -107,11 +107,15 @@ function PatternEditForm({
   const exportOpen = useEditStore((s) => s.exportOpen)
   const closeExport = useEditStore((s) => s.closeExport)
 
-  // Seed the draft fields + reset per-instance state on mount (the `key` above
-  // remounts this form when the pattern changes).
+  // Seed the draft fields + reset per-instance state once per pattern. The
+  // parent `key`s this form by `pattern.id`, and revalidation must not re-seed
+  // (that would wipe in-progress edits), so guard on the pattern id.
+  const lastSeededId = useRef<string | null>(null)
   useEffect(() => {
+    if (lastSeededId.current === pattern.id) return
+    lastSeededId.current = pattern.id
     useEditStore.getState().reset(pattern.title, pattern.description ?? "")
-  }, [pattern])
+  }, [pattern.id, pattern.title, pattern.description])
 
   // Registers the canvas's imperative API into the shared store.
   useEffect(() => {
