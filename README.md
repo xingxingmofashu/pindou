@@ -72,9 +72,8 @@ src/
   app/                  # Next.js App Router pages
     [lang]/             # Locale-prefixed routes (en / zh)
       (site)/           # Main site layout (header + footer chrome)
-        editor/         # Editor page
-        patterns/       # Pattern gallery
-        patterns/[id]/  # Pattern detail + edit pages
+        (content)/      # Home + pattern gallery + pattern detail
+        (workspace)/    # Editor + pattern edit pages
       sign-in/          # GitHub sign-in page
     api/auth/           # Better Auth route handlers
     api/patterns/       # REST API (GET list, POST publish)
@@ -82,13 +81,25 @@ src/
     api/transform/      # POST image → bead grid conversion (Node runtime)
     api/brands/         # GET palette catalog (all brands + colors)
   components/
-    auth/               # GitHubButton, UserMenu (sign-in UI)
-    editor/             # ToolBar, ZoomControls, ColorPalette, dialogs, BeadStatsPanel
-    pattern/            # PatternCard, detail panel
+    auth-nav.tsx        # Header auth area (sign-in link / user menu)
+    github-button.tsx   # GitHub OAuth sign-in button
+    header.tsx          # Site header (server component)
+    footer.tsx          # Site footer
+    logo.tsx            # Brand logo
     pixi-canvas.tsx     # Reusable PixiJS canvas component
+    color-palette.tsx   # Brand palette sidebar panel
+    bead-stats.tsx      # Live bead-usage panel
+    zoom-controls.tsx   # Zoom in / out / fit controls
+    dialogs/            # publish-dialog.tsx, import-dialog.tsx, export-dialog.tsx
+    icon/               # GitHub icon
+    providers/          # SWR + web-vitals providers
     ui/                 # shadcn/ui components (never edited manually)
   hooks/
     use-palette.ts      # Shared active-brand store (Zustand)
+    use-editor.ts       # Editor page state (tool, colour, panels, zoom, dialogs)
+    use-edit.ts         # Pattern edit page state (draft fields, panels, saving)
+    use-pattern.ts      # Pattern detail read-only state (canvas api + zoom + panels)
+    use-shortcuts.ts    # B/E/G tool-switching keybindings
     use-pixi-app.ts     # PixiJS Application lifecycle (WebGL context management)
     use-pixi-canvas.ts  # Zoom/pan/draw pointer events, fixed-resolution rebuild
   lib/

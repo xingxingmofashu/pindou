@@ -30,7 +30,7 @@ Repo-pinned skills live in `.claude/skills/` and `.agents/skills/` (managed via 
 - **Tailwind CSS v4** with `shadcn/tailwind.css` theme
 - **shadcn/ui** with **Base UI** primitives (NOT Radix)
 - **PixiJS v8** for the editor canvas (WebGL)
-- **Zustand** for the shared editor palette store (`use-palette.ts`)
+- **Zustand** for shared editor/pattern state (`use-palette.ts`, `use-editor.ts`, `use-edit.ts`, `use-pattern.ts` in `src/hooks/`)
 - **SWR** for client-side data fetching (`useSWR` GETs, `useSWRMutation` POSTs; shared `fetcher` in `lib/utils.ts`)
 - **culori** for color-space conversions
 - **Upstash Redis** (`@upstash/ratelimit` + `@upstash/redis`) for distributed rate limiting
@@ -48,16 +48,36 @@ Base UI is used instead of Radix. Key API differences:
 
 ### Editor flow (`/editor`)
 
+The editor is a **client page** whose subcomponents are inlined into `src/app/[lang]/(site)/(workspace)/editor/page.tsx`; cross-component state lives in the `useEditorStore` Zustand store (`src/hooks/use-editor.ts`), so the toolbar, panels, and dialogs read/write the store instead of drilling props through `EditorPage`.
+
 ```
-EditorPage (src/app/[lang]/(site)/editor/page.tsx)
-├── ToolBar (pen / eraser / fill, labels toggle, bead-usage toggle, clear-canvas, import/export, publish; embeds ZoomControls: ±1.3× buttons, read-only %, fit)
-├── ColorPalette (left sidebar, brand switcher + swatches grouped by series + eraser)
-├── <canvas> → usePixiCanvas hook
-├── BeadStatsPanel (right sidebar, live per-colour counts — recomputed by EditorPage via onGridChange)
-├── PublishDialog (title/desc/author → POST /api/patterns via getCellsData)
-├── ImportDialog (upload → POST /api/transform with mode/merge/background/excluded codes → Apply → loadGrid(grid))
-└── ExportDialog (reads grid via getCellsData → client-side PNG chart with colour-code labels + bead-usage list, downloads via src/lib/export.ts)
+EditorPage (client, default export)
+├── palette guard: seeds the active palette from /api/brands, then renders <EditorContent /> (or <EditorLoading /> while undefined)
+└── EditorContent (same file)
+    ├── EditorToolbar (inlined: pen/eraser/fill, undo/redo, labels, palette/bead-stats toggles, clear, import/export, publish, zoom)
+    ├── EditorColorPalettePanel (left sidebar — wraps the shared ColorPalette)
+    ├── PixiCanvas (middle — wraps <canvas> → usePixiCanvas hook)
+    ├── EditorBeadStatsPanel (right sidebar — wraps the shared BeadStatsPanel)
+    └── EditorDialogs (PublishDialog / ImportDialog / ExportDialog, lazy-loaded via next/dynamic)
 ```
+
+The shared editor pieces now live directly under `src/components/` (no `editor/` subdir): `pixi-canvas.tsx`, `color-palette.tsx`, `bead-stats.tsx`, `zoom-controls.tsx`, and the three dialogs in `src/components/dialogs/` (`publish-dialog.tsx`, `import-dialog.tsx`, `export-dialog.tsx`).
+
+- **PublishDialog** (title/desc/author → POST /api/patterns via `getCellsData`)
+- **ImportDialog** (upload → POST /api/transform with mode/merge/background/excluded codes → Apply → `loadGrid(grid)`)
+- **ExportDialog** (reads grid via `getCellsData` → client-side PNG chart with colour-code labels + bead-usage list, downloads via `src/lib/export.ts`)
+
+### Client-page pattern
+
+All interactive routes are **client pages** whose subcomponents are inlined into the page file, and whose cross-cutting state lives in a page-scoped Zustand store — do **not** add new `loading.tsx`/`error.tsx` route files for them (the loading skeleton is an inlined `XxxLoading` function; only the top-level `src/app/[lang]/error.tsx` and `global-error.tsx` remain as route error boundaries). The stores:
+
+- `use-palette.ts` — active brand palette (shared, seeded from `/api/brands`)
+- `use-editor.ts` — `/editor` state (tool, colour, labels, panel visibility, bead stats, zoom, undo/redo, dialog open flags)
+- `use-edit.ts` — `/patterns/[id]/edit` state (draft title/desc, colour, panels, zoom, saving; `reset()` seeds it on mount)
+- `use-pattern.ts` — `/patterns/[id]` read-only state (canvas api + zoom + panel visibility)
+- `use-shortcuts.ts` — global B/E/G tool-switching keybindings
+
+The canvas exposes an imperative API (`PixiCanvasApi`: `setZoom`/`fitToCanvas`/`clearCanvas`/`undo`/`redo`/`getCellsData`/`getBeadStats`/`loadGrid`) via an `apiRef` prop; each page registers it into its store with a `useEffect(() => setApi(canvasApiRef.current))` so toolbar/panel components drive the canvas through the store instead of props.
 
 **`usePixiCanvas` hook** (`src/hooks/use-pixi-canvas.ts`) is a thin coordinator for the PixiJS lifecycle; the logic lives in pure, React-free library modules:
 
@@ -65,10 +85,10 @@ EditorPage (src/app/[lang]/(site)/editor/page.tsx)
 src/lib/editor.ts         EMPTY/CELL/MIN_PX/MAX_GRID_DIMENSION/MAX_GRID_CELLS, serializeGrid/deserializeGrid/serializeBeadStats, countGridBeads/countBeadStats, gridSize/buildHexByCode/forEachPaintedCell, paintBlock/walkLine/floodFill, lodParams/computeGridLines/buildBeadEntries, getGridBounds/centerViewport, PixiContext/ViewRect/BeadEntry/GridRect/BeadStats types
 src/hooks/use-pixi-app.ts    usePixiApp() — PixiJS Application lifecycle hook (owns app.destroy(true))
 src/hooks/use-pixi-canvas.ts PixiJS lifecycle coordinator, wheel + pointer events, zoom/pan state. Takes a fully-resolved palette argument (never subscribes to the active-palette store itself).
-src/components/editor/pixi-canvas.tsx PixiCanvas resolves the palette: read-only views that pin `palette` render without a store subscription; the editor branch subscribes via `usePalette` (in `EditablePaletteBridge`).
+src/components/pixi-canvas.tsx PixiCanvas resolves the palette: read-only views that pin `palette` render without a store subscription; the editor branch subscribes via `usePalette` (in `EditablePaletteBridge`).
 ```
 
-The canvas grid lives in a ref (`cellsRef`) and mutates **outside React**. To surface changes, `usePixiCanvas` takes an `onGridChange` callback (fired at stroke end, fill, clear, and load — never per pointermove) and exposes `getCellsData()` (dense code grid + `beadStats` JSON for publish/export) and `getBeadStats()` (sparse `BeadStats`: painted dims + per-code counts, O(painted cells), no dense allocation). EditorPage owns the stats in state and feeds `BeadStatsPanel`. Undo/redo snapshots the sparse map before each destructive op (`pushHistory`, capped at `UNDO_LIMIT` = 50, no-op strokes dropped via `mapsEqual`); the history is **wiped on brand switch** (`clearHistory`) because 1‑based cell indices change meaning across palettes, so stale snapshots would render wrong colours.
+The canvas grid lives in a ref (`cellsRef`) and mutates **outside React**. To surface changes, `usePixiCanvas` takes an `onGridChange` callback (fired at stroke end, fill, clear, and load — never per pointermove) and exposes `getCellsData()` (dense code grid + `beadStats` JSON for publish/export) and `getBeadStats()` (sparse `BeadStats`: painted dims + per-code counts, O(painted cells), no dense allocation). The editor stores the stats via `setBeadStats` and `BeadStatsPanel` reads them back from the store. Undo/redo snapshots the sparse map before each destructive op (`pushHistory`, capped at `UNDO_LIMIT` = 50, no-op strokes dropped via `mapsEqual`); the history is **wiped on brand switch** (`clearHistory`) because 1‑based cell indices change meaning across palettes, so stale snapshots would render wrong colours.
 
 ```
 PixiJS Application (WebGL)
@@ -97,7 +117,7 @@ src/proxy.ts              locale detection + redirect; matcher excludes _next|ap
 - **Links/routes**: use `localizedPath(locale, path)` (e.g. `/editor` → `/en/editor`); SWR/API calls stay locale-agnostic absolute paths (`/api/...`).
 - **Dates**: date-fns locale `zhCN` (`date-fns/locale`) for `zh`; localized format strings live in the dictionary (`patternDetail.dateFormat`).
 - Better Auth OAuth callback `/api/auth/callback/github` is under `/api`, so the proxy never touches it.
-- `/api/auth/...` (Better Auth) lives in `src/app/api/auth/` via `toNextJsHandler`; the sign-in UI is `src/components/auth/` (GitHubButton, UserMenu).
+- `/api/auth/...` (Better Auth) lives in `src/app/api/auth/` via `toNextJsHandler`; the sign-in UI is `src/components/` (`github-button.tsx`, `auth-nav.tsx` — the header's session-aware sign-in/user-menu area).
 
 ### Data model
 
@@ -167,7 +187,7 @@ src/types/index.ts                Row types for the three tables (Brand/Color/Pa
 src/db/schema.ts                   brands + colors + patterns (uuid id defaultRandom, timestamptz created_at/updated_at) + generated drizzle-zod wire schemas
 src/app/api/brands/route.ts        GET — all brands with their colors nested (the client catalog)
 src/app/api/brands/[id]/route.ts   GET — one brand by uuid id with colors nested
-src/hooks/use-palette.ts           Editor store (Zustand) — active palette (pushed in by ColorPalette, no fetch of its own)
+src/hooks/use-palette.ts           Editor store (Zustand) — active palette (pushed in by EditorPage/ColorPalette, no fetch of its own)
 ```
 
 - The row types in `src/types/index.ts` are `$inferSelect` types derived from the Drizzle schema — the schema is the single definition. Wire schemas `BrandSelectSchema`/`ColorSelectSchema` are generated from those rows by drizzle-zod in `src/db/schema.ts` (uuid ids, timestamps coerced from ISO strings). `/api/brands` (the catalog — every brand with its colors nested, `ORDER BY sort_order`) and `/api/brands/[id]` (a single brand by its uuid row id, e.g. a pattern's `brandId`) are the palette endpoints; a resolved palette is a `Palette` (`Brand & { colors: Color[] }` — a brand row with `colors` nested).
@@ -176,7 +196,7 @@ src/hooks/use-palette.ts           Editor store (Zustand) — active palette (pu
 - Two representations coexist: the editor's **in-memory sparse map holds 1‑based indices** into `palette.colors` (order-dependent), while the **wire/stored grid is code‑based** (`string[][]`, `""` = empty — migration 0012, PR "store pattern grids as colour codes"). Colors are still served `ORDER BY sort_order` because the in-memory index and the editor's ordering depend on it. Reordering color rows no longer corrupts *published* patterns (codes are stable), but it does shift in-memory index semantics — `serializeGrid`/`deserializeGrid` take the palette for exactly this reason, and any brand-palette replace must rebuild the code→index binding in code that holds sparse state.
 - `/api/brands` is CDN/browser-cacheable: the catalog only changes via `db:migrate`, so the route sends `Cache-Control: public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400`. Palette changes propagate only after the cache expires.
 - Wire contract between client and server is the brand **code** (a plain string matching `brands.code`, e.g. `"mard"`); the server maps code↔brand uuid (`patterns.fk_brand_id`) internally.
-- `usePalette()` (in `use-palette.ts`) reads a module-level Zustand store and returns `{ palette, setActivePalette }`; it holds only the active palette (a `Palette` — a brand row with colors nested) and makes no network requests. ColorPalette fetches `/api/brands` via `useSWR` for its switcher and pushes the chosen brand (which already carries nested colors) into the store, seeding the first catalog brand on first load. The editor canvas (`EditablePaletteBridge`), the export dialog, and the import dialog read the shared palette because the user-controlled EditorPage cannot wire it as a prop (the export dialog must use the same palette instance the canvas draws with — a freshly fetched brand could serve a cached colour order and shift every bead). Consumers that need a *specific* brand (pattern detail page) fetch it directly with `useSWR` (a single `/api/brands/[id]` call keyed by the brand uuid — colors are nested) instead of touching the store. Consumers must guard `palette === undefined` while it loads (`EditablePaletteBridge` returns null; ColorPalette shows a placeholder). Read-only views pin a `palette` prop and bypass the store entirely. SSR snapshots are null, so hydration stays consistent.
+- `usePalette()` (in `use-palette.ts`) reads a module-level Zustand store and returns `{ palette, setActivePalette }`; it holds only the active palette (a `Palette` — a brand row with colors nested) and makes no network requests. The editor page (`EditorPage`) fetches `/api/brands` via `useSWR`, seeds the first catalog brand into the store, and guards `palette === undefined` with `EditorLoading` before rendering `EditorContent`. ColorPalette also fetches `/api/brands` for its switcher and pushes the chosen brand into the store. The editor canvas (`EditablePaletteBridge`), the export dialog, and the import dialog read the shared palette because the user-controlled EditorPage cannot wire it as a prop (the export dialog must use the same palette instance the canvas draws with — a freshly fetched brand could serve a cached colour order and shift every bead). Consumers that need a *specific* brand (pattern detail page) fetch it directly with `useSWR` (a single `/api/brands/[id]` call keyed by the brand uuid — colors are nested) instead of touching the store. Read-only views pin a `palette` prop and bypass the store entirely. SSR snapshots are null, so hydration stays consistent.
 
 ### Server-side (`/api` + database)
 
@@ -199,7 +219,7 @@ src/db/                                Drizzle schema + Neon Postgres Pool (@neo
 
 - **Tables**: `brands` (id uuid PK defaultRandom, code unique, name, sort_order) · `colors` (id uuid PK defaultRandom, fk_brand_id → brands.id ON DELETE cascade, code, name, hex, series, sort_order, unique (fk_brand_id, code)) · `patterns` (id uuid PK defaultRandom, fk_brand_id → brands.id, …). All three tables share the same audit shape: uuid `id` (default `gen_random_uuid()`) and `created_at`/`updated_at` (`timestamp with time zone`, default `now()`) — the DB generates them, so routes never set them. `brands.code` is the wire brand code; `name` is the display name. Brands are served `ORDER BY sort_order` (mard=0 first), colors `ORDER BY sort_order` (the array index grid cells index into).
 - **Grid contract**: the wire format is a **code grid** — `string[][]`, `grid[row][col]` = `""` (empty) or a colour code (e.g. `"A1"`). `/api/transform` and `/api/patterns` store/serve codes; the editor converts to its in-memory index-based sparse map via `deserializeGrid`, and `ImportDialog` feeds the transform's code grid straight into `loadGrid`.
-- **Edit flow**: `/patterns/[id]/edit` (under `[lang]/(site)/patterns/[id]/edit/page.tsx`) is a client page that loads the pattern + its brand palette via `useSWR`, renders an editable `PixiCanvas`, then `PATCH`es the grid/title/desc back through `/api/patterns/[id]` via `postJson` (method `"PATCH"`). Only the owner (session `fkUserId` match) can edit — the API returns 403 otherwise.
+- **Edit flow**: `/patterns/[id]/edit` (under `[lang]/(site)/(workspace)/patterns/[id]/edit/page.tsx`) is a client page that loads the pattern + its brand palette via `useSWR`, renders an editable `PixiCanvas`, then `PATCH`es the grid/title/desc back through `/api/patterns/[id]` via `postJson` (method `"PATCH"`). Only the owner (session `fkUserId` match) can edit — the API returns 403 otherwise.
 - `lib/transform.ts` and `lib/thumbnail.ts` import sharp and must never be imported from a client component — only the API routes use them. Routes reach the DB through the `src/lib/server/` helpers (`palettes.ts`, `patterns.ts`) — never the pool directly — and palette data is never bundled into the client.
 - **Distributed rate limiting**: `rateLimit(key, limit, windowMs)` (in `lib/rate-limit.ts`) uses an Upstash Redis sliding window shared across Vercel + Netlify instances. Only `/api/transform` enforces it today (per-IP, leftmost `x-forwarded-for` — trustworthy on the Vercel edge, client-spoofable elsewhere, accepted as best-effort; 20 req / 60 s). `rateLimit` **fails open**: a Redis outage or missing env vars resolves `true` (allows) instead of 500ing the route, so the endpoint keeps working unthrottled — the deployments must set `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (Netlify: Production scope + a manual redeploy, since env changes don't auto-redeploy) for throttling to actually engage. Publish/edit (`POST`/`PATCH` patterns) are **not** yet rate-limited — a known gap if you touch those routes.
 - **Hard request limits**: `/api/transform` rejects files > 10 MB (413; content-length pre-check before parsing multipart, then `file.size`) and sources > `MAX_INPUT_PIXELS` (40M) → 400 (`InputImageTooLargeError`); the client import dialog mirrors the 10 MB cap. Publish/edit reject JSON bodies > 20 MB (413) via content-length + post-read length check. Grids are bounded by the wire schema: rows/cols ≤ `MAX_GRID_DIMENSION` (4096), total cells ≤ `MAX_GRID_CELLS` (1,000,000); `Transform` clamps its output to that budget so an import always satisfies publish validation. Text caps: title ≤ 200, description ≤ 2000, beadStats ≤ 100,000.
