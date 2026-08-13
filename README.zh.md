@@ -72,9 +72,8 @@ src/
   app/                  # Next.js App Router 页面
     [lang]/             # 带语言前缀的路由（en / zh）
       (site)/           # 站点主布局（页头 + 页脚外壳）
-        editor/         # 编辑器页面
-        patterns/       # 图纸画廊
-        patterns/[id]/  # 图纸详情与编辑页面
+        (content)/      # 首页 + 图纸画廊 + 图纸详情
+        (workspace)/    # 编辑器 + 图纸编辑页面
       sign-in/          # GitHub 登录页
     api/auth/           # Better Auth 路由处理
     api/patterns/       # REST API（GET 列表、POST 发布）
@@ -82,13 +81,25 @@ src/
     api/transform/      # POST 图片 → 图纸转换（Node runtime）
     api/brands/         # GET 色号目录（所有品牌及色号）
   components/
-    auth/               # GitHubButton、UserMenu（登录 UI）
-    editor/             # 工具栏、缩放控件、色号面板、各弹窗、珠子用量面板
-    pattern/            # 图纸卡片、详情面板
+    auth-nav.tsx        # 页头登录区（登录链接 / 用户菜单）
+    github-button.tsx   # GitHub OAuth 登录按钮
+    header.tsx          # 站点页头（服务端组件）
+    footer.tsx          # 站点页脚
+    logo.tsx            # 品牌 logo
     pixi-canvas.tsx     # 可复用 PixiJS 画布组件
+    color-palette.tsx   # 品牌色号面板
+    bead-stats.tsx      # 实时珠子用量面板
+    zoom-controls.tsx   # 放大 / 缩小 / 适应画布控件
+    dialogs/            # publish-dialog.tsx、import-dialog.tsx、export-dialog.tsx
+    icon/               # GitHub 图标
+    providers/          # SWR 与 web-vitals 提供者
     ui/                 # shadcn/ui 组件（禁止手动修改）
   hooks/
     use-palette.ts      # 共享当前品牌 store（Zustand）
+    use-editor.ts       # 编辑器页面状态（工具、颜色、面板、缩放、弹窗）
+    use-edit.ts         # 图纸编辑页状态（草稿字段、面板、保存）
+    use-pattern.ts      # 图纸详情只读状态（画布 api + 缩放 + 面板）
+    use-shortcuts.ts    # B/E/G 工具切换快捷键
     use-pixi-app.ts     # PixiJS Application 生命周期（WebGL 上下文管理）
     use-pixi-canvas.ts  # 缩放/平移/绘制指针事件、固定分辨率重建
   lib/
