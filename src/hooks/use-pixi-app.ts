@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type RefObject } from "react"
 import { Application, Container, Graphics } from "pixi.js"
 import { toast } from "@/components/ui/toast"
+import { useI18n } from "@/i18n/client"
 import type { PixiContext } from "@/lib/editor"
 
 /**
@@ -19,6 +20,13 @@ export function usePixiApp(
 ): PixiContext | null {
   const [ctx, setCtx] = useState<PixiContext | null>(null)
   const rafRef = useRef(0)
+  const { t } = useI18n()
+  // Latest `t` behind a ref so the one-shot init effect doesn't need `t` in
+  // its deps (re-running it would tear down and rebuild the WebGL context).
+  const tRef = useRef(t)
+  useEffect(() => {
+    tRef.current = t
+  }, [t])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -36,8 +44,8 @@ export function usePixiApp(
       toast.add({
         id: "webgl-context-lost",
         type: "error",
-        title: "Canvas unavailable",
-        description: "The WebGL canvas was lost. Please reload the page.",
+        title: tRef.current("editor.canvasUnavailable"),
+        description: tRef.current("editor.canvasUnavailableDescription"),
       })
     }
     canvas.addEventListener("webglcontextlost", onContextLost)
@@ -56,8 +64,8 @@ export function usePixiApp(
         toast.add({
           id: "webgl-unavailable",
           type: "error",
-          title: "Canvas unavailable",
-          description: "Your browser could not start the WebGL canvas. Please try a different browser.",
+          title: tRef.current("editor.canvasUnavailable"),
+          description: tRef.current("editor.webglUnavailableDescription"),
         })
         return /* WebGL unavailable */
       }

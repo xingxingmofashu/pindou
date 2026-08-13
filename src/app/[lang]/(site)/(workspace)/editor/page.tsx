@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
+import { useShallow } from "zustand/react/shallow"
 import { Pencil, Eraser, PaintBucket, Trash2, CaseSensitive, ImagePlus, Download, List, Palette as PaletteIcon, Undo2, Redo2 } from "lucide-react"
 import { PixiCanvas, type PixiCanvasApi } from "@/components/pixi-canvas"
 import { ColorPalette } from "@/components/color-palette"
@@ -121,21 +122,41 @@ function EditorToolbar() {
   const { t } = useI18n()
   const [clearOpen, setClearOpen] = useState(false)
 
-  const activeTool = useEditorStore((s) => s.activeTool)
-  const setActiveTool = useEditorStore((s) => s.setActiveTool)
-  const showLabels = useEditorStore((s) => s.showLabels)
-  const toggleLabels = useEditorStore((s) => s.toggleLabels)
-  const showBeadStats = useEditorStore((s) => s.showBeadStats)
-  const toggleBeadStats = useEditorStore((s) => s.toggleBeadStats)
-  const showColorPalette = useEditorStore((s) => s.showColorPalette)
-  const toggleColorPalette = useEditorStore((s) => s.toggleColorPalette)
-  const zoom = useEditorStore((s) => s.zoom)
-  const canUndo = useEditorStore((s) => s.canUndo)
-  const canRedo = useEditorStore((s) => s.canRedo)
-  const api = useEditorStore((s) => s.api)
-  const openImport = useEditorStore((s) => s.openImport)
-  const openExport = useEditorStore((s) => s.openExport)
-  const openPublish = useEditorStore((s) => s.openPublish)
+  const {
+    activeTool,
+    setActiveTool,
+    showLabels,
+    toggleLabels,
+    showBeadStats,
+    toggleBeadStats,
+    showColorPalette,
+    toggleColorPalette,
+    zoom,
+    canUndo,
+    canRedo,
+    api,
+    openImport,
+    openExport,
+    openPublish,
+  } = useEditorStore(
+    useShallow((s) => ({
+      activeTool: s.activeTool,
+      setActiveTool: s.setActiveTool,
+      showLabels: s.showLabels,
+      toggleLabels: s.toggleLabels,
+      showBeadStats: s.showBeadStats,
+      toggleBeadStats: s.toggleBeadStats,
+      showColorPalette: s.showColorPalette,
+      toggleColorPalette: s.toggleColorPalette,
+      zoom: s.zoom,
+      canUndo: s.canUndo,
+      canRedo: s.canRedo,
+      api: s.api,
+      openImport: s.openImport,
+      openExport: s.openExport,
+      openPublish: s.openPublish,
+    })),
+  )
 
   return (
     <div className="flex items-center justify-between px-3 py-2 border">

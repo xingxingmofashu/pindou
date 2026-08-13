@@ -181,7 +181,10 @@
     "exportFailedTitle": "Export failed",
     "exportFailedDescription": "This browser can't render an image that large — lower the pixels-per-bead value and try again.",
     "unknownPalette": "Unknown palette",
-    "unknownPaletteDescription": "This pattern's palette could not be loaded."
+    "unknownPaletteDescription": "This pattern's palette could not be loaded.",
+    "canvasUnavailable": "Canvas unavailable",
+    "canvasUnavailableDescription": "The WebGL canvas was lost. Please reload the page.",
+    "webglUnavailableDescription": "Your browser could not start the WebGL canvas. Please try a different browser."
   },
   "footer": {
     "tagline": "Fuse bead pattern editor & community",

@@ -240,6 +240,8 @@ function PatternCard({
           alt={title}
           width={128}
           height={128}
+          sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
+          unoptimized
           className="block aspect-square w-full bg-muted object-cover [image-rendering:pixelated]"
           onError={() => setImageFailed(true)}
         />

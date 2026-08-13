@@ -181,7 +181,10 @@
     "exportFailedTitle": "导出失败",
     "exportFailedDescription": "当前浏览器无法导出该尺寸的图片，请降低“每颗拼豆的像素”后重试。",
     "unknownPalette": "未知色板",
-    "unknownPaletteDescription": "无法加载这个图案的色板。"
+    "unknownPaletteDescription": "无法加载这个图案的色板。",
+    "canvasUnavailable": "画布不可用",
+    "canvasUnavailableDescription": "WebGL 画布已丢失，请刷新页面。",
+    "webglUnavailableDescription": "浏览器无法启动 WebGL 画布，请尝试更换浏览器。"
   },
   "footer": {
     "tagline": "拼豆图案编辑器与社区",

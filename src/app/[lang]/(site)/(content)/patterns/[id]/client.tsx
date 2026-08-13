@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { Download, Info, List } from "lucide-react"
 import { PixiCanvas, type PixiCanvasApi } from "@/components/pixi-canvas"
@@ -46,10 +46,14 @@ export function PatternDetailClient({
   const { rows, cols } = gridSize(grid) ?? { rows: 0, cols: 0 }
   const totalBeads = totalBeadCount(beadStats)
 
+  // Index palette colours by code once, so the per-code lookup below stays O(1)
+  // instead of scanning the palette for every bead-stat entry.
+  const colorByCode = useMemo(() => new Map(palette.colors.map((c) => [c.code, c])), [palette])
+
   const sortedStats = Object.entries(beadStats)
     .sort(([, a], [, b]) => b - a)
     .map(([code, count]) => {
-      const color = palette.colors.find((c) => c.code === code)
+      const color = colorByCode.get(code)
       return { code, count, name: color?.name, hex: color?.hex }
     })
 
