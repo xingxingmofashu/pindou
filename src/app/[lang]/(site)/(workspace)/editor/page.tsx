@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useShortcuts } from "@/hooks/use-shortcuts"
 import { useEditorStore } from "@/hooks/use-editor"
+import { usePalette } from "@/hooks/use-palette"
 import { useI18n } from "@/i18n/client"
 import type { ToolKind, CellsData } from "@/lib/editor"
 
@@ -63,13 +64,16 @@ export default function EditorContent() {
   const showLabels = useEditorStore((s) => s.showLabels)
   const showColorPalette = useEditorStore((s) => s.showColorPalette)
   const showBeadStats = useEditorStore((s) => s.showBeadStats)
+  const { palette } = usePalette()
 
   // Registers the canvas's imperative API into the shared store so the toolbar
-  // and dialogs can drive it.
+  // and dialogs can drive it. The canvas only mounts once the palette resolves
+  // (EditablePaletteBridge returns null before that), so re-register on palette
+  // change — otherwise the store keeps a null `api` from the first mount.
   useEffect(() => {
     setApi(canvasApiRef.current)
     return () => setApi(null)
-  }, [setApi])
+  }, [setApi, palette])
 
   // Stable: both dialogs read the canvas grid through it, and the export dialog
   // memoizes on it, so an identity change per render would defeat the memo.
