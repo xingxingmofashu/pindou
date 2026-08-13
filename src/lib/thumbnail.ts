@@ -1,6 +1,6 @@
 import sharp from "sharp"
 import { buildHexByCode, gridSize } from "@/lib/editor"
-import { MIN_PX, EDITOR_BG } from "@/lib/constants"
+import { EDITOR_BG } from "@/lib/constants"
 import { hexToRgb } from "@/lib/utils"
 import { R2 } from "@/lib/r2"
 import type { Palette } from "@/types"
@@ -8,7 +8,7 @@ import type { Palette } from "@/types"
 /** Maximum cells per axis before downsampling kicks in. */
 const MAX_CELLS = 48
 /** Fixed output square side in pixels. */
-const SIZE = MAX_CELLS * MIN_PX
+const SIZE = 128
 /** Object-key prefix under which thumbnails are stored in the R2 bucket. */
 const KEY_PREFIX = "thumbnails"
 

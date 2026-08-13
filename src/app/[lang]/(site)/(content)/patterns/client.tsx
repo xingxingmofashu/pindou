@@ -20,6 +20,10 @@ import { formatRelativeDate } from "@/lib/date"
 import { localizedPath } from "@/i18n/config"
 import { useI18n } from "@/i18n/client"
 
+/** 1×1 transparent GIF — placeholder `src` for a failed/empty thumbnail. */
+const TRANSPARENT_PIXEL =
+  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+
 export interface PatternListItem {
   id: string
   title: string
@@ -227,22 +231,18 @@ function PatternCard({
   return (
     <Link href={localizedPath(locale, `/patterns/${id}`)} className="block">
       <Card>
-        {thumbUrl && !imageFailed ? (
-          <Image
-            src={thumbUrl}
-            alt={title}
-            // Thumbnails are fixed 480×480 (see Thumbnail.SIZE); rendering a
-            // real <img> keeps the Card's `:first-child` styles (no top
-            // padding, top corners rounded) exactly as the old <img> did.
-            width={480}
-            height={480}
-            sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
-            className="block aspect-square w-full bg-muted object-cover"
-            onError={() => setImageFailed(true)}
-          />
-        ) : (
-          <div className="aspect-square w-full bg-muted" />
-        )}
+        {/* Always render an image element so it stays the Card's `:first-child`,
+            keeping the flush-top + rounded-top styles even in the failed branch.
+            The failed/empty branch swaps in a 1×1 transparent GIF (data: URI, so
+            the Next image optimizer leaves it untouched). */}
+        <Image
+          src={thumbUrl && !imageFailed ? thumbUrl : TRANSPARENT_PIXEL}
+          alt={title}
+          width={128}
+          height={128}
+          className="block aspect-square w-full bg-muted object-cover [image-rendering:pixelated]"
+          onError={() => setImageFailed(true)}
+        />
         <CardHeader>
           <CardTitle className="truncate">
             {title}
