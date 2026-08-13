@@ -386,6 +386,8 @@ export class Transform {
       this.removeBackgroundColor(grid)
     }
 
-    return { grid, width, height, beadCount: countGridBeads(grid).size }
+    const counts = countGridBeads(grid)
+    const beadCount = Array.from(counts.values()).reduce((sum, n) => sum + n, 0)
+    return { grid, width, height, beadCount }
   }
 }
