@@ -7,7 +7,7 @@ import { pageMetadata } from "@/lib/server/meta"
 import { getDictionary, getLocale } from "@/i18n/server"
 import { isLocale } from "@/i18n/config"
 import { auth } from "@/lib/auth/server"
-import { PatternDetailClient } from "./detail"
+import { PatternDetailClient } from "./client"
 import type { PatternDetailType } from "@/db/schema"
 
 export async function generateMetadata({
