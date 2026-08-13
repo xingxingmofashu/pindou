@@ -178,6 +178,8 @@
     "scaleReduced": "scale reduced to {scale}px/bead",
     "scaleHint": "Larger scale means a clearer image, but a bigger file.",
     "exportPng": "Export PNG",
+    "exportFailedTitle": "Export failed",
+    "exportFailedDescription": "This browser can't render an image that large — lower the pixels-per-bead value and try again.",
     "unknownPalette": "Unknown palette",
     "unknownPaletteDescription": "This pattern's palette could not be loaded."
   },

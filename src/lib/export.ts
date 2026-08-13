@@ -3,7 +3,7 @@ import { MAJOR_GRID_STEP } from "@/lib/constants"
 import type { Palette } from "@/types"
 
 /** Default pixels per bead when the caller doesn't specify a scale. */
-export const DEFAULT_EXPORT_SCALE = 64
+export const DEFAULT_EXPORT_SCALE = 32
 
 /**
  * Largest canvas dimension in pixels. Caps memory on pathological grids
@@ -228,15 +228,18 @@ export class Export {
    * @param palette - Palette used to resolve code → colour hex.
    * @param scale   - Pixels per bead (integer; clamped to fit the canvas limit).
    * @param opts    - Optional export options.
+   * @returns `true` when the PNG was generated and the download was triggered;
+   *          `false` when the browser failed to encode the canvas (e.g. it is
+   *          too large for the platform).
    */
-  png(
+  async png(
     grid: string[][],
     palette: Palette,
     scale = DEFAULT_EXPORT_SCALE,
     opts: ExportGridOptions = {},
-  ): void {
+  ): Promise<boolean> {
     const size = gridSize(grid)
-    if (!size) return
+    if (!size) return false
     const { rows, cols } = size
 
     const hexByCode = buildHexByCode(palette)
@@ -250,7 +253,7 @@ export class Export {
     canvas.width = width
     canvas.height = height
     const ctx = canvas.getContext("2d")
-    if (!ctx) return
+    if (!ctx) return false
 
     ctx.fillStyle = "#ffffff"
     ctx.fillRect(0, 0, canvas.width, canvas.height)
@@ -390,14 +393,16 @@ export class Export {
       })
     }
 
-    canvas.toBlob((blob) => {
-      if (!blob) return
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `pattern-${cols}x${rows}@${s}x.png`
-      a.click()
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
-    }, "image/png")
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, "image/png")
+    })
+    if (!blob) return false
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `pattern-${cols}x${rows}@${s}x.png`
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    return true
   }
 }

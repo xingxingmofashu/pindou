@@ -64,7 +64,7 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
   const majorStep = Math.max(1, Math.floor(Number(majorGridStep)) || MAJOR_GRID_STEP)
   const size = grid ? exporter.size(grid, scale, { showBeadStats: beadStatsOn }) : null
 
-  const handleExport = useCallback(() => {
+  const handleExport = useCallback(async () => {
     if (!data) {
       toast.add({
         type: "error",
@@ -81,7 +81,7 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
       })
       return
     }
-    exporter.png(
+    const ok = await exporter.png(
       data.grid,
       palette,
       scale,
@@ -93,6 +93,14 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
         beadStatsTitle: t("editor.beadStatsTitle"),
       },
     )
+    if (!ok) {
+      toast.add({
+        type: "error",
+        title: t("editor.exportFailedTitle"),
+        description: t("editor.exportFailedDescription"),
+      })
+      return
+    }
     onClose()
   }, [data, palette, scale, labelsOn, beadStatsOn, majorGridOn, majorStep, exporter, onClose, t])
 

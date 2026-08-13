@@ -178,6 +178,8 @@
     "scaleReduced": "比例降至每颗 {scale}px",
     "scaleHint": "更大的比例意味着更清晰的图像，但文件也会更大。",
     "exportPng": "导出 PNG",
+    "exportFailedTitle": "导出失败",
+    "exportFailedDescription": "当前浏览器无法导出该尺寸的图片，请降低“每颗拼豆的像素”后重试。",
     "unknownPalette": "未知色板",
     "unknownPaletteDescription": "无法加载这个图案的色板。"
   },
