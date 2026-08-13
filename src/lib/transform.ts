@@ -1,4 +1,3 @@
-import sharp from "sharp"
 import { converter } from "culori"
 import { MAX_GRID_CELLS, MAX_GRID_DIMENSION } from "@/lib/constants"
 import { countGridBeads, mostFrequent } from "@/lib/editor"
@@ -13,16 +12,7 @@ const MIN_SOURCE_SIDE = 256
 /** Pre-scale keeps roughly this many sub-samples per target cell. */
 const SAMPLES_PER_CELL = 12
 
-/**
- * Sources above this many pixels are rejected before decode (≈7071×7071, covers
- * 48 MP phone/DSLR photos). Bounds worst-case decode memory to ~160 MB RGBA.
- */
-export const MAX_INPUT_PIXELS = 40_000_000
-
 const toOklab = converter("oklab")
-
-/** Thrown by {@link Transform.convert} when the source exceeds {@link MAX_INPUT_PIXELS}. */
-export class InputImageTooLargeError extends Error {}
 
 /** How a cell's source pixels collapse into one representative colour. */
 export type TransformMode = "average" | "dominant"
@@ -62,6 +52,9 @@ interface RgbColor {
   b: number
 }
 
+/** Raw RGBA pixels — a `Uint8Array` (sharp) or `Uint8ClampedArray` (canvas). */
+type RgbaPixels = Uint8Array | Uint8ClampedArray
+
 /**
  * One image → bead-grid conversion. Holds the palette's precomputed OKLab
  * samples once and shares them between nearest-colour matching and the
@@ -98,7 +91,7 @@ export class Transform {
    * @returns The representative colour, or null for an empty cell.
    */
   private static cellRepresentative(
-    data: Buffer,
+    data: RgbaPixels,
     srcWidth: number,
     x0: number,
     y0: number,
@@ -147,6 +140,55 @@ export class Transform {
       g: Math.round(gSum / pixelCount),
       b: Math.round(bSum / pixelCount),
     }
+  }
+
+  /**
+   * Clamp a requested bead-grid width (and the height derived from it) to the
+   * publishable budget — per-side {@link MAX_GRID_DIMENSION} and total
+   * {@link MAX_GRID_CELLS} — preserving the source aspect ratio.
+   *
+   * @param srcW           - Source image width in pixels.
+   * @param srcH           - Source image height in pixels.
+   * @param requestedWidth - Target width in beads.
+   * @returns The final grid dimensions in beads.
+   */
+  static resolveGridSize(
+    srcW: number,
+    srcH: number,
+    requestedWidth: number,
+  ): { width: number; height: number } {
+    let width = Math.min(Math.max(1, Math.round(requestedWidth)), MAX_GRID_DIMENSION)
+    let height = Math.min(
+      Math.max(1, Math.round((width * srcH) / srcW)),
+      MAX_GRID_DIMENSION,
+    )
+
+    // Keep the output within the publishable cell budget: a 4096-wide portrait
+    // could otherwise produce a grid that exceeds MAX_GRID_CELLS and then fail
+    // the schema check on publish. Scaling both sides keeps the aspect ratio.
+    if (width * height > MAX_GRID_CELLS) {
+      const scale = Math.sqrt(MAX_GRID_CELLS / (width * height))
+      width = Math.max(1, Math.floor(width * scale))
+      height = Math.max(1, Math.floor(height * scale))
+    }
+    return { width, height }
+  }
+
+  /**
+   * Cap the source long side for pre-scaling, so each target cell covers
+   * roughly {@link SAMPLES_PER_CELL}² source pixels without exceeding
+   * {@link MAX_SOURCE_SIDE}.
+   *
+   * @param width  - Target grid width in beads.
+   * @param height - Target grid height in beads.
+   * @returns The long-side cap, in source pixels.
+   */
+  static resolvePrescaleCap(width: number, height: number): number {
+    const targetSide = Math.max(width, height)
+    return Math.min(
+      MAX_SOURCE_SIDE,
+      Math.max(MIN_SOURCE_SIDE, targetSide * SAMPLES_PER_CELL),
+    )
   }
 
   /**
@@ -290,72 +332,30 @@ export class Transform {
   }
 
   /**
-   * Convert an image buffer into a bead grid quantized to the palette.
+   * Quantize a raw RGBA source buffer into a bead grid.
    *
-   * Each target cell first collapses its source-pixel region into a single
-   * representative colour — the RGB average for photos, or the most frequent
-   * exact RGB for illustrations — and that representative is then mapped to the
-   * nearest palette colour. Averaging before quantizing (rather than quantizing
-   * each pixel and voting) keeps gradients smooth and free of scattered noise.
-   * The source is pre-scaled so each cell covers roughly {@link SAMPLES_PER_CELL}²
-   * pixels; `nearest` kernel preserves exact colours for `dominant` mode, while
-   * `linear` gives the box-like average `average` mode wants.
+   * The caller has already decoded and pre-scaled the source (on the server via
+   * sharp, on the client via the import Web Worker + canvas). Each target cell
+   * first collapses its source-pixel region into a single representative colour
+   * — the RGB average for photos, or the most frequent exact RGB for
+   * illustrations — and that representative is then mapped to the nearest
+   * palette colour. Averaging before quantizing (rather than quantizing each
+   * pixel and voting) keeps gradients smooth and free of scattered noise.
    *
-   * @param image - Encoded image bytes (PNG/JPEG/WebP/GIF/AVIF/TIFF).
-   * @param opts  - Target width and optional mode / merge / background.
+   * @param data      - Raw RGBA pixels (row-major, 4 bytes per pixel).
+   * @param srcWidth  - Source width in pixels.
+   * @param srcHeight - Source height in pixels.
+   * @param opts      - Target width and optional mode / merge / background.
    * @returns The dense code grid plus dimensions and bead count.
    */
-  async convert(
-    image: Buffer,
+  quantize(
+    data: RgbaPixels,
+    srcWidth: number,
+    srcHeight: number,
     opts: TransformOptions,
-  ): Promise<TransformResult> {
-    const metadata = await sharp(image).metadata()
-    const srcW = metadata.width ?? 0
-    const srcH = metadata.height ?? 0
-    if (srcW <= 0 || srcH <= 0) throw new Error("Unsupported image")
-    if (srcW * srcH > MAX_INPUT_PIXELS) {
-      throw new InputImageTooLargeError(
-        `${srcW}×${srcH} exceeds the ${MAX_INPUT_PIXELS}-pixel limit`,
-      )
-    }
-
-    let width = Math.min(Math.max(1, Math.round(opts.width)), MAX_GRID_DIMENSION)
-    let height = Math.min(
-      Math.max(1, Math.round((width * srcH) / srcW)),
-      MAX_GRID_DIMENSION,
-    )
-
-    // Keep the output within the publishable cell budget: a 4096-wide portrait
-    // could otherwise produce a grid that exceeds MAX_GRID_CELLS and then fail
-    // the schema check on publish. Scaling both sides keeps the aspect ratio.
-    if (width * height > MAX_GRID_CELLS) {
-      const scale = Math.sqrt(MAX_GRID_CELLS / (width * height))
-      width = Math.max(1, Math.floor(width * scale))
-      height = Math.max(1, Math.floor(height * scale))
-    }
-
+  ): TransformResult {
+    const { width, height } = Transform.resolveGridSize(srcWidth, srcHeight, opts.width)
     const mode = opts.mode ?? "average"
-    const targetSide = Math.max(width, height)
-    const cap = Math.min(
-      MAX_SOURCE_SIDE,
-      Math.max(MIN_SOURCE_SIDE, targetSide * SAMPLES_PER_CELL),
-    )
-    const pipeline = sharp(image, { limitInputPixels: MAX_INPUT_PIXELS })
-    const preScaled =
-      Math.max(srcW, srcH) > cap
-        ? pipeline.resize({
-            width: cap,
-            kernel: mode === "dominant" ? sharp.kernel.nearest : sharp.kernel.linear,
-          })
-        : pipeline
-
-    const { data, info } = await preScaled
-      .ensureAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true })
-
-    const srcWidth = info.width
-    const srcHeight = info.height
 
     const grid: string[][] = []
     for (let r = 0; r < height; r++) {

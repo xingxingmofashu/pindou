@@ -7,8 +7,9 @@ import { GridStorage } from "@/lib/grid-storage"
 import { PatternInsertSchema, PaginationSchema } from "@/db/schema"
 import { getPatternsPage } from "@/lib/server/patterns"
 import { getPaletteByCode } from "@/lib/server/palettes"
-import { MAX_BODY_BYTES } from "@/lib/constants"
+import { MAX_BODY_BYTES, PATTERN_WRITE_LIMIT, PATTERN_WRITE_WINDOW_MS } from "@/lib/constants"
 import { auth } from "@/lib/auth/server"
+import { rateLimit } from "@/lib/rate-limit"
 
 /** Thumbnail renderer + R2 uploader for this route. */
 const thumbnail = new Thumbnail()
@@ -60,6 +61,10 @@ export async function POST(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers })
   if (!session) {
     return NextResponse.json({ error: "Sign in to publish" }, { status: 401 })
+  }
+
+  if (!(await rateLimit(`user:${session.user.id}`, PATTERN_WRITE_LIMIT, PATTERN_WRITE_WINDOW_MS))) {
+    return NextResponse.json({ error: "Too many requests, try again later" }, { status: 429 })
   }
 
   const contentLength = Number(request.headers.get("content-length"))
