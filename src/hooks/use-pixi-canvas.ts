@@ -2,12 +2,15 @@
 
 import { useEffect, useRef, useState, useCallback } from "react"
 import { Text, type Graphics } from "pixi.js"
+import { useTheme } from "next-themes"
 import {
   CELL,
   DEFAULT_ZOOM,
   MIN_ZOOM,
   MAX_ZOOM,
   ZOOM_FACTOR,
+  EDITOR_BG,
+  EDITOR_BG_DARK,
 } from "@/lib/constants"
 import {
   EMPTY,
@@ -40,9 +43,15 @@ const PAN_BUFFER = 0.5
 /** Max undo snapshots kept in memory (each is a sparse Map copy). */
 const UNDO_LIMIT = 50
 
-/** Grid line colour and alpha — fixed for all views. */
-const GRID_COLOR = 0x000000
+/** Grid line colour and alpha — theme-dependent (dark grid on light canvas,
+ *  light grid on dark canvas). */
+const GRID_COLOR_LIGHT = 0x000000
+const GRID_COLOR_DARK = 0xffffff
 const GRID_ALPHA = 0.12
+
+/** Bead label text colour — theme-dependent. */
+const LABEL_FILL_LIGHT = "#111"
+const LABEL_FILL_DARK = "#f5f5f5"
 
 interface UsePixiCanvasOptions {
   initialZoom?: number
@@ -99,6 +108,11 @@ export function usePixiCanvas(
   const [zoom, setZoomState] = useState(initialZoom)
   const zoomRef = useRef(initialZoom)
   const rafRef = useRef(0)
+
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === "dark"
+  const gridColor = isDark ? GRID_COLOR_DARK : GRID_COLOR_LIGHT
+  const labelFill = isDark ? LABEL_FILL_DARK : LABEL_FILL_LIGHT
 
   const cellsRef = useRef<Map<string, number>>(new Map())
   const rectRef = useRef<DOMRect | null>(null)
@@ -177,7 +191,7 @@ export function usePixiCanvas(
       // lodScale 1) so an imported pattern keeps its fixed cell count at any
       // zoom. LOD only controls the paint-brush block size, never the display.
       const { rects } = computeGridLines(buildView, CELL, z)
-      paintGridLines(ctx.gridGfx, rects, GRID_COLOR, GRID_ALPHA)
+      paintGridLines(ctx.gridGfx, rects, gridColor, GRID_ALPHA)
 
       const entries = buildBeadEntries(cellsRef.current, buildView, 1, CELL, palette)
 
@@ -202,7 +216,7 @@ export function usePixiCanvas(
             text: e.code,
             style: {
               fontSize: pos.fontSize,
-              fill: "#111",
+              fill: labelFill,
               fontFamily: "monospace",
               fontWeight: "bold",
             },
@@ -216,7 +230,7 @@ export function usePixiCanvas(
         }
       }
     },
-    [viewport, palette, showLabels]
+    [viewport, palette, showLabels, gridColor, labelFill]
   )
 
   // Keep the latest pixiCtx, rebuild callback, and the runtime opts behind
@@ -301,6 +315,15 @@ export function usePixiCanvas(
     renderer.on("resize", onResize)
     return () => { renderer.off("resize", onResize) }
   }, [pixiCtx])
+
+  /** Keep the Pixi renderer background in sync with the theme. The app is
+   *  initialised with the light background (`EDITOR_BG`) so changing it here at
+   *  runtime avoids tearing down and rebuilding the WebGL context on toggle. */
+  useEffect(() => {
+    const ctx = pixiRef.current
+    if (!ctx?.app.renderer) return
+    ctx.app.renderer.background.color = isDark ? EDITOR_BG_DARK : EDITOR_BG
+  }, [isDark])
 
   /** Rebuild whenever the rebuild callback changes (covers zoom/palette/showLabels). */
   useEffect(() => {

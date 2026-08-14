@@ -57,3 +57,6 @@ export const GITHUB_URL = "https://github.com/xingxingmofashu/pindou"
 
 /** Background colour of the editor canvas (also the thumbnail background). */
 export const EDITOR_BG = "#fafafa"
+
+/** Dark-mode canvas background — applied at runtime to the Pixi renderer. */
+export const EDITOR_BG_DARK = "#171717"
