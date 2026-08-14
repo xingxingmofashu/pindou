@@ -2,16 +2,19 @@
  *
  * Strategy:
  *  - `install`: precache the localized home pages as offline fallbacks.
- *  - Navigation: network-first. The response streams straight through to the
- *    browser (RSC streaming / `loading.tsx` skeletons keep working) while the
- *    body is buffered into the page cache in the background. On failure it
- *    falls back to the cached page matching the request's locale segment.
+ *  - Navigation: network-first. On success the response streams straight
+ *    through (RSC streaming / `loading.tsx` skeletons keep working); nothing
+ *    is written to cache. On failure it falls back to the cached page matching
+ *    the request's locale segment. Visited pages are NOT cached: they are
+ *    dynamic (SWR/SSR data, session-dependent views) and must stay fresh, and
+ *    the offline fallback is always the locale home page.
  *  - Same-origin static assets (`/_next/static/*`, icons at the root):
  *    stale-while-revalidate so a refreshed build's assets are picked up.
  *  - Everything else (`/api/*`, cross-origin images): never intercepted.
  *
- * Dynamic data (pattern lists, details, palette) is intentionally not cached:
- * it is served by SWR/SSR and must stay fresh.
+ * Note: the offline shell is fully usable only after the service worker has
+ * controlled at least one page load — the entry-point assets are cached
+ * stale-while-revalidate on first controlled navigation.
  */
 const CACHE_NAMES = {
   pages: "pindou-pages-v1",
@@ -69,7 +72,7 @@ self.addEventListener("fetch", (event) => {
   if (path.startsWith("/api/")) return
 
   if (request.mode === "navigate") {
-    event.respondWith(navigateStrategy(event, request, path))
+    event.respondWith(navigateStrategy(request, path))
     return
   }
 
@@ -79,17 +82,11 @@ self.addEventListener("fetch", (event) => {
   }
 })
 
-async function navigateStrategy(event, request, path) {
-  const cache = await caches.open(CACHE_NAMES.pages)
+async function navigateStrategy(request, path) {
   try {
-    const response = await fetch(request)
-    if (response.ok) {
-      // Buffer the body into the page cache after handing the stream to the
-      // browser, so streaming renders are not delayed by the cache write.
-      event.waitUntil(cache.put(request.clone(), response.clone()))
-    }
-    return response
+    return await fetch(request)
   } catch {
+    const cache = await caches.open(CACHE_NAMES.pages)
     const [, lang] = path.split("/")
     const fallback = FALLBACK_PAGES.includes(`/${lang}`) ? `/${lang}` : "/en"
     const cached = await cache.match(fallback, { ignoreSearch: true })
