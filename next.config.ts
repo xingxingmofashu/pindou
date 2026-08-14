@@ -57,11 +57,31 @@ const nextConfig: NextConfig = {
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
               "connect-src 'self' https: wss:",
+              "worker-src 'self'",
               "object-src 'none'",
               "base-uri 'self'",
               "frame-ancestors 'self'",
               "form-action 'self'",
             ].join("; "),
+          },
+        ],
+      },
+      {
+        // The service worker must never be cached by the browser: an old
+        // cached script would keep the app on stale assets indefinitely.
+        source: "/sw.js",
+        headers: [
+          {
+            key: "Content-Type",
+            value: "application/javascript; charset=utf-8",
+          },
+          {
+            key: "Cache-Control",
+            value: "no-cache, no-store, must-revalidate",
+          },
+          {
+            key: "Content-Security-Policy",
+            value: "default-src 'self'; script-src 'self'",
           },
         ],
       },

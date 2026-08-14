@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { notFound } from "next/navigation";
@@ -8,6 +8,7 @@ import { isLocale, locales } from "@/i18n/config";
 import { ThemeProvider } from "next-themes";
 import { SWRProvider } from "@/components/providers/swr-provider";
 import { WebVitals } from "@/components/providers/web-vitals";
+import { PwaRegister } from "@/components/pwa/pwa-register";
 import { Toaster } from "@/components/ui/toast";
 import { SITE_URL } from "@/lib/server/meta";
 import "../globals.css";
@@ -26,6 +27,14 @@ export function generateStaticParams() {
   return locales.map((lang) => ({ lang }));
 }
 
+/**
+ * PWA theme colour for the browser chrome / task switcher. Matches the
+ * light-theme `--primary` (near-black) used across the UI.
+ */
+export const viewport: Viewport = {
+  themeColor: "#171717",
+};
+
 export async function generateMetadata({
   params,
 }: {
@@ -38,6 +47,9 @@ export async function generateMetadata({
     title: dict.meta.title,
     description: dict.meta.description,
     metadataBase: new URL(SITE_URL),
+    icons: {
+      apple: "/apple-touch-icon.png",
+    },
     // hreflang for the root route is added per-page (the layout cannot know
     // its own path); pages with content override `title`/`description`/OG.
     openGraph: {
@@ -83,6 +95,7 @@ export default async function RootLayout({
             <WebVitals />
             <Toaster />
             <Analytics />
+            <PwaRegister />
           </I18nProvider>
         </ThemeProvider>
       </body>
