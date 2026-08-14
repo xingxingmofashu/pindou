@@ -28,6 +28,15 @@ export function usePixiApp(
     tRef.current = t
   }, [t])
 
+  // Latest background behind a ref for the same reason: `app.init` must use
+  // the theme-aware colour of the first render, but a later theme change
+  // (which changes the prop) must NOT re-run the init effect and rebuild the
+  // WebGL context — runtime recolouring is handled by usePixiCanvas.
+  const backgroundRef = useRef(backgroundColor)
+  useEffect(() => {
+    backgroundRef.current = backgroundColor
+  }, [backgroundColor])
+
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -55,7 +64,7 @@ export function usePixiApp(
         await app.init({
           canvas,
           resizeTo: parent,
-          background: backgroundColor,
+          background: backgroundRef.current,
           antialias: true,
           resolution: window.devicePixelRatio || 1,
           autoDensity: true,
@@ -114,7 +123,7 @@ export function usePixiApp(
       if (app.renderer) app.destroy(true, { children: true })
       setCtx(null)
     }
-  }, [canvasRef, backgroundColor])
+  }, [canvasRef])
 
   return ctx
 }
