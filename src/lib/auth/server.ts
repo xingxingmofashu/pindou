@@ -24,7 +24,7 @@ export const auth = betterAuth({
     },
   },
   trustedOrigins: [baseURL],
-  plugins: [nextCookies(), bearer(), oauthPopup()],
+  plugins: [bearer(), oauthPopup(), nextCookies()],
 })
 
 export type Session = typeof auth.$Infer.Session
