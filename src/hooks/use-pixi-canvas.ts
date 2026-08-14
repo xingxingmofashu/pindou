@@ -603,12 +603,19 @@ export function usePixiCanvas(
     }
   }, [palette])
 
-  const loadGrid = useCallback((grid: string[][]) => {
+  const loadGrid = useCallback((grid: string[][], seed = false) => {
     const before = snapshot()
     cellsRef.current = deserializeGrid(grid, palette)
-    // Push *after* the swap so `mapsEqual` sees old vs new and records the
-    // load as an undoable step (undo returns to the previous canvas).
-    pushHistory(before)
+    if (seed) {
+      // Initial load (edit page): the loaded grid is the baseline, not an undo
+      // step — otherwise `canUndo` would be true on a pristine page and the
+      // first undo would wipe the whole pattern back to a blank canvas.
+      clearHistory()
+    } else {
+      // Push *after* the swap so `mapsEqual` sees old vs new and records the
+      // load as an undoable step (undo returns to the previous canvas).
+      pushHistory(before)
+    }
 
     // Fit the loaded grid to the viewport instead of forcing a fixed zoom, so
     // detail/edit/import all open with the whole pattern visible.
@@ -616,7 +623,7 @@ export function usePixiCanvas(
 
     rebuildRef.current()
     onGridChangeRef.current?.()
-  }, [fitToCanvas, palette, pushHistory])
+  }, [fitToCanvas, palette, pushHistory, clearHistory])
 
   /** Live bead-usage stats computed straight from the sparse model — no dense
    *  grid allocation (cheap enough to call after every stroke). */

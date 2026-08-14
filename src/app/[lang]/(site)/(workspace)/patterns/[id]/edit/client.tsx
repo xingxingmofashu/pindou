@@ -1,9 +1,21 @@
 "use client"
 
-import { useCallback, useEffect, useRef } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, CaseSensitive, Download, List, Palette as PaletteIcon } from "lucide-react"
+import {
+  ArrowLeft,
+  CaseSensitive,
+  Download,
+  Eraser,
+  List,
+  PaintBucket,
+  Palette as PaletteIcon,
+  Pencil,
+  Redo2,
+  Trash2,
+  Undo2,
+} from "lucide-react"
 import { PixiCanvas, type PixiCanvasApi } from "@/components/pixi-canvas"
 import { ColorPalette } from "@/components/color-palette"
 import { BeadStatsPanel } from "@/components/bead-stats"
@@ -16,14 +28,33 @@ import { Separator } from "@/components/ui/separator"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { toast } from "@/components/ui/toast"
 import { PatternUpdateSchema } from "@/db/schema"
 import { postJson } from "@/lib/utils"
 import { localizedPath } from "@/i18n/config"
 import { useI18n } from "@/i18n/client"
 import { useEditStore } from "@/hooks/use-edit"
+import { useShortcuts } from "@/hooks/use-shortcuts"
 import type { PatternDetailType } from "@/db/schema"
 import type { Palette } from "@/types"
+import type { ToolKind } from "@/lib/editor"
+
+const TOOLS: { value: ToolKind; icon: typeof Pencil; shortcut: string }[] = [
+  { value: "pen", icon: Pencil, shortcut: "B" },
+  { value: "eraser", icon: Eraser, shortcut: "E" },
+  { value: "fill", icon: PaintBucket, shortcut: "G" },
+]
 
 /**
  * Editable form + canvas for an owned pattern. Registers the canvas API and
@@ -44,6 +75,8 @@ export function PatternEditContentClient({
   const canvasApiRef = useRef<PixiCanvasApi>(null)
   const setApi = useEditStore((s) => s.setApi)
   const setZoom = useEditStore((s) => s.setZoom)
+  const setActiveTool = useEditStore((s) => s.setActiveTool)
+  const activeTool = useEditStore((s) => s.activeTool)
   const activeColorIndex = useEditStore((s) => s.activeColorIndex)
   const showLabels = useEditStore((s) => s.showLabels)
   const showLeftPanel = useEditStore((s) => s.showLeftPanel)
@@ -74,6 +107,14 @@ export function PatternEditContentClient({
   const onGridChange = useCallback(() => {
     useEditStore.getState().setBeadStats(canvasApiRef.current?.getBeadStats() ?? null)
   }, [])
+
+  // Keeps the toolbar's undo/redo buttons in sync with the canvas history.
+  const onHistoryChange = useCallback((canUndo: boolean, canRedo: boolean) => {
+    useEditStore.getState().setHistory(canUndo, canRedo)
+  }, [])
+
+  // Tool shortcuts (B/E/G) advertised in the toolbar tooltips.
+  useShortcuts(setActiveTool)
 
   const backToPattern = useCallback(
     () => router.push(localizedPath(locale, `/patterns/${id}`)),
@@ -144,11 +185,13 @@ export function PatternEditContentClient({
         <PixiCanvas
           palette={palette}
           grid={pattern.gridData}
+          activeTool={activeTool}
           activeColorIndex={activeColorIndex}
           label={showLabels}
           apiRef={canvasApiRef}
           onZoomChange={setZoom}
           onGridChange={onGridChange}
+          onHistoryChange={onHistoryChange}
           className="flex-1 min-w-0 border"
         />
         {showBeadStats && <PatternEditBeadStatsPanel palette={palette} />}
@@ -256,9 +299,15 @@ function PatternEditToolbar({ id, onSave }: { id: string; onSave: () => void }) 
   )
 }
 
-/** Collapsible left panel: title/description fields plus the colour palette. */
+/** Collapsible left panel: drawing tools, title/description fields, and the colour palette. */
 function PatternEditFieldsPanel({ palette }: { palette: Palette }) {
   const { t } = useI18n()
+  const [clearOpen, setClearOpen] = useState(false)
+  const activeTool = useEditStore((s) => s.activeTool)
+  const setActiveTool = useEditStore((s) => s.setActiveTool)
+  const canUndo = useEditStore((s) => s.canUndo)
+  const canRedo = useEditStore((s) => s.canRedo)
+  const api = useEditStore((s) => s.api)
   const title = useEditStore((s) => s.title)
   const setTitle = useEditStore((s) => s.setTitle)
   const description = useEditStore((s) => s.description)
@@ -293,6 +342,99 @@ function PatternEditFieldsPanel({ palette }: { palette: Palette }) {
           />
         </div>
         <p className="text-xs text-muted-foreground">{t("patternDetail.editHint")}</p>
+      </div>
+      <div className="flex items-center gap-0.5 border px-2 py-1.5">
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="outline"
+                size="icon-xs"
+                disabled={!canUndo}
+                aria-label={t("editor.undo")}
+              >
+                <Undo2 data-icon="inline-start" />
+              </Button>
+            }
+            onClick={() => api?.undo()}
+          />
+          <TooltipContent side="bottom">{t("editor.undo")} (⌘Z)</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="outline"
+                size="icon-xs"
+                disabled={!canRedo}
+                aria-label={t("editor.redo")}
+              >
+                <Redo2 data-icon="inline-start" />
+              </Button>
+            }
+            onClick={() => api?.redo()}
+          />
+          <TooltipContent side="bottom">{t("editor.redo")} (⇧⌘Z)</TooltipContent>
+        </Tooltip>
+        <Separator orientation="vertical" className="mx-1 h-5" />
+        {TOOLS.map(({ value, icon: Icon, shortcut }) => {
+          const label = t(`editor.${value}`)
+          return (
+            <Tooltip key={value}>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant={activeTool === value ? "secondary" : "outline"}
+                    size="icon-xs"
+                    aria-label={label}
+                  >
+                    <Icon data-icon="inline-start" />
+                  </Button>
+                }
+                onClick={() => setActiveTool(value)}
+              />
+              <TooltipContent side="bottom">
+                {label} ({shortcut})
+              </TooltipContent>
+            </Tooltip>
+          )
+        })}
+        <Separator orientation="vertical" className="mx-1 h-5" />
+        <AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <AlertDialogTrigger
+                  render={
+                    <Button variant="outline" size="icon-xs" aria-label={t("editor.clearCanvasAria")}>
+                      <Trash2 data-icon="inline-start" />
+                    </Button>
+                  }
+                />
+              }
+            />
+            <TooltipContent side="bottom">{t("editor.clearCanvas")}</TooltipContent>
+          </Tooltip>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("editor.clearCanvas")}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("editor.clearCanvasDescription")}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  api?.clearCanvas()
+                  setClearOpen(false)
+                }}
+              >
+                {t("editor.clear")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
       <div className="flex-1 min-h-0">
         <ColorPalette
