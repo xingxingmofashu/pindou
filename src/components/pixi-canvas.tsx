@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useRef, useImperativeHandle, type RefObject } from "react"
-import { EDITOR_BG } from "@/lib/constants"
+import { useTheme } from "next-themes"
+import { EDITOR_BG, EDITOR_BG_DARK } from "@/lib/constants"
 import { usePixiApp } from "@/hooks/use-pixi-app"
 import { usePixiCanvas } from "@/hooks/use-pixi-canvas"
 import { usePalette } from "@/hooks/use-palette"
@@ -64,7 +65,8 @@ function PixiCanvasInner({
   onGridChange,
   onHistoryChange,
 }: InnerProps) {
-  const ctx = usePixiApp(canvasRef, EDITOR_BG)
+  const { resolvedTheme } = useTheme()
+  const ctx = usePixiApp(canvasRef, resolvedTheme === "dark" ? EDITOR_BG_DARK : EDITOR_BG)
   const { zoom, setZoom, fitToCanvas, clearCanvas, undo, redo, getCellsData, getBeadStats, loadGrid } =
     usePixiCanvas(ctx, palette, { activeTool, activeColorIndex, showLabels: label, readonly, onGridChange, onHistoryChange })
 
