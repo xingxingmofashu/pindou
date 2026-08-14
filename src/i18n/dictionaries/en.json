@@ -9,7 +9,8 @@
     "editor": "Editor",
     "github": "GitHub",
     "githubAria": "View source on GitHub",
-    "signIn": "Sign in"
+    "signIn": "Sign in",
+    "toggleTheme": "Toggle theme"
   },
   "auth": {
     "signOut": "Sign out",

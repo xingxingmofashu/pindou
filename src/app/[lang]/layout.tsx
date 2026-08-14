@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { I18nProvider } from "@/i18n/client";
 import { getDictionary } from "@/i18n/server";
 import { isLocale, locales } from "@/i18n/config";
+import { ThemeProvider } from "next-themes";
 import { SWRProvider } from "@/components/providers/swr-provider";
 import { WebVitals } from "@/components/providers/web-vitals";
 import { Toaster } from "@/components/ui/toast";
@@ -67,15 +68,23 @@ export default async function RootLayout({
   return (
     <html
       lang={lang}
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="h-dvh">
-        <I18nProvider locale={lang} messages={messages}>
-          <SWRProvider>{children}</SWRProvider>
-          <WebVitals />
-          <Toaster />
-          <Analytics />
-        </I18nProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <I18nProvider locale={lang} messages={messages}>
+            <SWRProvider>{children}</SWRProvider>
+            <WebVitals />
+            <Toaster />
+            <Analytics />
+          </I18nProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

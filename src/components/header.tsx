@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Logo } from "@/components/logo"
 import { AuthNav } from "@/components/auth-nav"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { GITHUB_URL } from "@/lib/constants"
 import { localizedPath } from "@/i18n/config"
 import { getDictionary, getLocale } from "@/i18n/server"
@@ -46,6 +47,7 @@ export async function Header() {
         >
           {dict.header.github}
         </Button>
+        <ThemeToggle />
         <AuthNav />
       </div>
     </header>
