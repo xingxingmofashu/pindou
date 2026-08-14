@@ -318,12 +318,15 @@ export function usePixiCanvas(
 
   /** Keep the Pixi renderer background in sync with the theme. The app is
    *  initialised with the light background (`EDITOR_BG`) so changing it here at
-   *  runtime avoids tearing down and rebuilding the WebGL context on toggle. */
+   *  runtime avoids tearing down and rebuilding the WebGL context on toggle.
+   *  Depends on `pixiCtx` too: on first load the theme resolves (and `isDark`
+   *  settles) before the async WebGL init completes, so the assignment must
+   *  run again once the renderer actually exists. */
   useEffect(() => {
     const ctx = pixiRef.current
     if (!ctx?.app.renderer) return
     ctx.app.renderer.background.color = isDark ? EDITOR_BG_DARK : EDITOR_BG
-  }, [isDark])
+  }, [isDark, pixiCtx])
 
   /** Rebuild whenever the rebuild callback changes (covers zoom/palette/showLabels). */
   useEffect(() => {
