@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useState } from "react"
-import Link from "next/link"
 import useSWRMutation from "swr/mutation"
 import {
   AlertDialog,
@@ -23,7 +22,7 @@ import { PatternInsertSchema } from "@/db/schema"
 import { postJson } from "@/lib/utils"
 import type { CellsData } from "@/lib/editor"
 import { GithubIcon } from "@/components/icon/github"
-import { useSession } from "@/lib/auth/client"
+import { signIn, useSession } from "@/lib/auth/client"
 import { localizedPath } from "@/i18n/config"
 import { useI18n } from "@/i18n/client"
 
@@ -95,6 +94,24 @@ export function PublishDialog({ open, onClose, onPublished, onGetCellsData }: Pu
     onClose()
   }, [onClose])
 
+  // Runs the GitHub OAuth flow in a popup so the editor page never navigates
+  // away and the in-memory draft survives the sign-in. On success the reactive
+  // `useSession` updates and this dialog swaps to the publish form.
+  const handleSignInPopup = useCallback(async () => {
+    const { error } = await signIn.popup({
+      provider: "github",
+      callbackURL: localizedPath(locale, "/editor"),
+    })
+    if (error) {
+      toast.add({
+        id: "sign-in-failed",
+        type: "error",
+        title: t("auth.signInFailed"),
+        description: t("auth.signInFailedDescription"),
+      })
+    }
+  }, [locale, t])
+
   return (
     <AlertDialog
       open={open}
@@ -139,14 +156,7 @@ export function PublishDialog({ open, onClose, onPublished, onGetCellsData }: Pu
                 <Button
                   variant="outline"
                   className="justify-center"
-                  nativeButton={false}
-                  render={
-                    <Link
-                      href={`${localizedPath(locale, "/sign-in")}?callback=${encodeURIComponent(
-                        localizedPath(locale, "/editor"),
-                      )}`}
-                    />
-                  }
+                  onClick={handleSignInPopup}
                 >
                   <GithubIcon />
                   {t("auth.signInToPublish")}
