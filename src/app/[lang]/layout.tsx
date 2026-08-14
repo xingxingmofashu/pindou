@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { notFound } from "next/navigation";
 import { I18nProvider } from "@/i18n/client";
@@ -73,6 +74,7 @@ export default async function RootLayout({
           <SWRProvider>{children}</SWRProvider>
           <WebVitals />
           <Toaster />
+          <Analytics />
         </I18nProvider>
       </body>
     </html>
