@@ -2,7 +2,7 @@
 
 import { create } from "zustand"
 import { DEFAULT_ZOOM } from "@/lib/constants"
-import type { BeadStats } from "@/lib/editor"
+import type { BeadStats, ToolKind } from "@/lib/editor"
 import type { PixiCanvasApi } from "@/components/pixi-canvas"
 
 interface EditStore {
@@ -12,6 +12,8 @@ interface EditStore {
   title: string
   /** Pattern description (draft, edited in the left panel). */
   description: string
+  /** Currently active drawing tool. */
+  activeTool: ToolKind
   /** Currently selected palette colour (0 = eraser, 1..N = palette index). */
   activeColorIndex: number
   /** Whether colour-code labels are shown on the canvas. */
@@ -28,11 +30,16 @@ interface EditStore {
   exportOpen: boolean
   /** Whether a save request is in flight. */
   saving: boolean
+  /** Whether the user can undo the last canvas edit. */
+  canUndo: boolean
+  /** Whether the user can redo a previously undone canvas edit. */
+  canRedo: boolean
   setApi: (api: PixiCanvasApi | null) => void
   /** Reset per-instance state and seed the draft fields from the pattern. */
   reset: (title: string, description: string) => void
   setTitle: (title: string) => void
   setDescription: (description: string) => void
+  setActiveTool: (tool: ToolKind | ((prev: ToolKind) => ToolKind)) => void
   setActiveColorIndex: (index: number) => void
   toggleLabels: () => void
   toggleLeftPanel: () => void
@@ -42,6 +49,7 @@ interface EditStore {
   openExport: () => void
   closeExport: () => void
   setSaving: (saving: boolean) => void
+  setHistory: (canUndo: boolean, canRedo: boolean) => void
 }
 
 /**
@@ -54,6 +62,7 @@ export const useEditStore = create<EditStore>((set) => ({
   api: null,
   title: "",
   description: "",
+  activeTool: "pen",
   activeColorIndex: 1,
   showLabels: false,
   showLeftPanel: true,
@@ -62,11 +71,14 @@ export const useEditStore = create<EditStore>((set) => ({
   beadStats: null,
   exportOpen: false,
   saving: false,
+  canUndo: false,
+  canRedo: false,
   setApi: (api) => set({ api }),
   reset: (title, description) =>
     set({
       title,
       description,
+      activeTool: "pen",
       activeColorIndex: 1,
       showLabels: false,
       showLeftPanel: true,
@@ -75,9 +87,13 @@ export const useEditStore = create<EditStore>((set) => ({
       beadStats: null,
       exportOpen: false,
       saving: false,
+      canUndo: false,
+      canRedo: false,
     }),
   setTitle: (title) => set({ title }),
   setDescription: (description) => set({ description }),
+  setActiveTool: (tool) =>
+    set((state) => ({ activeTool: typeof tool === "function" ? tool(state.activeTool) : tool })),
   setActiveColorIndex: (index) => set({ activeColorIndex: index }),
   toggleLabels: () => set((state) => ({ showLabels: !state.showLabels })),
   toggleLeftPanel: () => set((state) => ({ showLeftPanel: !state.showLeftPanel })),
@@ -87,4 +103,5 @@ export const useEditStore = create<EditStore>((set) => ({
   openExport: () => set({ exportOpen: true }),
   closeExport: () => set({ exportOpen: false }),
   setSaving: (saving) => set({ saving }),
+  setHistory: (canUndo, canRedo) => set({ canUndo, canRedo }),
 }))

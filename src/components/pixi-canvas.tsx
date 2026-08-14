@@ -20,8 +20,10 @@ export interface PixiCanvasApi {
   getCellsData: () => CellsData | null
   /** Live per-colour bead counts + painted dims (null when the grid is empty). */
   getBeadStats: () => BeadStats | null
-  /** Replace the canvas contents with a serialized code grid. */
-  loadGrid: (grid: string[][]) => void
+  /** Replace the canvas contents with a serialized code grid. When `seed` is
+   *  true (initial load of an existing pattern), the loaded grid becomes the
+   *  history baseline instead of an undoable step. */
+  loadGrid: (grid: string[][], seed?: boolean) => void
 }
 
 export interface PixiCanvasProps {
@@ -75,7 +77,7 @@ function PixiCanvasInner({
   }, [zoom, onZoomChange])
 
   useEffect(() => {
-    if (grid && grid.length > 0 && ctx) loadGrid(grid)
+    if (grid && grid.length > 0 && ctx) loadGrid(grid, true)
   }, [grid, ctx, loadGrid])
 
   // Clear the canvas only when the palette code actually changes (brand switch
