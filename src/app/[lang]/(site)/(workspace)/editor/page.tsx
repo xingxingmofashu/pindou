@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import { useShallow } from "zustand/react/shallow"
-import { Pencil, Eraser, PaintBucket, Trash2, CaseSensitive, ImagePlus, Download, List, Palette as PaletteIcon, Undo2, Redo2 } from "lucide-react"
+import { Pencil, Eraser, PaintBucket, Pipette, Trash2, CaseSensitive, ImagePlus, Download, List, Palette as PaletteIcon, Undo2, Redo2 } from "lucide-react"
 import { PixiCanvas, type PixiCanvasApi } from "@/components/pixi-canvas"
 import { ColorPalette } from "@/components/color-palette"
 import { BeadStatsPanel } from "@/components/bead-stats"
@@ -49,6 +49,7 @@ const TOOLS: { value: ToolKind; icon: typeof Pencil; shortcut: string }[] = [
   { value: "pen", icon: Pencil, shortcut: "B" },
   { value: "eraser", icon: Eraser, shortcut: "E" },
   { value: "fill", icon: PaintBucket, shortcut: "G" },
+  { value: "eyedropper", icon: Pipette, shortcut: "I" },
 ]
 
 /**
@@ -63,6 +64,7 @@ export default function EditorContent() {
   const setActiveTool = useEditorStore((s) => s.setActiveTool)
   const activeTool = useEditorStore((s) => s.activeTool)
   const activeColorIndex = useEditorStore((s) => s.activeColorIndex)
+  const setActiveColorIndex = useEditorStore((s) => s.setActiveColorIndex)
   const showLabels = useEditorStore((s) => s.showLabels)
   const showColorPalette = useEditorStore((s) => s.showColorPalette)
   const showBeadStats = useEditorStore((s) => s.showBeadStats)
@@ -112,6 +114,7 @@ export default function EditorContent() {
           onZoomChange={setZoom}
           onGridChange={onGridChange}
           onHistoryChange={onHistoryChange}
+          onColorPick={setActiveColorIndex}
         />
         {showBeadStats && <EditorBeadStatsPanel />}
       </div>
