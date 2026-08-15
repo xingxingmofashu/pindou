@@ -119,6 +119,16 @@ export function PatternEditContentClient({
   // Tool shortcuts (B/E/G) advertised in the toolbar tooltips.
   useShortcuts(setActiveTool)
 
+  // Eyedropper pick: set the sampled colour, then return to the pen tool so a
+  // follow-up click draws instead of picking again.
+  const handleColorPick = useCallback(
+    (index: number) => {
+      setActiveColorIndex(index)
+      setActiveTool("pen")
+    },
+    [setActiveColorIndex, setActiveTool],
+  )
+
   const backToPattern = useCallback(
     () => router.push(localizedPath(locale, `/patterns/${id}`)),
     [router, locale, id],
@@ -195,7 +205,7 @@ export function PatternEditContentClient({
           onZoomChange={setZoom}
           onGridChange={onGridChange}
           onHistoryChange={onHistoryChange}
-          onColorPick={setActiveColorIndex}
+          onColorPick={handleColorPick}
           className="flex-1 min-w-0 border"
         />
         {showBeadStats && <PatternEditBeadStatsPanel palette={palette} />}
