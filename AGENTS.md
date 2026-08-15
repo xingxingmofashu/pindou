@@ -83,7 +83,7 @@ The stores:
 - `use-editor.ts` — `/editor` state (tool, colour, labels, panel visibility, bead stats, zoom, undo/redo, dialog open flags)
 - `use-edit.ts` — `/patterns/[id]/edit` state (draft title/desc, colour, panels, zoom, saving; `reset()` seeds it on mount)
 - `use-pattern.ts` — `/patterns/[id]` read-only state (canvas api + zoom + panel visibility)
-- `use-shortcuts.ts` — global B/E/G tool-switching keybindings
+- `use-shortcuts.ts` — global B/E/G/I tool-switching keybindings
 
 The canvas exposes an imperative API (`PixiCanvasApi`: `setZoom`/`fitToCanvas`/`clearCanvas`/`undo`/`redo`/`getCellsData`/`getBeadStats`/`loadGrid`) via an `apiRef` prop; each page registers it into its store with a `useEffect(() => setApi(canvasApiRef.current))` so toolbar/panel components drive the canvas through the store instead of props.
 
@@ -157,15 +157,16 @@ Pan draws beads + grid lines for a **padded** region (`rebuild({ skipLabels: tru
 
 ### Drawing tools
 
-All three tools are implemented in the pointer interaction effect:
+All four tools are implemented in the pointer interaction effect:
 
 | Tool | Behaviour |
 |---|---|
 | **Pen** | Paints the active colour into the visual-cell block via `paintBlock()`. Drag uses Bresenham interpolation (`walkLine`) between visual-cell coords (stored in `drawRef` as `vc/vr`, rederived from `toPaintTarget` each move at the current LOD — survives zoom changes mid-stroke). |
 | **Eraser** | Same as pen but writes `EMPTY` (deletes from the sparse map). |
 | **Fill** | Flood-fills a 4-connected region of the start cell's colour via `floodFill()`. Empty start regions are bounded by the painted bounds ±1, so filling background can't escape to infinity on the unbounded grid. |
+| **Eyedropper** | Samples the **dominant** colour across the visual-cell block under the cursor via `sampleDominantColor()`/`mostFrequent` (the same block a pen press would paint) and sets it as the active colour via `onColorPick`. Stays on the tool after a pick (no auto-return to pen). Empty cells are ignored. While active, hovering a painted cell fires `onHoverCell({ code, hex })` — `null` on empty/leave, throttled to colour changes — which `PixiCanvas` feeds into a cursor-following shadcn Tooltip (`trackCursorAxis="both"`) as a colour preview. |
 
-The eyedropper was removed; `ToolKind` is `"pen" | "eraser" | "fill"` and lives in `src/lib/editor.ts`.
+`ToolKind` is `"pen" | "eraser" | "fill" | "eyedropper"` and lives in `src/lib/editor.ts`.
 
 ### Zoom / pan
 

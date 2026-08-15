@@ -6,7 +6,7 @@ import type { Palette } from "@/types"
 export const EMPTY = 0
 
 /** Identifies one of the drawing tools. */
-export type ToolKind = "pen" | "eraser" | "fill"
+export type ToolKind = "pen" | "eraser" | "fill" | "eyedropper"
 
 /** PixiJS scene-graph objects passed between {@link usePixiApp} and {@link usePixiCanvas}. */
 export interface PixiContext {

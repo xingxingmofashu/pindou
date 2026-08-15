@@ -8,6 +8,7 @@ const TOOL_SHORTCUTS: Record<string, ToolKind> = {
   b: "pen",
   e: "eraser",
   g: "fill",
+  i: "eyedropper",
 }
 
 /** Whether the event target is a text field (input, textarea, contenteditable). */
@@ -18,7 +19,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 /**
- * Global tool-switching shortcuts (B/E/G) advertised in the ToolBar tooltips.
+ * Global tool-switching shortcuts (B/E/G/I) advertised in the ToolBar tooltips.
  * Ignored while typing in a text field (dialogs) or when a modifier is held
  * (Cmd/Ctrl+Z, Cmd/Ctrl+Y, …).
  */

@@ -27,6 +27,7 @@ import {
   getGridBounds,
   boundsWorldSize,
   centerViewport,
+  mostFrequent,
   type ToolKind,
   type ViewRect,
   type BeadEntry,
@@ -65,6 +66,13 @@ interface UsePixiCanvasOptions {
   onGridChange?: () => void
   /** Fired with the current undo/redo availability whenever history changes. */
   onHistoryChange?: (canUndo: boolean, canRedo: boolean) => void
+  /** Fired with the picked 1‑based palette index when the eyedropper samples a
+   *  non-empty cell. Not fired for empty cells. */
+  onColorPick?: (index: number) => void
+  /** Fired with the colour under the cursor while the eyedropper is active and
+   *  hovering a non-empty cell; `null` when hovering empty space or leaving
+   *  the canvas. Only fired when the sampled colour actually changes. */
+  onHoverCell?: (cell: { code: string; hex: string } | null) => void
 }
 
 /** Mutable per-render options mirrored into refs for the event handlers. */
@@ -72,6 +80,8 @@ interface RuntimeOpts {
   activeTool: ToolKind
   activeColorIndex: number
   readonly: boolean
+  onColorPick: ((index: number) => void) | null
+  onHoverCell: ((cell: { code: string; hex: string } | null) => void) | null
 }
 
 /** Paint a batch of grid-line rectangles onto a Graphics and fill them. */
@@ -90,6 +100,25 @@ function mapsEqual(a: Map<string, number>, b: Map<string, number>): boolean {
   return true
 }
 
+/** Dominant 1‑based colour index across a visual-cell block, or `undefined`
+ *  when every cell in the block is empty. Used by the eyedropper for both
+ *  picking and the hover preview, so a zoomed-out sample matches what a pen
+ *  press would paint. `EMPTY` is never stored in the map, so no skip needed. */
+function sampleDominantColor(
+  map: Map<string, number>,
+  t: { c0: number; r0: number; c1: number; r1: number },
+): number | undefined {
+  const counts = new Map<number, number>()
+  for (let r = t.r0; r < t.r1; r++) {
+    for (let c = t.c0; c < t.c1; c++) {
+      const v = map.get(`${c},${r}`)
+      if (v === undefined) continue
+      counts.set(v, (counts.get(v) ?? 0) + 1)
+    }
+  }
+  return mostFrequent(counts)
+}
+
 export function usePixiCanvas(
   pixiCtx: PixiContext | null,
   palette: Palette,
@@ -103,6 +132,8 @@ export function usePixiCanvas(
     readonly = false,
     onGridChange,
     onHistoryChange,
+    onColorPick,
+    onHoverCell,
   } = options
 
   const [zoom, setZoomState] = useState(initialZoom)
@@ -124,13 +155,17 @@ export function usePixiCanvas(
   const redoStackRef = useRef<Map<string, number>[]>([])
 
   const pixiRef = useRef(pixiCtx)
-  const runtimeRef = useRef<RuntimeOpts>({ activeTool, activeColorIndex, readonly })
+  const runtimeRef = useRef<RuntimeOpts>({ activeTool, activeColorIndex, readonly, onColorPick: null, onHoverCell: null })
   const onGridChangeRef = useRef(onGridChange)
   const onHistoryChangeRef = useRef(onHistoryChange)
   const panRef = useRef({ on: false, startX: 0, startY: 0, startWX: 0, startWY: 0 })
   const drawRef = useRef<{ on: boolean; vc: number; vr: number; before: Map<string, number> | null }>({
     on: false, vc: 0, vr: 0, before: null,
   })
+  /** Last colour reported via `onHoverCell`, to skip unchanged samples. */
+  const lastHoverRef = useRef<string | null>(null)
+  /** Palette code the hover throttle was last primed for. */
+  const lastHoverPaletteRef = useRef(palette.code)
 
   const canvas = pixiCtx?.app.canvas as HTMLCanvasElement | undefined
 
@@ -240,9 +275,17 @@ export function usePixiCanvas(
   useEffect(() => {
     pixiRef.current = pixiCtx
     rebuildRef.current = rebuild
-    runtimeRef.current = { activeTool, activeColorIndex, readonly }
+    runtimeRef.current = { activeTool, activeColorIndex, readonly, onColorPick: onColorPick ?? null, onHoverCell: onHoverCell ?? null }
     onGridChangeRef.current = onGridChange
     onHistoryChangeRef.current = onHistoryChange
+    // Reset the hover throttle when the eyedropper isn't active (or the palette
+    // changes), so switching tools and back re-fires the preview even on the
+    // same cell — the component clears its own `hovered` state on tool change,
+    // but this ref lives here and would otherwise suppress the re-fire.
+    if (activeTool !== "eyedropper" || palette.code !== lastHoverPaletteRef.current) {
+      lastHoverPaletteRef.current = palette.code
+      lastHoverRef.current = null
+    }
   })
 
   /** Deep-copy the sparse grid so a snapshot survives later mutations. */
@@ -477,6 +520,17 @@ export function usePixiCanvas(
         onGridChangeRef.current?.()
         return
       }
+      if (rt.activeTool === "eyedropper") {
+        // Sample the dominant colour across the visual-cell block under the
+        // cursor (the same block a pen press would paint), so zoomed-out picks
+        // match what the brush actually lays down. Empty cells are ignored.
+        e.preventDefault()
+        const t = toPaintTarget(e.clientX, e.clientY, rectRef.current)
+        if (!t) return
+        const best = sampleDominantColor(cellsRef.current, t)
+        if (best !== undefined) rt.onColorPick?.(best)
+        return
+      }
       if (!isDraw(rt.activeTool)) return
 
       e.preventDefault()
@@ -511,6 +565,29 @@ export function usePixiCanvas(
       }
 
       const d = drawRef.current
+
+      // Eyedropper hover preview: report the dominant colour under the cursor
+      // (only when not mid-stroke). Throttled to colour changes so we don't
+      // fire a React re-render on every pointermove.
+      if (!d.on && runtimeRef.current.activeTool === "eyedropper") {
+        const t = toPaintTarget(e.clientX, e.clientY, rectRef.current)
+        if (!t) return
+        const idx = sampleDominantColor(cellsRef.current, t)
+        if (idx === undefined) {
+          if (lastHoverRef.current !== null) {
+            lastHoverRef.current = null
+            runtimeRef.current.onHoverCell?.(null)
+          }
+          return
+        }
+        const color = palette.colors[idx - 1]
+        if (!color) return
+        if (lastHoverRef.current !== color.code) {
+          lastHoverRef.current = color.code
+          runtimeRef.current.onHoverCell?.({ code: color.code, hex: color.hex })
+        }
+        return
+      }
       if (!d.on) return
 
       const t = toPaintTarget(e.clientX, e.clientY, rectRef.current)
@@ -538,6 +615,11 @@ export function usePixiCanvas(
         if (d.before) pushHistory(d.before)
         onGridChangeRef.current?.()
       }
+      // Hide the eyedropper hover preview when the pointer leaves the canvas.
+      if (lastHoverRef.current !== null) {
+        lastHoverRef.current = null
+        runtimeRef.current.onHoverCell?.(null)
+      }
     }
 
     const onContextMenu = (e: Event) => e.preventDefault()
@@ -554,7 +636,7 @@ export function usePixiCanvas(
     return () => {
       for (const [ev, fn] of events) cvs.removeEventListener(ev, fn)
     }
-  }, [canvas, toWorld, toPaintTarget, pushHistory])
+  }, [canvas, toWorld, toPaintTarget, pushHistory, palette.colors])
 
   /** Clear the canvas and redraw. With `clearHistoryFlag` (brand switch) the
    *  undo/redo stacks are wiped too — cell indices change meaning across

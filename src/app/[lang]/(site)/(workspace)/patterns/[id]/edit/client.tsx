@@ -12,6 +12,7 @@ import {
   PaintBucket,
   Palette as PaletteIcon,
   Pencil,
+  Pipette,
   Redo2,
   Trash2,
   Undo2,
@@ -54,6 +55,7 @@ const TOOLS: { value: ToolKind; icon: typeof Pencil; shortcut: string }[] = [
   { value: "pen", icon: Pencil, shortcut: "B" },
   { value: "eraser", icon: Eraser, shortcut: "E" },
   { value: "fill", icon: PaintBucket, shortcut: "G" },
+  { value: "eyedropper", icon: Pipette, shortcut: "I" },
 ]
 
 /**
@@ -78,6 +80,7 @@ export function PatternEditContentClient({
   const setActiveTool = useEditStore((s) => s.setActiveTool)
   const activeTool = useEditStore((s) => s.activeTool)
   const activeColorIndex = useEditStore((s) => s.activeColorIndex)
+  const setActiveColorIndex = useEditStore((s) => s.setActiveColorIndex)
   const showLabels = useEditStore((s) => s.showLabels)
   const showLeftPanel = useEditStore((s) => s.showLeftPanel)
   const showBeadStats = useEditStore((s) => s.showBeadStats)
@@ -192,6 +195,7 @@ export function PatternEditContentClient({
           onZoomChange={setZoom}
           onGridChange={onGridChange}
           onHistoryChange={onHistoryChange}
+          onColorPick={setActiveColorIndex}
           className="flex-1 min-w-0 border"
         />
         {showBeadStats && <PatternEditBeadStatsPanel palette={palette} />}

@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useRef, useImperativeHandle, type RefObject } from "react"
+import { useEffect, useRef, useImperativeHandle, useState, type RefObject } from "react"
 import { useTheme } from "next-themes"
 import { EDITOR_BG, EDITOR_BG_DARK } from "@/lib/constants"
 import { usePixiApp } from "@/hooks/use-pixi-app"
 import { usePixiCanvas } from "@/hooks/use-pixi-canvas"
 import { usePalette } from "@/hooks/use-palette"
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import type { ToolKind, BeadStats, CellsData } from "@/lib/editor"
 import type { Palette } from "@/types"
 
@@ -40,6 +41,9 @@ export interface PixiCanvasProps {
   onGridChange?: () => void
   /** Fired with the current undo/redo availability whenever history changes. */
   onHistoryChange?: (canUndo: boolean, canRedo: boolean) => void
+  /** Fired with the sampled 1‑based palette index when the eyedropper tool
+   *  clicks a non-empty cell (never for empty cells). */
+  onColorPick?: (index: number) => void
   className?: string
 }
 
@@ -47,6 +51,8 @@ export interface PixiCanvasProps {
 type InnerProps = Omit<PixiCanvasProps, "className" | "palette"> & {
   canvasRef: RefObject<HTMLCanvasElement | null>
   palette: Palette
+  /** Internal: drives the eyedropper hover preview tooltip. */
+  onHoverCell?: (cell: { code: string; hex: string } | null) => void
 }
 
 /**
@@ -66,11 +72,13 @@ function PixiCanvasInner({
   onZoomChange,
   onGridChange,
   onHistoryChange,
+  onColorPick,
+  onHoverCell,
 }: InnerProps) {
   const { resolvedTheme } = useTheme()
   const ctx = usePixiApp(canvasRef, resolvedTheme === "dark" ? EDITOR_BG_DARK : EDITOR_BG)
   const { zoom, setZoom, fitToCanvas, clearCanvas, undo, redo, getCellsData, getBeadStats, loadGrid } =
-    usePixiCanvas(ctx, palette, { activeTool, activeColorIndex, showLabels: label, readonly, onGridChange, onHistoryChange })
+    usePixiCanvas(ctx, palette, { activeTool, activeColorIndex, showLabels: label, readonly, onGridChange, onHistoryChange, onColorPick, onHoverCell })
 
   useEffect(() => {
     onZoomChange?.(zoom)
@@ -105,8 +113,21 @@ function PixiCanvasInner({
   return null
 }
 
-export function PixiCanvas({ className, palette, readonly, ...props }: PixiCanvasProps) {
+export function PixiCanvas({ className, palette, readonly, activeTool, ...props }: PixiCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  // Colour under the cursor while the eyedropper is active, driving the
+  // cursor-following hover preview tooltip. Reset when the tool or read-only
+  // state changes (adjusted during render — the React-recommended way to reset
+  // state from a prop change) so a stale preview doesn't linger.
+  const [hovered, setHovered] = useState<{ code: string; hex: string } | null>(null)
+  const [prevPreviewKey, setPrevPreviewKey] = useState<string>("")
+  const previewKey = `${activeTool ?? ""}:${readonly ? "ro" : "rw"}`
+  if (prevPreviewKey !== previewKey) {
+    setPrevPreviewKey(previewKey)
+    setHovered(null)
+  }
+
+  const showHover = !readonly && activeTool === "eyedropper" && hovered !== null
 
   // When a palette is pinned (read-only detail page, or the pattern editor),
   // render a bare branch that never subscribes to the active-palette store.
@@ -117,13 +138,27 @@ export function PixiCanvas({ className, palette, readonly, ...props }: PixiCanva
     <div className={className}>
       {/* The canvas parent must be padding-free: Pixi sizes itself from its
           parent's clientWidth/clientHeight, which include padding. */}
-      <div className="h-full w-full">
-        <canvas ref={canvasRef} className="block h-full w-full" />
-      </div>
+      <Tooltip trackCursorAxis="both" open={showHover}>
+        <TooltipTrigger render={
+          <div className="h-full w-full">
+            <canvas ref={canvasRef} className="block h-full w-full" />
+          </div>
+        } />
+        {hovered && (
+          <TooltipContent sideOffset={10}>
+            <span
+              aria-hidden="true"
+              className="size-3 rounded-[4px] border border-white/30"
+              style={{ backgroundColor: hovered.hex }}
+            />
+            <span>{hovered.code}</span>
+          </TooltipContent>
+        )}
+      </Tooltip>
       {palette ? (
-        <PixiCanvasInner canvasRef={canvasRef} palette={palette} readonly={readonly} {...props} />
+        <PixiCanvasInner canvasRef={canvasRef} palette={palette} readonly={readonly} activeTool={activeTool} onHoverCell={setHovered} {...props} />
       ) : (
-        <EditablePaletteBridge canvasRef={canvasRef} readonly={readonly ?? false} {...props} />
+        <EditablePaletteBridge canvasRef={canvasRef} readonly={readonly ?? false} activeTool={activeTool} onHoverCell={setHovered} {...props} />
       )}
     </div>
   )
