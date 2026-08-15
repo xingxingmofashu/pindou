@@ -99,6 +99,16 @@ export default function EditorContent() {
   // Tool shortcuts (B/E/G) advertised in the toolbar tooltips.
   useShortcuts(setActiveTool)
 
+  // Eyedropper pick: set the sampled colour, then return to the pen tool so a
+  // follow-up click draws instead of picking again.
+  const handleColorPick = useCallback(
+    (index: number) => {
+      setActiveColorIndex(index)
+      setActiveTool("pen")
+    },
+    [setActiveColorIndex, setActiveTool],
+  )
+
   return (
     <div className="flex h-full flex-col gap-2 overflow-hidden">
       <UnsavedChangesGuard dirty={beadStats !== null} />
@@ -114,7 +124,7 @@ export default function EditorContent() {
           onZoomChange={setZoom}
           onGridChange={onGridChange}
           onHistoryChange={onHistoryChange}
-          onColorPick={setActiveColorIndex}
+          onColorPick={handleColorPick}
         />
         {showBeadStats && <EditorBeadStatsPanel />}
       </div>
