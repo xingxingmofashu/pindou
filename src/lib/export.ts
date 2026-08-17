@@ -45,6 +45,29 @@ const STATS_ROW_H = 32
 const STATS_GAP = 8
 const STATS_PAD = 12
 
+/**
+ * Side length of the per-tile canvases used to render export text. Safari
+ * silently drops `fillText`/`strokeText` on canvases larger than ~4096px per
+ * side (while fills/strokes still render), so text is rasterized into small
+ * tiles and composited back via `drawImage`. 2048 keeps every tile well under
+ * that limit at any realistic export size.
+ */
+const TEXT_TILE_SIZE = 2048
+
+/**
+ * Extra pixels of overlap on each side of a text tile, so a glyph that
+ * straddles a tile seam is rasterized whole in both neighbours and the
+ * composite reconstructs it without clipping. Generous enough to cover the
+ * largest label/coordinate font the layout can produce.
+ */
+const TEXT_TILE_PAD = 128
+
+/**
+ * Largest canvas dimension still drawn directly; larger exports tile their text
+ * on per-tile canvases that stay under this limit too.
+ */
+const TEXT_SAFE_DIM = 4096
+
 /** Scaled bead-usage section geometry, derived from the pattern's bead size. */
 interface StatsGeometry {
   titleFont: number
@@ -103,7 +126,10 @@ export interface ExportSize {
  * a thicker, darker grid is drawn every `majorGridStep` cells, grouping the
  * beads into blocks (8×8 by default). With {@link ExportGridOptions.showLabels}
  * each bead gets its colour code centred on it. The effective scale is clamped
- * so the full canvas never exceeds {@link MAX_EXPORT_DIM} on either side.
+ * so the full canvas never exceeds {@link MAX_EXPORT_DIM} on either side. Text
+ * (labels, coordinates, bead-usage entries) is drawn on small per-tile canvases
+ * and composited back, since Safari drops canvas text on canvases wider or
+ * taller than ~4096px while fills/strokes still render.
  */
 export class Export {
   /** The distinct number of painted colours — one bead-usage row per colour. */
@@ -166,6 +192,65 @@ export class Export {
       cols,
       width: Math.max(canvasWidth, headerW + g.pad + cols * itemW + g.pad),
       height: g.pad + titleH + rows * g.rowH + g.pad,
+    }
+  }
+
+  /**
+   * Render canvas text through small per-tile canvases instead of the (possibly
+   * very large) destination. Safari silently drops `fillText`/`strokeText` on
+   * canvases wider or taller than roughly {@link TEXT_SAFE_DIM} pixels while
+   * fills and strokes still render, so a large export would lose every label
+   * unless the text is drawn on smaller canvases and composited via
+   * `drawImage` (a plain pixel copy, unaffected by the text limit). Each tile
+   * is `tileSize` square plus a `pad`-pixel border on every side; glyphs that
+   * straddle a seam are rasterized whole in both neighbouring tiles and each
+   * composite clips back to the tile's own unpadded region, so the seams read
+   * correctly.
+   *
+   * @param target   - The full-size destination context (the export canvas).
+   * @param width    - Full canvas width in pixels.
+   * @param height   - Full canvas height in pixels.
+   * @param tileSize - Unpadded side length of each square tile.
+   * @param pad      - Overlap (in pixels) around each tile so seam-straddling
+   *                   glyphs are captured by both neighbours.
+   * @param draw     - Draws one tile's worth of text; receives the tile context
+   *                   already translated to full-canvas coordinates and the tile's
+   *                   padded clip rectangle (in full-canvas space) to cull against.
+   */
+  private static renderTiledText(
+    target: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    tileSize: number,
+    pad: number,
+    draw: (
+      tile: CanvasRenderingContext2D,
+      padded: { left: number; top: number; right: number; bottom: number },
+    ) => void,
+  ): void {
+    for (let tileY = 0; tileY < height; tileY += tileSize) {
+      const tileH = Math.min(tileSize, height - tileY)
+      for (let tileX = 0; tileX < width; tileX += tileSize) {
+        const tileW = Math.min(tileSize, width - tileX)
+        const canvas = document.createElement("canvas")
+        canvas.width = tileW + 2 * pad
+        canvas.height = tileH + 2 * pad
+        const tile = canvas.getContext("2d")
+        if (!tile) continue
+        // Translate so the caller draws in full-canvas coordinates; the text
+        // sits at an offset of `pad` inside the tile.
+        tile.translate(pad - tileX, pad - tileY)
+        draw(tile, {
+          left: tileX - pad,
+          top: tileY - pad,
+          right: tileX + tileW + pad,
+          bottom: tileY + tileH + pad,
+        })
+        // Composite only the tile's unpadded interior — the padded border was
+        // there to render seam-straddling glyphs, not to be drawn over the
+        // neighbours.
+        target.drawImage(canvas, pad, pad, tileW, tileH, tileX, tileY, tileW, tileH)
+      }
     }
   }
 
@@ -321,76 +406,193 @@ export class Export {
     ctx.lineTo(headerW + cols * s, headerH + 0.5)
     ctx.stroke()
 
+    // ----- Text layer -----
+    // Safari silently drops canvas text (`fillText`/`strokeText`) on canvases
+    // larger than ~4096px per side while fills and strokes still render, so a
+    // wide/tall export would lose every label, coordinate number, and the
+    // bead-usage list. Text is therefore drawn on small per-tile canvases and
+    // composited back with `drawImage` (a plain pixel copy, unaffected by the
+    // text limit), keeping the output pixel-identical to a direct draw.
+    //
     // Colour-code labels on each bead (mirrors the editor's Labels toggle).
+    // Widths depend only on the code (the font is fixed), so measure each once
+    // on the main context and share the cache across every tile.
+    const labelFont = Math.max(4, Math.round(s * 0.4))
+    ctx.font = `${labelFont}px ui-monospace, monospace`
+    const labelWidths = new Map<string, number>()
     if (opts.showLabels) {
-      ctx.fillStyle = BEAD_LABEL_COLOR
-      ctx.font = `${Math.max(4, Math.round(s * 0.4))}px ui-monospace, monospace`
-      ctx.textAlign = "center"
-      ctx.textBaseline = "middle"
-      // Widths depend only on the code (the font is fixed), so measure each once.
-      const labelWidths = new Map<string, number>()
-      forEachPaintedCell(grid, (code, r, c) => {
-        let width = labelWidths.get(code)
-        if (width === undefined) {
-          width = ctx.measureText(code).width
-          labelWidths.set(code, width)
-        }
-        if (width > s) return
-        ctx.fillText(code, headerW + (c + 0.5) * s, headerH + (r + 0.5) * s)
+      forEachPaintedCell(grid, (code) => {
+        if (!labelWidths.has(code)) labelWidths.set(code, ctx.measureText(code).width)
       })
     }
 
-    // Column numbers centred in their header cells along the top, row numbers
-    // centred in theirs down the left. Every column gets a label: the font
-    // shrinks just enough for the widest number (the last column) to fit ~72%
-    // of its `s`-wide header cell — the same share two-digit labels already
-    // occupy at numFont (2 × 0.6 × 0.6s = 0.72s) — so wide grids read uniformly
-    // instead of cramped, and coordinates never silently stop at 99.
-    ctx.fillStyle = LABEL_COLOR
-    ctx.textBaseline = "middle"
-    ctx.textAlign = "center"
-    const colLabelBudget = s * 0.72
-    let colFont = numFont
-    ctx.font = `${colFont}px ui-monospace, monospace`
-    while (colFont > 4 && ctx.measureText(String(cols)).width > colLabelBudget) {
-      colFont--
-      ctx.font = `${colFont}px ui-monospace, monospace`
-    }
-    for (let c = 0; c < cols; c++) {
-      ctx.fillText(String(c + 1), headerW + (c + 0.5) * s, headerH / 2)
-    }
-    ctx.font = `${numFont}px ui-monospace, monospace`
-    for (let r = 0; r < rows; r++) {
-      ctx.fillText(String(r + 1), headerW / 2, headerH + (r + 0.5) * s)
-    }
+    const itemW = detail ? Export.statsItemWidth(geo) : 0
 
-    // Bead-usage section below the pattern: a title line, then a multi-column
-    // grid of entries (swatch, code, count). Text style resets from the labels.
+    // Bead-usage entries are left-anchored and can be several times the bead
+    // size wide, so the tile pad must cover the widest string for seam-straddling
+    // glyphs to be captured whole. Keep each tile canvas (tile + 2×pad) under
+    // TEXT_SAFE_DIM so the tiles themselves never hit Safari's text limit.
+    const statsTextWidths = new Map<string, number>()
+    let widestStatsText = 0
     if (detail) {
-      ctx.textAlign = "left"
-      ctx.textBaseline = "middle"
-      const titleY = headerH + rows * s + geo.pad
-      ctx.fillStyle = LABEL_COLOR
-      ctx.font = `600 ${geo.titleFont}px ui-monospace, monospace`
-      ctx.fillText(opts.beadStatsTitle ?? "Beads used", headerW + geo.pad, titleY + geo.titleFont / 2)
-      const bodyY = titleY + geo.titleFont + 4
-
       ctx.font = `${geo.font}px ui-monospace, monospace`
-      const itemW = Export.statsItemWidth(geo)
-      used.forEach(({ hex, code, count }, i) => {
+      for (const { code, count } of used) {
+        const text = `${code}  ×${count}`
+        const w = ctx.measureText(text).width
+        statsTextWidths.set(text, w)
+        if (w > widestStatsText) widestStatsText = w
+      }
+      // The section title is also left-anchored (bold, larger font); include it
+      // so a title straddling a seam is captured whole too.
+      ctx.font = `600 ${geo.titleFont}px ui-monospace, monospace`
+      const title = opts.beadStatsTitle ?? "Beads used"
+      if (ctx.measureText(title).width > widestStatsText) {
+        widestStatsText = ctx.measureText(title).width
+      }
+    }
+    // The pad is the max glyph half-extent: labels are bounded to `s` wide by
+    // the width guard, column numbers fit 0.72s, row numbers are measured, and
+    // stats text is left-anchored (full width from its anchor). Half of each is
+    // what can spill past a seam.
+    ctx.font = `${numFont}px ui-monospace, monospace`
+    const rowNumberW = ctx.measureText(String(rows)).width
+    const colNumberW = ctx.measureText(String(cols)).width
+    const halfExtent = Math.max(
+      s / 2,
+      Math.ceil(widestStatsText),
+      rowNumberW / 2,
+      colNumberW / 2,
+    )
+    const tilePad = Math.max(TEXT_TILE_PAD, Math.ceil(halfExtent))
+    // A pathological pad (absurd export scale) must not starve the tile of
+    // interior space; cap so the interior keeps at least 64px.
+    const tilePadCap = Math.max(0, Math.floor((TEXT_SAFE_DIM - 64) / 2))
+    const textPad = Math.min(tilePad, tilePadCap)
+    const tileSize = Math.max(1, Math.min(TEXT_TILE_SIZE, TEXT_SAFE_DIM - 2 * textPad))
+
+    // True when the axis-aligned box at `x`,`y` (centred, or left-anchored with
+    // width `w`) overlaps the padded tile rect — the tile then rasterizes the
+    // whole glyph so the composite reconstructs it across seams.
+    const overlaps = (
+      box: { x: number; y: number; w: number; h: number; centered: boolean },
+      p: { left: number; top: number; right: number; bottom: number },
+    ) => {
+      const halfW = box.centered ? box.w / 2 : 0
+      const halfH = box.h / 2
+      const bx0 = box.x - halfW
+      const by0 = box.y - halfH
+      const bx1 = box.x - halfW + box.w
+      const by1 = box.y - halfH + box.h
+      return bx1 >= p.left && bx0 <= p.right && by1 >= p.top && by0 <= p.bottom
+    }
+
+    // Draw one tile's worth of text. The tile context is translated to
+    // full-canvas coordinates, so positions are absolute; the padded clip
+    // rectangle (in full-canvas space) culls items whose glyphs fall outside.
+    const drawText = (
+      tctx: CanvasRenderingContext2D,
+      padded: { left: number; top: number; right: number; bottom: number },
+    ) => {
+      // Colour-code labels on each bead (mirrors the editor's Labels toggle).
+      if (opts.showLabels) {
+        tctx.fillStyle = BEAD_LABEL_COLOR
+        tctx.font = `${labelFont}px ui-monospace, monospace`
+        tctx.textAlign = "center"
+        tctx.textBaseline = "middle"
+        forEachPaintedCell(grid, (code, r, c) => {
+          const x = headerW + (c + 0.5) * s
+          const y = headerH + (r + 0.5) * s
+          const width = labelWidths.get(code)
+          if (width === undefined || width > s) return
+          if (!overlaps({ x, y, w: width, h: labelFont, centered: true }, padded)) return
+          tctx.fillText(code, x, y)
+        })
+      }
+
+      // Column numbers centred in their header cells along the top, row numbers
+      // centred in theirs down the left. Every column gets a label: the font
+      // shrinks just enough for the widest number (the last column) to fit ~72%
+      // of its `s`-wide header cell — the same share two-digit labels already
+      // occupy at numFont (2 × 0.6 × 0.6s = 0.72s) — so wide grids read
+      // uniformly instead of cramped, and coordinates never silently stop at 99.
+      tctx.fillStyle = LABEL_COLOR
+      tctx.textBaseline = "middle"
+      tctx.textAlign = "center"
+      const colLabelBudget = s * 0.72
+      let colFont = numFont
+      tctx.font = `${colFont}px ui-monospace, monospace`
+      while (colFont > 4 && tctx.measureText(String(cols)).width > colLabelBudget) {
+        colFont--
+        tctx.font = `${colFont}px ui-monospace, monospace`
+      }
+      const colNumberW = tctx.measureText(String(cols)).width
+      for (let c = 0; c < cols; c++) {
+        const x = headerW + (c + 0.5) * s
+        if (!overlaps({ x, y: headerH / 2, w: colNumberW, h: numFont, centered: true }, padded)) continue
+        tctx.fillText(String(c + 1), x, headerH / 2)
+      }
+      tctx.font = `${numFont}px ui-monospace, monospace`
+      const rowNumberW = tctx.measureText(String(rows)).width
+      for (let r = 0; r < rows; r++) {
+        const y = headerH + (r + 0.5) * s
+        if (!overlaps({ x: headerW / 2, y, w: rowNumberW, h: numFont, centered: true }, padded)) continue
+        tctx.fillText(String(r + 1), headerW / 2, y)
+      }
+
+      // Bead-usage text below the pattern: a title line, then a multi-column
+      // grid of entries (code, count). The swatch rectangles are plain fills
+      // and are drawn straight onto the main canvas. Text style resets from the
+      // labels.
+      if (detail) {
+        tctx.textAlign = "left"
+        tctx.textBaseline = "middle"
+        const titleY = headerH + rows * s + geo.pad
+        tctx.fillStyle = LABEL_COLOR
+        tctx.font = `600 ${geo.titleFont}px ui-monospace, monospace`
+        const titleX = headerW + geo.pad
+        const titleCY = titleY + geo.titleFont / 2
+        const title = opts.beadStatsTitle ?? "Beads used"
+        if (overlaps({ x: titleX, y: titleCY, w: tctx.measureText(title).width, h: geo.titleFont, centered: false }, padded)) {
+          tctx.fillText(title, titleX, titleCY)
+        }
+        const bodyY = titleY + geo.titleFont + 4
+
+        tctx.font = `${geo.font}px ui-monospace, monospace`
+        used.forEach(({ code, count }, i) => {
+          const col = i % detail.cols
+          const row = Math.floor(i / detail.cols)
+          const x = headerW + geo.pad + col * itemW
+          const y = bodyY + row * geo.rowH + geo.swatch / 2
+          const text = `${code}  ×${count}`
+          // The swatch precedes the text, so the label's left-anchored box must
+          // start at the text x, not the cell x.
+          const textX = x + geo.pad + geo.swatch + geo.gap
+          if (!overlaps({ x: textX, y, w: statsTextWidths.get(text) ?? 0, h: geo.font, centered: false }, padded)) return
+          tctx.fillStyle = "#111"
+          tctx.fillText(text, textX, y)
+        })
+      }
+    }
+
+    // Bead-usage swatch rectangles — plain fills, safe on the main canvas.
+    if (detail) {
+      const titleY = headerH + rows * s + geo.pad
+      const bodyY = titleY + geo.titleFont + 4
+      used.forEach(({ hex }, i) => {
         const col = i % detail.cols
         const row = Math.floor(i / detail.cols)
         const x = headerW + geo.pad + col * itemW
         const y = bodyY + row * geo.rowH
         ctx.fillStyle = hex
         ctx.fillRect(x, y, geo.swatch, geo.swatch)
-        ctx.fillStyle = "#111"
-        ctx.fillText(
-          `${code}  ×${count}`,
-          x + geo.pad + geo.swatch + geo.gap,
-          y + geo.swatch / 2,
-        )
       })
+    }
+
+    if (width <= TEXT_SAFE_DIM && height <= TEXT_SAFE_DIM) {
+      // Small canvas: draw the text directly, matching the pre-tiling path.
+      drawText(ctx, { left: -textPad, top: -textPad, right: width + textPad, bottom: height + textPad })
+    } else {
+      Export.renderTiledText(ctx, width, height, tileSize, textPad, drawText)
     }
 
     const blob = await new Promise<Blob | null>((resolve) => {
