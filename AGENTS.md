@@ -64,7 +64,7 @@ The shared editor pieces now live directly under `src/components/` (no `editor/`
 
 - **PublishDialog** (title/desc/author → POST /api/patterns via `getCellsData`)
 - **ImportDialog** (upload → client-side image→grid conversion in a Web Worker → Apply → `loadGrid(grid)`)
-- **ExportDialog** (reads grid via `getCellsData` → client-side PNG chart with colour-code labels + bead-usage list, downloads via `src/lib/export.ts`)
+- **ExportDialog** (reads grid via `getCellsData` → client-side PNG chart with colour-code labels + bead-usage list, downloads via `src/lib/export.ts`). Export text is drawn on small per-tile canvases and composited back, because Safari silently drops canvas text on canvases wider/taller than ~4096px while fills/strokes still render.
 
 Image→grid conversion runs entirely in the browser: `src/workers/transform.worker.ts` (a `new Worker(new URL(...))` module) decodes + pre-scales the image with `createImageBitmap`/`OffscreenCanvas`, then feeds the RGBA buffer to `Transform.quantize` in `src/lib/transform.ts` — a pure, React-free module (no sharp, no network round-trip). `ImportDialog` lazy-creates the worker (`useRef<Worker>`), tags each request with a `reqId` to drop stale responses, and `terminate()`s on unmount.
 
