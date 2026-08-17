@@ -119,10 +119,11 @@ export interface ExportSize {
  * Renders bead-grid patterns to printable PNG charts.
  *
  * The output is a pattern chart: a white background, light grid lines, and
- * 1‑based row/column coordinates in shaded header bands along the top and left
- * edges. Header cells match a bead's size, so coordinates align with the beads
- * they label. Beads are drawn as solid `scale × scale` squares with no canvas
- * scaling, keeping them pixel-perfect. With {@link ExportGridOptions.showMajorGrid}
+ * 1‑based row/column coordinates in shaded header bands along all four edges
+ * (row numbers left and right, column numbers top and bottom). Header cells
+ * match a bead's size, so coordinates align with the beads they label. Beads
+ * are drawn as solid `scale × scale` squares with no canvas scaling, keeping
+ * them pixel-perfect. With {@link ExportGridOptions.showMajorGrid}
  * a thicker, darker grid is drawn every `majorGridStep` cells, grouping the
  * beads into blocks (8×8 by default). With {@link ExportGridOptions.showLabels}
  * each bead gets its colour code centred on it. The effective scale is clamped
@@ -268,8 +269,8 @@ export class Export {
       const numFont = Math.max(4, Math.round(s * 0.6))
       const headerW = Math.ceil(String(rows).length * numFont * 0.7) + s
       const headerH = s
-      let width = headerW + cols * s + s
-      let height = headerH + rows * s + s
+      let width = headerW + cols * s + headerW
+      let height = headerH + rows * s + headerH
       if (statsCount > 0) {
         const stats = Export.statsSize(Export.statsGeometry(s), statsCount, width, headerW)
         width = Math.max(width, stats.width)
@@ -334,6 +335,15 @@ export class Export {
     const geo = Export.statsGeometry(s)
     const detail = opts.showBeadStats ? Export.statsSize(geo, used.length, width, headerW) : null
 
+    // Grid-area bounds: the bead block plus its four coordinate bands. The
+    // bead-usage section below can grow the canvas beyond the grid on either
+    // axis, so band shading, grid lines, dividers, and coordinates anchor to
+    // the grid area — never the canvas edges.
+    const beadRight = headerW + cols * s
+    const beadBottom = headerH + rows * s
+    const gridW = beadRight + headerW
+    const gridH = beadBottom + headerH
+
     const canvas = document.createElement("canvas")
     canvas.width = width
     canvas.height = height
@@ -343,11 +353,14 @@ export class Export {
     ctx.fillStyle = "#ffffff"
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-    // Shade the top and left coordinate bands so they read as part of the grid
-    // (the corner where the bands meet is covered twice, harmlessly).
+    // Shade the top, left, bottom, and right coordinate bands so they read as
+    // part of the grid (the corners where the bands meet are covered twice,
+    // harmlessly).
     ctx.fillStyle = HEADER_BG
     ctx.fillRect(0, 0, canvas.width, headerH)
     ctx.fillRect(0, 0, headerW, canvas.height)
+    ctx.fillRect(0, beadBottom, canvas.width, headerH)
+    ctx.fillRect(beadRight, 0, headerW, canvas.height)
 
     forEachPaintedCell(grid, (code, r, c) => {
       const hex = hexByCode.get(code)
@@ -365,12 +378,12 @@ export class Export {
     for (let c = 0; c <= cols; c++) {
       const x = headerW + c * s + 0.5
       ctx.moveTo(x, 0)
-      ctx.lineTo(x, headerH + rows * s)
+      ctx.lineTo(x, gridH)
     }
     for (let r = 0; r <= rows; r++) {
       const y = headerH + r * s + 0.5
       ctx.moveTo(0, y)
-      ctx.lineTo(headerW + cols * s, y)
+      ctx.lineTo(gridW, y)
     }
     ctx.stroke()
 
@@ -387,23 +400,28 @@ export class Export {
       for (let c = 0; c <= cols; c += step) {
         const x = headerW + c * s + 0.5
         ctx.moveTo(x, 0)
-        ctx.lineTo(x, headerH + rows * s)
+        ctx.lineTo(x, gridH)
       }
       for (let r = 0; r <= rows; r += step) {
         const y = headerH + r * s + 0.5
         ctx.moveTo(0, y)
-        ctx.lineTo(headerW + cols * s, y)
+        ctx.lineTo(gridW, y)
       }
       ctx.stroke()
     }
 
-    // A slightly darker divider separates the coordinate bands from the beads.
+    // A slightly darker divider separates the coordinate bands from the beads,
+    // running the full extent of each band so the bead area is boxed in.
     ctx.strokeStyle = HEADER_DIVIDER
     ctx.beginPath()
     ctx.moveTo(headerW + 0.5, 0)
-    ctx.lineTo(headerW + 0.5, headerH + rows * s)
+    ctx.lineTo(headerW + 0.5, gridH)
+    ctx.moveTo(beadRight + 0.5, 0)
+    ctx.lineTo(beadRight + 0.5, gridH)
     ctx.moveTo(0, headerH + 0.5)
-    ctx.lineTo(headerW + cols * s, headerH + 0.5)
+    ctx.lineTo(gridW, headerH + 0.5)
+    ctx.moveTo(0, beadBottom + 0.5)
+    ctx.lineTo(gridW, beadBottom + 0.5)
     ctx.stroke()
 
     // ----- Text layer -----
@@ -509,12 +527,13 @@ export class Export {
         })
       }
 
-      // Column numbers centred in their header cells along the top, row numbers
-      // centred in theirs down the left. Every column gets a label: the font
-      // shrinks just enough for the widest number (the last column) to fit ~72%
-      // of its `s`-wide header cell — the same share two-digit labels already
-      // occupy at numFont (2 × 0.6 × 0.6s = 0.72s) — so wide grids read
-      // uniformly instead of cramped, and coordinates never silently stop at 99.
+      // Column numbers centred in their header cells along the top and bottom,
+      // row numbers centred in theirs down the left and up the right. Every
+      // column gets a label: the font shrinks just enough for the widest
+      // number (the last column) to fit ~72% of its `s`-wide header cell — the
+      // same share two-digit labels already occupy at numFont (2 × 0.6 × 0.6s
+      // = 0.72s) — so wide grids read uniformly instead of cramped, and
+      // coordinates never silently stop at 99.
       tctx.fillStyle = LABEL_COLOR
       tctx.textBaseline = "middle"
       tctx.textAlign = "center"
@@ -528,15 +547,27 @@ export class Export {
       const colNumberW = tctx.measureText(String(cols)).width
       for (let c = 0; c < cols; c++) {
         const x = headerW + (c + 0.5) * s
-        if (!overlaps({ x, y: headerH / 2, w: colNumberW, h: numFont, centered: true }, padded)) continue
-        tctx.fillText(String(c + 1), x, headerH / 2)
+        const yTop = headerH / 2
+        const yBottom = beadBottom + headerH / 2
+        if (overlaps({ x, y: yTop, w: colNumberW, h: numFont, centered: true }, padded)) {
+          tctx.fillText(String(c + 1), x, yTop)
+        }
+        if (overlaps({ x, y: yBottom, w: colNumberW, h: numFont, centered: true }, padded)) {
+          tctx.fillText(String(c + 1), x, yBottom)
+        }
       }
       tctx.font = `${numFont}px ui-monospace, monospace`
       const rowNumberW = tctx.measureText(String(rows)).width
       for (let r = 0; r < rows; r++) {
         const y = headerH + (r + 0.5) * s
-        if (!overlaps({ x: headerW / 2, y, w: rowNumberW, h: numFont, centered: true }, padded)) continue
-        tctx.fillText(String(r + 1), headerW / 2, y)
+        const xLeft = headerW / 2
+        const xRight = beadRight + headerW / 2
+        if (overlaps({ x: xLeft, y, w: rowNumberW, h: numFont, centered: true }, padded)) {
+          tctx.fillText(String(r + 1), xLeft, y)
+        }
+        if (overlaps({ x: xRight, y, w: rowNumberW, h: numFont, centered: true }, padded)) {
+          tctx.fillText(String(r + 1), xRight, y)
+        }
       }
 
       // Bead-usage text below the pattern: a title line, then a multi-column
@@ -546,7 +577,7 @@ export class Export {
       if (detail) {
         tctx.textAlign = "left"
         tctx.textBaseline = "middle"
-        const titleY = headerH + rows * s + geo.pad
+const titleY = gridH + geo.pad
         tctx.fillStyle = LABEL_COLOR
         tctx.font = `600 ${geo.titleFont}px ui-monospace, monospace`
         const titleX = headerW + geo.pad
@@ -576,7 +607,7 @@ export class Export {
 
     // Bead-usage swatch rectangles — plain fills, safe on the main canvas.
     if (detail) {
-      const titleY = headerH + rows * s + geo.pad
+      const titleY = headerH + rows * s + headerH + geo.pad
       const bodyY = titleY + geo.titleFont + 4
       used.forEach(({ hex }, i) => {
         const col = i % detail.cols
