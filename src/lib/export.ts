@@ -137,9 +137,9 @@ export interface ExportGridOptions {
    * Split the pattern into `count` square sheets (1, 4, 9 or 16; 1 = one full
    * image). Each sheet is a self-contained chart — it keeps the full coordinate
    * bands, so the sheets tile together exactly — and downloads as a single
-   * ZIP archive of PNGs.
-   * (`pattern-…-tile-{i}-of-{n}.png`). The bead-usage list, when enabled, is
-   * only drawn on sheets that contain at least one painted cell.
+   * ZIP archive of PNGs named `pattern-…-tile-{i}-of-{n}.png`. The bead-usage
+   * list, when enabled, is only drawn on sheets that contain at least one
+   * painted cell.
    */
   tileCount?: 1 | 4 | 9 | 16
 }
@@ -481,11 +481,14 @@ export class Export {
 
   /**
    * Full exported image size for a grid and scale, plus the effective scale.
-   * When {@link ExportGridOptions.tileCount} splits the export, returns the
-   * full-image size for reference plus per-sheet sizes in `tiles`.
+   * When {@link ExportGridOptions.tileCount} splits the export, `width/height`
+   * stay the full-image reference (what a single export would be) while
+   * `scale` becomes the per-sheet effective pixels-per-bead and `tiles`
+   * carries each sheet's own dimensions.
    *
    * @param grid  - The serialized code grid (`grid[row][col]`, "" = empty).
-   * @param scale - Pixels per bead (clamped so the full canvas fits the limit).
+   * @param scale - Pixels per bead (clamped so each output canvas fits the
+   *                limit; per-sheet when splitting, full-image otherwise).
    * @param opts  - Optional export options (a bead-usage list grows the height).
    * @returns The canvas width/height and the effective pixels-per-bead, or null
    *          for an empty grid.
@@ -494,9 +497,11 @@ export class Export {
     const size = gridSize(grid)
     if (!size) return null
     const count = opts.showBeadStats ? Export.usedColorCount(grid) : 0
-    const { s, width, height } = Export.computeLayout(size.cols, size.rows, scale, count)
     const tileCount = opts.tileCount ?? 1
-    if (tileCount <= 1) return { width, height, scale: s, tiles: null }
+    if (tileCount <= 1) {
+      const { s, width, height } = Export.computeLayout(size.cols, size.rows, scale, count)
+      return { width, height, scale: s, tiles: null }
+    }
     const tileList = Export.tileGrid(size.cols, size.rows, tileCount)
     // Each sheet's usage list counts only the colours inside its own window, so
     // sheets that cover empty regions may carry no list at all.
@@ -511,6 +516,11 @@ export class Export {
         : 0,
     )
     const ts = Export.tileScale(size.cols, size.rows, scale, statsCounts, tileCount)
+    // Reference full-image size at the full-image clamp (`s`): this is what a
+    // single-image export of the same grid would be. The actual sheets render
+    // at the per-sheet `ts` (each tile's own canvas ≤ MAX_EXPORT_DIM), so
+    // `scale` and `tiles[].scale` carry the effective pixels-per-bead.
+    const { width, height } = Export.computeLayout(size.cols, size.rows, scale, count)
     const tiles = tileList.map((t, i) => {
       const withStats = statsCounts[i] > 0
       const { width: tw, height: th } = Export.tileLayout(size.cols, size.rows, t, ts, statsCounts[i], withStats)
@@ -528,7 +538,6 @@ export class Export {
    * downloads inside a single ZIP archive. Each sheet carries its own
    * bead-usage list (when enabled), counting only the colours inside that
    * sheet's window.
-   * (when enabled), counting only the colours inside that sheet's window.
    *
    * @param grid    - The serialized code grid (`grid[row][col]`, "" = empty).
    * @param palette - Palette used to resolve code → colour hex.
@@ -654,11 +663,15 @@ export class Export {
    * @param ctx    - Destination context (sized to the output canvas).
    * @param grid   - The serialized code grid.
    * @param palette- Palette used to resolve code → colour hex.
-   * @param scale  - Pixels per bead (integer; clamped to fit the canvas limit).
    * @param opts   - Optional export options.
    * @param layout - Resolved full layout (see {@link fullLayout}).
    * @param win    - Data-cell window; for a single-image export this is the
    *                 whole grid, for a split export one sheet's slice.
+   * @param s      - Effective pixels-per-bead for this window: the full-image
+   *                 clamp for a single export, the per-sheet clamp for a
+   *                 split export. All geometry (beads, bands, fonts) derives
+   *                 from it, so the render matches the canvas size it was
+   *                 laid out with.
    */
   private renderWindow(
     ctx: CanvasRenderingContext2D,
