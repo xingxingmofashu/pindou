@@ -1,6 +1,6 @@
 import * as React from "react"
 
-import { cn } from "@pindou/shared"
+import { cn } from "../../utils"
 
 function Card({
   className,

@@ -1,4 +1,4 @@
-import { cn } from "@pindou/shared"
+import { cn } from "../../utils"
 import { Loader2Icon } from "lucide-react"
 
 function Spinner({ className, ...props }: React.ComponentProps<"svg">) {
