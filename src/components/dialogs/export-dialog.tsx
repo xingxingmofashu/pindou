@@ -65,7 +65,13 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
   const { rows, cols } = (grid ? gridSize(grid) : null) ?? { rows: 0, cols: 0 }
   const scale = Math.max(1, Math.floor(Number(scaleInput)) || 1)
   const majorStep = Math.max(1, Math.floor(Number(majorGridStep)) || MAJOR_GRID_STEP)
-  const size = grid ? exporter.size(grid, scale, { showBeadStats: beadStatsOn, tileCount }) : null
+  // `size()` walks the whole grid (window stats per sheet when splitting), so
+  // memoize it on the inputs that actually change the output. Toggling labels
+  // or the major grid re-renders the dialog but must not re-scan the grid.
+  const size = useMemo(
+    () => (grid ? exporter.size(grid, scale, { showBeadStats: beadStatsOn, tileCount }) : null),
+    [grid, scale, beadStatsOn, tileCount, exporter],
+  )
 
   const handleExport = useCallback(async () => {
     if (!data) {
