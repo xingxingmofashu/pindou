@@ -124,31 +124,6 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
         </DialogHeader>
 
         <div className="flex items-center justify-between gap-2">
-          <Label htmlFor="export-tile-count">{t("editor.tileCount")}</Label>
-          {/* Base UI ToggleGroup: value is always a string[] even in single-select mode. */}
-          <ToggleGroup
-            value={[String(tileCount)]}
-            onValueChange={(values) => {
-              const n = Number(values[0])
-              if (EXPORT_TILE_COUNTS.includes(n as (typeof EXPORT_TILE_COUNTS)[number])) {
-                setTileCount(n as 1 | 4 | 9 | 16)
-              }
-            }}
-            multiple={false}
-          >
-            {EXPORT_TILE_COUNTS.map((n) => (
-              <ToggleGroupItem
-                key={n}
-                value={String(n)}
-                aria-label={n === 1 ? t("editor.tileSingle") : t("editor.tileSplit", { count: n })}
-              >
-                {n === 1 ? t("editor.tileSingle") : n}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
-
-        <div className="flex items-center justify-between gap-2">
           <Label htmlFor="export-labels">{t("editor.showColourCodes")}</Label>
           <Switch
             id="export-labels"
@@ -191,6 +166,31 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
             </p>
           </div>
         )}
+
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="export-tile-count">{t("editor.tileCount")}</Label>
+          {/* Base UI ToggleGroup: value is always a string[] even in single-select mode. */}
+          <ToggleGroup
+            value={[String(tileCount)]}
+            onValueChange={(values) => {
+              const n = Number(values[0])
+              if (EXPORT_TILE_COUNTS.includes(n as (typeof EXPORT_TILE_COUNTS)[number])) {
+                setTileCount(n as 1 | 4 | 9 | 16)
+              }
+            }}
+            multiple={false}
+          >
+            {EXPORT_TILE_COUNTS.map((n) => (
+              <ToggleGroupItem
+                key={n}
+                value={String(n)}
+                aria-label={n === 1 ? t("editor.tileSingle") : t("editor.tileSplit", { count: n })}
+              >
+                {n}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
 
         <div className="grid gap-1.5">
           <Label htmlFor="export-scale">{t("editor.pixelsPerBead")}</Label>
