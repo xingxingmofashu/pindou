@@ -280,12 +280,14 @@ export class Export {
     headerW: number,
   ): StatsLayout {
     const titleH = g.titleFont + 4
-    const itemW = Export.statsItemWidth(g)
     const cols = Export.statsColumns(g, canvasWidth - headerW)
     const rows = Math.ceil(count / cols)
     return {
       cols,
-      width: Math.max(canvasWidth, headerW + g.pad + cols * itemW + g.pad),
+      // The usage list wraps inside the canvas width — it never widens the
+      // image. A split sheet therefore keeps its grid width (no blank space
+      // to the right), and a single-image export keeps its full width.
+      width: canvasWidth,
       height: g.pad + titleH + rows * g.rowH + g.pad,
     }
   }
@@ -362,11 +364,10 @@ export class Export {
       const numFont = Math.max(4, Math.round(s * 0.6))
       const headerW = Math.ceil(String(rows).length * numFont * 0.7) + s
       const headerH = s
-      let width = headerW + cols * s + headerW
+      const width = headerW + cols * s + headerW
       let height = headerH + rows * s + headerH
       if (statsCount > 0) {
         const stats = Export.statsSize(Export.statsGeometry(s), statsCount, width, headerW)
-        width = Math.max(width, stats.width)
         height += stats.height
       }
       return { numFont, headerW, headerH, width, height }
@@ -468,12 +469,11 @@ export class Export {
     const numFont = Math.max(4, Math.round(s * 0.6))
     const headerW = Math.ceil(String(rows).length * numFont * 0.7) + s
     const headerH = s
-    let width = headerW + tile.dataCols * s + headerW
+    const width = headerW + tile.dataCols * s + headerW
     let height = headerH + tile.dataRows * s + headerH
     if (withStats && statsCount > 0) {
       const g = Export.statsGeometry(s)
       const stats = Export.statsSize(g, statsCount, width, headerW)
-      width = Math.max(width, stats.width)
       height += stats.height
     }
     return { width, height }
@@ -563,7 +563,7 @@ export class Export {
       layout.headerW,
     )
     const canvas = document.createElement("canvas")
-    canvas.width = stats ? Math.max(layout.width, stats.detail!.width) : layout.width
+    canvas.width = layout.width
     canvas.height = layout.height + (stats?.detail?.height ?? 0)
     const ctx = canvas.getContext("2d")
     if (!ctx) return false
