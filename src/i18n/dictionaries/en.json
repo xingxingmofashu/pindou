@@ -192,7 +192,8 @@
     "canvasUnavailable": "Canvas unavailable",
     "canvasUnavailableDescription": "The WebGL canvas was lost. Please reload the page.",
     "webglUnavailableDescription": "Your browser could not start the WebGL canvas. Please try a different browser.",
-    "tileCount": "Split into",
+    "tileCount": "Split",
+    "tileCountDescription": "Split large patterns into smaller sheets for printing and assembly.",
     "tileSingle": "One image",
     "tileSplit": "{count} sheets",
     "tileSize": "Each sheet: {cols} × {rows} beads · {width} × {height} px"

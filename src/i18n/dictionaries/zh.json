@@ -192,7 +192,8 @@
     "canvasUnavailable": "画布不可用",
     "canvasUnavailableDescription": "WebGL 画布已丢失，请刷新页面。",
     "webglUnavailableDescription": "浏览器无法启动 WebGL 画布，请尝试更换浏览器。",
-    "tileCount": "分割成",
+    "tileCount": "分割",
+    "tileCountDescription": "将大图案拆分成多张图表，方便打印与拼接。",
     "tileSingle": "一张图",
     "tileSplit": "{count} 张",
     "tileSize": "每张：{cols} × {rows} 颗拼豆 · {width} × {height} px"
