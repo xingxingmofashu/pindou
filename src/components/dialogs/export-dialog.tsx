@@ -129,44 +129,56 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex items-center justify-between gap-2">
-          <Label htmlFor="export-labels">{t("editor.showColourCodes")}</Label>
-          <Switch
-            id="export-labels"
-            checked={labelsOn}
-            onCheckedChange={(checked) => setLabelsOn(checked)}
-          />
+        <div className="grid gap-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <Label htmlFor="export-labels">{t("editor.showColourCodes")}</Label>
+            <Switch
+              id="export-labels"
+              checked={labelsOn}
+              onCheckedChange={(checked) => setLabelsOn(checked)}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">{t("editor.showColourCodesDescription")}</p>
         </div>
 
-        <div className="flex items-center justify-between gap-2">
-          <Label htmlFor="export-bead-stats">{t("editor.showBeadStats")}</Label>
-          <Switch
-            id="export-bead-stats"
-            checked={beadStatsOn}
-            onCheckedChange={(checked) => setBeadStatsOn(checked)}
-          />
+        <div className="grid gap-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <Label htmlFor="export-bead-stats">{t("editor.showBeadStats")}</Label>
+            <Switch
+              id="export-bead-stats"
+              checked={beadStatsOn}
+              onCheckedChange={(checked) => setBeadStatsOn(checked)}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">{t("editor.showBeadStatsDescription")}</p>
         </div>
 
-        <div className="flex items-center justify-between gap-2">
-          <Label htmlFor="export-major-grid">{t("editor.showMajorGrid")}</Label>
-          <Switch
-            id="export-major-grid"
-            checked={majorGridOn}
-            onCheckedChange={(checked) => setMajorGridOn(checked)}
-          />
+        <div className="grid gap-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <Label htmlFor="export-major-grid">{t("editor.showMajorGrid")}</Label>
+            <Switch
+              id="export-major-grid"
+              checked={majorGridOn}
+              onCheckedChange={(checked) => setMajorGridOn(checked)}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">{t("editor.showMajorGridDescription")}</p>
         </div>
 
         {majorGridOn && (
           <div className="grid gap-1.5">
-            <Label htmlFor="export-major-grid-step">{t("editor.majorGridStep")}</Label>
-            <Input
-              id="export-major-grid-step"
-              type="number"
-              min={1}
-              step={1}
-              value={majorGridStep}
-              onChange={(e) => setMajorGridStep(e.target.value)}
-            />
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="export-major-grid-step">{t("editor.majorGridStep")}</Label>
+              <Input
+                id="export-major-grid-step"
+                type="number"
+                min={1}
+                step={1}
+                className="w-20"
+                value={majorGridStep}
+                onChange={(e) => setMajorGridStep(e.target.value)}
+              />
+            </div>
             <p className="text-xs text-muted-foreground">
               {t("editor.majorGridHint", { step: majorStep })}
             </p>
@@ -174,41 +186,18 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
         )}
 
         <div className="grid gap-1.5">
-          <Label htmlFor="export-tile-count">{t("editor.tileCount")}</Label>
-          <p className="text-xs text-muted-foreground">{t("editor.tileCountDescription")}</p>
-          {/* Base UI ToggleGroup: value is always a string[] even in single-select mode. */}
-          <ToggleGroup
-            value={[String(tileCount)]}
-            onValueChange={(values) => {
-              const n = Number(values[0])
-              if (EXPORT_TILE_COUNTS.includes(n as (typeof EXPORT_TILE_COUNTS)[number])) {
-                setTileCount(n as 1 | 4 | 9 | 16)
-              }
-            }}
-            multiple={false}
-          >
-            {EXPORT_TILE_COUNTS.map((n) => (
-              <ToggleGroupItem
-                key={n}
-                value={String(n)}
-                aria-label={n === 1 ? t("editor.tileSingle") : t("editor.tileSplit", { count: n })}
-              >
-                {n}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
-
-        <div className="grid gap-1.5">
-          <Label htmlFor="export-scale">{t("editor.pixelsPerBead")}</Label>
-          <Input
-            id="export-scale"
-            type="number"
-            min={1}
-            step={1}
-            value={scaleInput}
-            onChange={(e) => setScaleInput(e.target.value)}
-          />
+          <div className="flex items-center justify-between gap-2">
+            <Label htmlFor="export-scale">{t("editor.pixelsPerBead")}</Label>
+            <Input
+              id="export-scale"
+              type="number"
+              min={1}
+              step={1}
+              className="w-20"
+              value={scaleInput}
+              onChange={(e) => setScaleInput(e.target.value)}
+            />
+          </div>
           <p className="text-xs text-muted-foreground">
             {rows > 0 && size
               ? tileCount > 1 && size.tiles
@@ -240,6 +229,34 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
                     .join(" · ")
               : t("editor.scaleHint")}
           </p>
+        </div>
+
+        <div className="grid gap-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <Label htmlFor="export-tile-count">{t("editor.tileCount")}</Label>
+            {/* Base UI ToggleGroup: value is always a string[] even in single-select mode. */}
+            <ToggleGroup
+              value={[String(tileCount)]}
+              onValueChange={(values) => {
+                const n = Number(values[0])
+                if (EXPORT_TILE_COUNTS.includes(n as (typeof EXPORT_TILE_COUNTS)[number])) {
+                  setTileCount(n as 1 | 4 | 9 | 16)
+                }
+              }}
+              multiple={false}
+            >
+              {EXPORT_TILE_COUNTS.map((n) => (
+                <ToggleGroupItem
+                  key={n}
+                  value={String(n)}
+                  aria-label={n === 1 ? t("editor.tileSingle") : t("editor.tileSplit", { count: n })}
+                >
+                  {n}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </div>
+          <p className="text-xs text-muted-foreground">{t("editor.tileCountDescription")}</p>
         </div>
 
         <DialogFooter>
