@@ -1,5 +1,11 @@
 import { zipSync } from "fflate"
-import { buildHexByCode, countGridBeads, forEachPaintedCell, gridSize } from "@/lib/editor"
+import {
+  buildHexByCode,
+  countGridBeads,
+  forEachPaintedCell,
+  forEachPaintedCellInWindow,
+  gridSize,
+} from "@/lib/editor"
 import { MAJOR_GRID_STEP } from "@/lib/constants"
 import type { Palette } from "@/types"
 
@@ -219,8 +225,7 @@ export class Export {
     win: { colStart: number; colEnd: number; rowStart: number; rowEnd: number },
   ): number {
     const seen = new Set<string>()
-    forEachPaintedCell(grid, (code, r, c) => {
-      if (c < win.colStart || c >= win.colEnd || r < win.rowStart || r >= win.rowEnd) return
+    forEachPaintedCellInWindow(grid, win, (code) => {
       seen.add(code)
     })
     return seen.size
@@ -235,10 +240,12 @@ export class Export {
     const order = new Map(palette.colors.map((color, i) => [color.code, i]))
     const hexByCode = buildHexByCode(palette)
     const counts = new Map<string, number>()
-    forEachPaintedCell(grid, (code, r, c) => {
-      if (win && (c < win.colStart || c >= win.colEnd || r < win.rowStart || r >= win.rowEnd)) return
-      counts.set(code, (counts.get(code) ?? 0) + 1)
-    })
+    const countCell = (code: string) => counts.set(code, (counts.get(code) ?? 0) + 1)
+    if (win) {
+      forEachPaintedCellInWindow(grid, win, countCell)
+    } else {
+      forEachPaintedCell(grid, countCell)
+    }
     return Array.from(counts)
       .sort(([a], [b]) => (order.get(a) ?? Infinity) - (order.get(b) ?? Infinity))
       .map(([code, count]) => ({ code, hex: hexByCode.get(code) ?? "#000000", count }))
@@ -682,6 +689,7 @@ export class Export {
     win: { colStart: number; colEnd: number; rowStart: number; rowEnd: number; showStats: boolean },
     stats: WindowStats | null,
     s: number,
+    shared?: { hexByCode: Map<string, string>; labelWidths: Map<string, number> },
   ): void {
     const { rows, cols } = layout
     // Geometry derives from the *effective* pixels-per-bead `s` (the full-image
@@ -721,9 +729,10 @@ export class Export {
     ctx.fillRect(0, beadBottom, canvasW, headerH)
     ctx.fillRect(beadRight, 0, headerW, canvasH)
 
-    const hexByCode = buildHexByCode(palette)
-    forEachPaintedCell(grid, (code, r, c) => {
-      if (c < win.colStart || c >= win.colEnd || r < win.rowStart || r >= win.rowEnd) return
+    // Build the palette lookup once; split exports reuse it across sheets via
+    // the `shared` cache.
+    const hexByCode = shared?.hexByCode ?? buildHexByCode(palette)
+    forEachPaintedCellInWindow(grid, win, (code, r, c) => {
       const hex = hexByCode.get(code)
       if (!hex) return
       ctx.fillStyle = hex
@@ -809,8 +818,11 @@ export class Export {
     // on the main context and share the cache across every tile.
     const labelFont = Math.max(4, Math.round(s * 0.4))
     ctx.font = `${labelFont}px ui-monospace, monospace`
-    const labelWidths = new Map<string, number>()
-    if (opts.showLabels) {
+    // Widths depend only on the code (the font is fixed), so measure each once
+    // and share the cache across every tile — and across every sheet of a
+    // split export, where all sheets use the same `ts`.
+    const labelWidths = shared?.labelWidths ?? new Map<string, number>()
+    if (opts.showLabels && labelWidths.size === 0) {
       forEachPaintedCell(grid, (code) => {
         if (!labelWidths.has(code)) labelWidths.set(code, ctx.measureText(code).width)
       })
@@ -889,8 +901,7 @@ export class Export {
         tctx.font = `${labelFont}px ui-monospace, monospace`
         tctx.textAlign = "center"
         tctx.textBaseline = "middle"
-        forEachPaintedCell(grid, (code, r, c) => {
-          if (c < win.colStart || c >= win.colEnd || r < win.rowStart || r >= win.rowEnd) return
+        forEachPaintedCellInWindow(grid, win, (code, r, c) => {
           const x = headerW + (c - win.colStart + 0.5) * s
           const y = headerH + (r - win.rowStart + 0.5) * s
           const width = labelWidths.get(code)
@@ -1030,6 +1041,14 @@ export class Export {
     )
     const ts = Export.tileScale(cols, rows, scale, statsCounts, tileCount)
     const last = tiles.length
+    // Palette lookup and label widths are the same for every sheet (all sheets
+    // render at the same `ts`), so build them once and reuse across the loop.
+    // `labelWidths` is filled lazily by the first `renderWindow` call (it needs
+    // a canvas context to measure with).
+    const shared: { hexByCode: Map<string, string>; labelWidths: Map<string, number> } = {
+      hexByCode: buildHexByCode(palette),
+      labelWidths: new Map(),
+    }
 
     const blobs: { name: string; data: Uint8Array }[] = []
     for (let i = 0; i < tiles.length; i++) {
@@ -1055,7 +1074,7 @@ export class Export {
         tw,
         tileHeaderW,
       )
-      this.renderWindow(ctx, grid, palette, opts, full, win, stats, ts)
+      this.renderWindow(ctx, grid, palette, opts, full, win, stats, ts, shared)
       const blob = await new Promise<Blob | null>((resolve) => {
         canvas.toBlob(resolve, "image/png")
       })
