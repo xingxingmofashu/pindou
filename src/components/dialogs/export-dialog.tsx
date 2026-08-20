@@ -204,31 +204,35 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
           />
           <p className="text-xs text-muted-foreground">
             {rows > 0 && size
-              ? [
-                  t("editor.exportSize", {
-                    cols,
-                    rows,
-                    width: size.width,
-                    height: size.height,
-                  }),
-                  size.scale < scale
-                    ? t("editor.scaleReduced", { scale: size.scale })
-                    : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")
+              ? tileCount > 1 && size.tiles
+                ? [
+                    t("editor.tileSize", {
+                      cols: size.tiles[0].dataCols,
+                      rows: size.tiles[0].dataRows,
+                      width: size.tiles[0].width,
+                      height: size.tiles[0].height,
+                    }),
+                    size.scale < scale
+                      ? t("editor.scaleReduced", { scale: size.scale })
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")
+                : [
+                    t("editor.exportSize", {
+                      cols,
+                      rows,
+                      width: size.width,
+                      height: size.height,
+                    }),
+                    size.scale < scale
+                      ? t("editor.scaleReduced", { scale: size.scale })
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")
               : t("editor.scaleHint")}
           </p>
-          {tileCount > 1 && size?.tiles && (
-            <p className="text-xs text-muted-foreground">
-              {t("editor.tileSize", {
-                cols: size.tiles[0].dataCols,
-                rows: size.tiles[0].dataRows,
-                width: size.tiles[0].width,
-                height: size.tiles[0].height,
-              })}
-            </p>
-          )}
         </div>
 
         <DialogFooter>
