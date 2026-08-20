@@ -1,7 +1,6 @@
 import { zipSync } from "fflate"
 import {
   buildHexByCode,
-  countGridBeads,
   forEachPaintedCell,
   forEachPaintedCellInWindow,
   gridSize,
@@ -216,7 +215,11 @@ export interface ExportSize {
 export class Export {
   /** The distinct number of painted colours — one bead-usage row per colour. */
   private static usedColorCount(grid: string[][]): number {
-    return countGridBeads(grid).size
+    // Only the distinct count is needed (each colour is one usage row), so a
+    // Set avoids the count bookkeeping of `countGridBeads`.
+    const seen = new Set<string>()
+    forEachPaintedCell(grid, (code) => seen.add(code))
+    return seen.size
   }
 
   /** The distinct number of painted colours inside a data-cell window. */
@@ -332,18 +335,24 @@ export class Export {
       padded: { left: number; top: number; right: number; bottom: number },
     ) => void,
   ): void {
+    // One scratch canvas reused for every tile: assigning width/height clears
+    // it and resets its context state, and `setTransform` replaces the
+    // (otherwise accumulating) translate, so a single allocation covers all
+    // tiles — a 16k×16k export would otherwise churn dozens of multi-MB
+    // canvases through the GC.
+    const canvas = document.createElement("canvas")
+    const tile = canvas.getContext("2d")
+    if (!tile) return
     for (let tileY = 0; tileY < height; tileY += tileSize) {
       const tileH = Math.min(tileSize, height - tileY)
       for (let tileX = 0; tileX < width; tileX += tileSize) {
         const tileW = Math.min(tileSize, width - tileX)
-        const canvas = document.createElement("canvas")
         canvas.width = tileW + 2 * pad
         canvas.height = tileH + 2 * pad
-        const tile = canvas.getContext("2d")
-        if (!tile) continue
         // Translate so the caller draws in full-canvas coordinates; the text
-        // sits at an offset of `pad` inside the tile.
-        tile.translate(pad - tileX, pad - tileY)
+        // sits at an offset of `pad` inside the tile. `setTransform` replaces
+        // the whole matrix (translate is cumulative on a shared canvas).
+        tile.setTransform(1, 0, 0, 1, pad - tileX, pad - tileY)
         draw(tile, {
           left: tileX - pad,
           top: tileY - pad,
@@ -447,11 +456,15 @@ export class Export {
   ): number {
     let lo = 1
     let hi = Math.max(1, scale)
+    // Tile data extents are fixed for a grid — only the pixel size scales — so
+    // resolve them once instead of re-splitting the grid on every binary step.
+    const extents = Export.tileGrid(cols, rows, tileCount).map((t) => ({
+      dataCols: t.dataCols,
+      dataRows: t.dataRows,
+    }))
     const fits = (s: number): boolean => {
-      const tiles = Export.tileGrid(cols, rows, tileCount)
-      for (let i = 0; i < tiles.length; i++) {
-        const withStats = statsCounts[i] > 0
-        const { width, height } = Export.tileLayout(cols, rows, tiles[i], s, statsCounts[i], withStats)
+      for (let i = 0; i < extents.length; i++) {
+        const { width, height } = Export.tileLayout(cols, rows, extents[i], s, statsCounts[i], statsCounts[i] > 0)
         if (width > MAX_EXPORT_DIM || height > MAX_EXPORT_DIM) return false
       }
       return true
@@ -468,7 +481,7 @@ export class Export {
   private static tileLayout(
     cols: number,
     rows: number,
-    tile: Omit<ExportTile, "scale" | "width" | "height" | "hasStats">,
+    tile: { dataCols: number; dataRows: number },
     s: number,
     statsCount: number,
     withStats: boolean,
