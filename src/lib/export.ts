@@ -80,6 +80,24 @@ const TEXT_TILE_PAD = 128
  */
 const TEXT_SAFE_DIM = 4096
 
+/**
+ * True when the axis-aligned box at `x`,`y` (centred, or left-anchored with
+ * width `w`) overlaps the padded tile rect — the tile then rasterizes the
+ * whole glyph so the composite reconstructs it across seams.
+ */
+function overlapsBox(
+  box: { x: number; y: number; w: number; h: number; centered: boolean },
+  p: { left: number; top: number; right: number; bottom: number },
+): boolean {
+  const halfW = box.centered ? box.w / 2 : 0
+  const halfH = box.h / 2
+  const bx0 = box.x - halfW
+  const by0 = box.y - halfH
+  const bx1 = box.x - halfW + box.w
+  const by1 = box.y - halfH + box.h
+  return bx1 >= p.left && bx0 <= p.right && by1 >= p.top && by0 <= p.bottom
+}
+
 /** Scaled bead-usage section geometry, derived from the pattern's bead size. */
 interface StatsGeometry {
   titleFont: number
@@ -148,9 +166,9 @@ export interface ExportGridOptions {
    */
   tileCount?: 1 | 4 | 9 | 16
   /**
-   * Watermark text tiled diagonally across the image (drawn above everything).
-   * Empty or omitted disables the watermark. Applies to every sheet of a
-   * split export, so the tiled watermark stays continuous after assembly.
+   * Watermark text drawn as three diagonal marks (top-left, centre,
+   * bottom-right) above everything. Empty or omitted disables the watermark.
+   * Applied to every sheet of a split export.
    */
   watermarkText?: string
 }
@@ -371,6 +389,63 @@ export class Export {
         target.drawImage(canvas, pad, pad, tileW, tileH, tileX, tileY, tileW, tileH)
       }
     }
+  }
+
+  /**
+   * Draw three semi-transparent italic watermarks along the main diagonal of
+   * an export image, above everything (labels, coordinates, stats). Three
+   * marks — near the top-left, centre, and bottom-right — identify the image
+   * without obscuring it. Runs inside the tiled-text context (`drawText`), so
+   * it also survives Safari's large-canvas text limit.
+   *
+   * @param tctx    - Tile context already translated to full-canvas coordinates.
+   * @param text    - Watermark string to draw.
+   * @param canvasW - Full canvas width in pixels (scales the mark size).
+   * @param canvasH - Full canvas height in pixels.
+   * @param padded  - Padded tile rect (full-canvas space) to cull against.
+   */
+  private static drawWatermark(
+    tctx: CanvasRenderingContext2D,
+    text: string,
+    canvasW: number,
+    canvasH: number,
+    padded: { left: number; top: number; right: number; bottom: number },
+  ): void {
+    // Scale with the image so a 16k export gets a proportionally larger mark
+    // than a small one; clamp to keep very wide images sane.
+    const wmFont = Math.max(14, Math.round(Math.min(canvasW, canvasH) / 50))
+    // Diagonal slant (−30°, the classic watermark angle).
+    const angle = -Math.PI / 6
+    const cosA = Math.cos(angle)
+    const sinA = Math.sin(angle)
+    // Conservative axis-aligned bounds of one rotated mark: the true rotated
+    // box is a subset, so skipping when this AABB misses the padded rect never
+    // drops a glyph that could overlap it.
+    const wmW = tctx.measureText(text).width
+    const bw = Math.abs(wmW * cosA) + Math.abs(wmFont * sinA)
+    const bh = Math.abs(wmW * sinA) + Math.abs(wmFont * cosA)
+    tctx.save()
+    tctx.globalAlpha = 0.18
+    tctx.fillStyle = "#000"
+    tctx.font = `italic ${wmFont}px ui-monospace, monospace`
+    tctx.textAlign = "center"
+    tctx.textBaseline = "middle"
+    tctx.translate(canvasW / 2, canvasH / 2)
+    tctx.rotate(angle)
+    // Three marks evenly spaced along the main diagonal — at 25%, 50%, and 75%
+    // of the way from the top-left corner to the bottom-right.
+    for (const t of [0.25, 0.5, 0.75]) {
+      const x = (t - 0.5) * canvasW
+      const y = (t - 0.5) * canvasH
+      const p = {
+        x: canvasW / 2 + x * cosA - y * sinA,
+        y: canvasH / 2 + x * sinA + y * cosA,
+      }
+      if (overlapsBox({ x: p.x, y: p.y, w: bw, h: bh, centered: true }, padded)) {
+        tctx.fillText(text, x, y)
+      }
+    }
+    tctx.restore()
   }
 
   /**
@@ -891,22 +966,6 @@ export class Export {
     const textPad = Math.min(tilePad, tilePadCap)
     const tileSize = Math.max(1, Math.min(TEXT_TILE_SIZE, TEXT_SAFE_DIM - 2 * textPad))
 
-    // True when the axis-aligned box at `x`,`y` (centred, or left-anchored with
-    // width `w`) overlaps the padded tile rect — the tile then rasterizes the
-    // whole glyph so the composite reconstructs it across seams.
-    const overlaps = (
-      box: { x: number; y: number; w: number; h: number; centered: boolean },
-      p: { left: number; top: number; right: number; bottom: number },
-    ) => {
-      const halfW = box.centered ? box.w / 2 : 0
-      const halfH = box.h / 2
-      const bx0 = box.x - halfW
-      const by0 = box.y - halfH
-      const bx1 = box.x - halfW + box.w
-      const by1 = box.y - halfH + box.h
-      return bx1 >= p.left && bx0 <= p.right && by1 >= p.top && by0 <= p.bottom
-    }
-
     // Draw one tile's worth of text. The tile context is translated to
     // full-canvas coordinates, so positions are absolute; the padded clip
     // rectangle (in full-canvas space) culls items whose glyphs fall outside.
@@ -925,7 +984,7 @@ export class Export {
           const y = headerH + (r - win.rowStart + 0.5) * s
           const width = labelWidths.get(code)
           if (width === undefined || width > s) return
-          if (!overlaps({ x, y, w: width, h: labelFont, centered: true }, padded)) return
+          if (!overlapsBox({ x, y, w: width, h: labelFont, centered: true }, padded)) return
           tctx.fillText(code, x, y)
         })
       }
@@ -950,10 +1009,10 @@ export class Export {
         const x = headerW + (c - win.colStart + 0.5) * s
         const yTop = headerH / 2
         const yBottom = beadBottom + headerH / 2
-        if (overlaps({ x, y: yTop, w: colNumberW, h: numFont, centered: true }, padded)) {
+        if (overlapsBox({ x, y: yTop, w: colNumberW, h: numFont, centered: true }, padded)) {
           tctx.fillText(String(c + 1), x, yTop)
         }
-        if (overlaps({ x, y: yBottom, w: colNumberW, h: numFont, centered: true }, padded)) {
+        if (overlapsBox({ x, y: yBottom, w: colNumberW, h: numFont, centered: true }, padded)) {
           tctx.fillText(String(c + 1), x, yBottom)
         }
       }
@@ -963,10 +1022,10 @@ export class Export {
         const y = headerH + (r - win.rowStart + 0.5) * s
         const xLeft = headerW / 2
         const xRight = beadRight + headerW / 2
-        if (overlaps({ x: xLeft, y, w: rowNumberW, h: numFont, centered: true }, padded)) {
+        if (overlapsBox({ x: xLeft, y, w: rowNumberW, h: numFont, centered: true }, padded)) {
           tctx.fillText(String(r + 1), xLeft, y)
         }
-        if (overlaps({ x: xRight, y, w: rowNumberW, h: numFont, centered: true }, padded)) {
+        if (overlapsBox({ x: xRight, y, w: rowNumberW, h: numFont, centered: true }, padded)) {
           tctx.fillText(String(r + 1), xRight, y)
         }
       }
@@ -985,7 +1044,7 @@ export class Export {
         const titleX = headerW + geo.pad
         const titleCY = titleY + geo.titleFont / 2
         const title = opts.beadStatsTitle ?? "Beads used"
-        if (overlaps({ x: titleX, y: titleCY, w: tctx.measureText(title).width, h: geo.titleFont, centered: false }, padded)) {
+        if (overlapsBox({ x: titleX, y: titleCY, w: tctx.measureText(title).width, h: geo.titleFont, centered: false }, padded)) {
           tctx.fillText(title, titleX, titleCY)
         }
         const bodyY = titleY + geo.titleFont + 4
@@ -1000,38 +1059,16 @@ export class Export {
           // The swatch precedes the text, so the label's left-anchored box must
           // start at the text x, not the cell x.
           const textX = x + geo.pad + geo.swatch + geo.gap
-          if (!overlaps({ x: textX, y, w: statsTextWidths.get(text) ?? 0, h: geo.font, centered: false }, padded)) return
+          if (!overlapsBox({ x: textX, y, w: statsTextWidths.get(text) ?? 0, h: geo.font, centered: false }, padded)) return
           tctx.fillStyle = "#111"
           tctx.fillText(text, textX, y)
         })
       }
 
-      // Watermark: semi-transparent italic text tiled across the whole image
-      // (grid, bands, and stats area), drawn last so it sits above everything.
-      // On a split export every sheet tiles the watermark over its own window,
-      // so the assembled image shows one continuous watermark.
+      // Watermark: three diagonal marks (top-left, centre, bottom-right),
+      // drawn last so they sit above everything (grid, bands, and stats area).
       if (opts.watermarkText) {
-        const wm = opts.watermarkText
-        // Scale with the image so a 16k export gets a proportionally larger
-        // mark than a small one; clamp to keep very wide images sane.
-        const wmFont = Math.max(14, Math.round(Math.min(canvasW, canvasH) / 50))
-        tctx.save()
-        tctx.globalAlpha = 0.18
-        tctx.fillStyle = "#000"
-        tctx.font = `italic ${wmFont}px ui-monospace, monospace`
-        tctx.textAlign = "center"
-        tctx.textBaseline = "middle"
-        const wmW = tctx.measureText(wm).width
-        const rowH = wmFont * 3
-        const step = wmW + rowH
-        for (let y = rowH / 2; y < canvasH; y += rowH) {
-          for (let x = (canvasW % step) / 2; x < canvasW; x += step) {
-            if (overlaps({ x, y, w: wmW, h: wmFont, centered: true }, padded)) {
-              tctx.fillText(wm, x, y)
-            }
-          }
-        }
-        tctx.restore()
+        Export.drawWatermark(tctx, opts.watermarkText, canvasW, canvasH, padded)
       }
     }
 
