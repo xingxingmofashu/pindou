@@ -1,3 +1,4 @@
+import { zipSync } from "fflate"
 import { buildHexByCode, countGridBeads, forEachPaintedCell, gridSize } from "@/lib/editor"
 import { MAJOR_GRID_STEP } from "@/lib/constants"
 import type { Palette } from "@/types"
@@ -98,6 +99,12 @@ interface UsedColor {
   count: number
 }
 
+/** Bead-usage stats for one export image (a full grid or one sheet). */
+interface WindowStats {
+  used: UsedColor[]
+  detail: StatsLayout | null
+}
+
 /** Bead-area geometry shared by rendering and size previews. */
 interface Layout {
   /** Effective pixels per bead (scale, clamped to the canvas limit). */
@@ -129,9 +136,10 @@ export interface ExportGridOptions {
   /**
    * Split the pattern into `count` square sheets (1, 4, 9 or 16; 1 = one full
    * image). Each sheet is a self-contained chart — it keeps the full coordinate
-   * bands, so the sheets tile together exactly — and downloads as its own PNG
+   * bands, so the sheets tile together exactly — and downloads as a single
+   * ZIP archive of PNGs.
    * (`pattern-…-tile-{i}-of-{n}.png`). The bead-usage list, when enabled, is
-   * only drawn on the last sheet to avoid repeating it on every page.
+   * only drawn on sheets that contain at least one painted cell.
    */
   tileCount?: 1 | 4 | 9 | 16
 }
@@ -162,9 +170,9 @@ export interface ExportTile {
   scale: number
   /** Sheet canvas width in pixels. */
   width: number
-  /** Sheet canvas height in pixels (includes the bead-usage list on the last sheet). */
+  /** Sheet canvas height in pixels (includes the sheet's bead-usage list when it has one). */
   height: number
-  /** True when this sheet carries the bead-usage list (only the last sheet). */
+  /** True when this sheet carries a bead-usage list (it has painted cells and stats are enabled). */
   hasStats: boolean
 }
 
@@ -205,14 +213,33 @@ export class Export {
     return countGridBeads(grid).size
   }
 
-  /** Each colour used in the grid with its swatch hex and count, in palette order. */
+  /** The distinct number of painted colours inside a data-cell window. */
+  private static usedColorCountInWindow(
+    grid: string[][],
+    win: { colStart: number; colEnd: number; rowStart: number; rowEnd: number },
+  ): number {
+    const seen = new Set<string>()
+    forEachPaintedCell(grid, (code, r, c) => {
+      if (c < win.colStart || c >= win.colEnd || r < win.rowStart || r >= win.rowEnd) return
+      seen.add(code)
+    })
+    return seen.size
+  }
+
+  /** Each colour used in a grid region with its swatch hex and count, in palette order. */
   private static usedColors(
     grid: string[][],
     palette: Palette,
+    win?: { colStart: number; colEnd: number; rowStart: number; rowEnd: number },
   ): UsedColor[] {
     const order = new Map(palette.colors.map((color, i) => [color.code, i]))
     const hexByCode = buildHexByCode(palette)
-    return Array.from(countGridBeads(grid))
+    const counts = new Map<string, number>()
+    forEachPaintedCell(grid, (code, r, c) => {
+      if (win && (c < win.colStart || c >= win.colEnd || r < win.rowStart || r >= win.rowEnd)) return
+      counts.set(code, (counts.get(code) ?? 0) + 1)
+    })
+    return Array.from(counts)
       .sort(([a], [b]) => (order.get(a) ?? Infinity) - (order.get(b) ?? Infinity))
       .map(([code, count]) => ({ code, hex: hexByCode.get(code) ?? "#000000", count }))
   }
@@ -398,8 +425,8 @@ export class Export {
   }
 
   /**
-   * The largest pixels-per-bead whose sheet canvases (bands + data cells + the
-   * bead-usage list on the last sheet) all stay within {@link MAX_EXPORT_DIM},
+   * The largest pixels-per-bead whose sheet canvases (bands + data cells + each
+   * sheet's own bead-usage list) all stay within {@link MAX_EXPORT_DIM},
    * binary-searched like {@link computeLayout} because every sheet dimension
    * grows monotonically with `s`.
    */
@@ -407,7 +434,7 @@ export class Export {
     cols: number,
     rows: number,
     scale: number,
-    statsCount: number,
+    statsCounts: number[],
     tileCount: number,
   ): number {
     let lo = 1
@@ -415,8 +442,8 @@ export class Export {
     const fits = (s: number): boolean => {
       const tiles = Export.tileGrid(cols, rows, tileCount)
       for (let i = 0; i < tiles.length; i++) {
-        const withStats = statsCount > 0 && i === tiles.length - 1
-        const { width, height } = Export.tileLayout(cols, rows, tiles[i], s, statsCount, withStats)
+        const withStats = statsCounts[i] > 0
+        const { width, height } = Export.tileLayout(cols, rows, tiles[i], s, statsCounts[i], withStats)
         if (width > MAX_EXPORT_DIM || height > MAX_EXPORT_DIM) return false
       }
       return true
@@ -470,11 +497,23 @@ export class Export {
     const { s, width, height } = Export.computeLayout(size.cols, size.rows, scale, count)
     const tileCount = opts.tileCount ?? 1
     if (tileCount <= 1) return { width, height, scale: s, tiles: null }
-    const ts = Export.tileScale(size.cols, size.rows, scale, count, tileCount)
     const tileList = Export.tileGrid(size.cols, size.rows, tileCount)
+    // Each sheet's usage list counts only the colours inside its own window, so
+    // sheets that cover empty regions may carry no list at all.
+    const statsCounts = tileList.map((t) =>
+      Boolean(opts.showBeadStats)
+        ? Export.usedColorCountInWindow(grid, {
+            colStart: t.dataCol,
+            colEnd: t.dataCol + t.dataCols,
+            rowStart: t.dataRow,
+            rowEnd: t.dataRow + t.dataRows,
+          })
+        : 0,
+    )
+    const ts = Export.tileScale(size.cols, size.rows, scale, statsCounts, tileCount)
     const tiles = tileList.map((t, i) => {
-      const withStats = count > 0 && i === tileList.length - 1
-      const { width: tw, height: th } = Export.tileLayout(size.cols, size.rows, t, ts, count, withStats)
+      const withStats = statsCounts[i] > 0
+      const { width: tw, height: th } = Export.tileLayout(size.cols, size.rows, t, ts, statsCounts[i], withStats)
       return { ...t, scale: ts, width: tw, height: th }
     })
     return { width, height, scale: ts, tiles }
@@ -486,8 +525,10 @@ export class Export {
    * With {@link ExportGridOptions.tileCount} > 1 the pattern is split into
    * that many square sheets; each sheet is its own self-contained chart (it
    * keeps the full coordinate bands, so the sheets tile together exactly) and
-   * downloads as a separate PNG. The bead-usage list, when enabled, is only
-   * drawn on the last sheet.
+   * downloads inside a single ZIP archive. Each sheet carries its own
+   * bead-usage list (when enabled), counting only the colours inside that
+   * sheet's window.
+   * (when enabled), counting only the colours inside that sheet's window.
    *
    * @param grid    - The serialized code grid (`grid[row][col]`, "" = empty).
    * @param palette - Palette used to resolve code → colour hex.
@@ -508,11 +549,22 @@ export class Export {
     const tileCount = opts.tileCount ?? 1
     if (tileCount > 1) return this.renderTiles(grid, palette, scale, opts, tileCount)
 
-    const layout = this.fullLayout(grid, palette, scale, opts)
+    const layout = this.fullLayout(grid, scale)
     if (!layout) return false
+    // Single-image export: the usage list covers the whole grid, so the canvas
+    // must fit the grid area plus the usage section below it.
+    const stats = Export.statsForWindow(
+      grid,
+      palette,
+      layout.s,
+      { colStart: 0, colEnd: layout.cols, rowStart: 0, rowEnd: layout.rows },
+      Boolean(opts.showBeadStats),
+      layout.width,
+      layout.headerW,
+    )
     const canvas = document.createElement("canvas")
-    canvas.width = layout.width
-    canvas.height = layout.height
+    canvas.width = stats ? Math.max(layout.width, stats.detail!.width) : layout.width
+    canvas.height = layout.height + (stats?.detail?.height ?? 0)
     const ctx = canvas.getContext("2d")
     if (!ctx) return false
     this.renderWindow(ctx, grid, palette, scale, opts, layout, {
@@ -521,7 +573,7 @@ export class Export {
       rowStart: 0,
       rowEnd: layout.rows,
       showStats: true,
-    })
+    }, stats)
     const blob = await new Promise<Blob | null>((resolve) => {
       canvas.toBlob(resolve, "image/png")
     })
@@ -537,23 +589,40 @@ export class Export {
 
   /**
    * Resolved full-image layout for a grid: the full-canvas geometry plus the
-   * grid dimensions and the bead-usage detail, so renderers never recompute it.
+   * grid dimensions, so renderers never recompute the shared geometry.
    * Returns null for an empty grid.
    */
   private fullLayout(
     grid: string[][],
-    palette: Palette,
     scale: number,
-    opts: ExportGridOptions,
-  ): (Layout & { rows: number; cols: number; detail: StatsLayout | null; used: UsedColor[] }) | null {
+  ): (Layout & { rows: number; cols: number }) | null {
     const size = gridSize(grid)
     if (!size) return null
     const { rows, cols } = size
-    const used = opts.showBeadStats ? Export.usedColors(grid, palette) : []
-    const layout = Export.computeLayout(cols, rows, scale, used.length)
-    const geo = Export.statsGeometry(layout.s)
-    const detail = opts.showBeadStats ? Export.statsSize(geo, used.length, layout.width, layout.headerW) : null
-    return { ...layout, rows, cols, detail, used }
+    const layout = Export.computeLayout(cols, rows, scale, 0)
+    return { ...layout, rows, cols }
+  }
+
+  /**
+   * Bead-usage stats for a data-cell window: every colour used in it with its
+   * count (in palette order), plus the laid-out usage section. Passed to
+   * {@link renderWindow} so a sheet's usage list reflects only that sheet's
+   * cells. `null` when the usage list is disabled.
+   */
+  private static statsForWindow(
+    grid: string[][],
+    palette: Palette,
+    s: number,
+    win: { colStart: number; colEnd: number; rowStart: number; rowEnd: number },
+    showStats: boolean,
+    canvasWidth: number,
+    headerW: number,
+  ): WindowStats | null {
+    if (!showStats) return null
+    const used = Export.usedColors(grid, palette, win)
+    const geo = Export.statsGeometry(s)
+    const detail = Export.statsSize(geo, used.length, canvasWidth, headerW)
+    return { used, detail }
   }
 
   /** Data-cell window (half-open ranges) that one export image covers. */
@@ -597,17 +666,18 @@ export class Export {
     palette: Palette,
     scale: number,
     opts: ExportGridOptions,
-    layout: Layout & { rows: number; cols: number; detail: StatsLayout | null; used: UsedColor[] },
+    layout: Layout & { rows: number; cols: number },
     win: { colStart: number; colEnd: number; rowStart: number; rowEnd: number; showStats: boolean },
+    stats: WindowStats | null,
   ): void {
     const { rows, cols, s, numFont, headerW, headerH } = layout
-    const { used, detail } = layout
+    const { used, detail } = stats ?? { used: [], detail: null }
     // The actual canvas dimensions — for a single-image export these equal the
     // full layout, for a sheet they are the sheet's own size.
     const canvasW = ctx.canvas.width
     const canvasH = ctx.canvas.height
     const geo = Export.statsGeometry(s)
-    const showStats = win.showStats && detail !== null
+    const showStats = win.showStats && stats !== null && detail !== null
     const colsInWindow = win.colEnd - win.colStart
     const rowsInWindow = win.rowEnd - win.rowStart
 
@@ -855,7 +925,8 @@ export class Export {
       // Bead-usage text below the pattern: a title line, then a multi-column
       // grid of entries (code, count). The swatch rectangles are plain fills
       // and are drawn straight onto the main canvas. Text style resets from the
-      // labels. Only the last sheet of a split export carries this section.
+      // labels. Every sheet of a split export carries its own usage list
+      // (counting only the cells in its window) when stats are enabled.
       if (showStats && detail) {
         tctx.textAlign = "left"
         tctx.textBaseline = "middle"
@@ -910,9 +981,10 @@ export class Export {
   }
 
   /**
-   * Split a grid into `tileCount` sheets and download each as its own PNG.
-   * Sheets are rendered and downloaded sequentially so the browser's download
-   * manager receives one file at a time and the page stays responsive.
+   * Split a grid into `tileCount` sheets and download them all as a single
+   * ZIP archive. Sheets are rendered sequentially so the page stays
+   * responsive; each sheet carries its own bead-usage list (when enabled),
+   * counting only the cells inside that sheet's window.
    */
   private async renderTiles(
     grid: string[][],
@@ -924,37 +996,66 @@ export class Export {
     const size = gridSize(grid)
     if (!size) return false
     const { rows, cols } = size
-    const full = this.fullLayout(grid, palette, scale, opts)
+    const full = this.fullLayout(grid, scale)
     if (!full) return false
-    const ts = Export.tileScale(cols, rows, scale, full.used.length, tileCount)
     const tiles = Export.tileGrid(cols, rows, tileCount)
+    const statsCounts = tiles.map((t) =>
+      Boolean(opts.showBeadStats)
+        ? Export.usedColorCountInWindow(grid, {
+            colStart: t.dataCol,
+            colEnd: t.dataCol + t.dataCols,
+            rowStart: t.dataRow,
+            rowEnd: t.dataRow + t.dataRows,
+          })
+        : 0,
+    )
+    const ts = Export.tileScale(cols, rows, scale, statsCounts, tileCount)
     const last = tiles.length
 
+    const blobs: { name: string; data: Uint8Array }[] = []
     for (let i = 0; i < tiles.length; i++) {
       const tile = tiles[i]
-      const hasStats = Boolean(opts.showBeadStats) && i === last - 1
-      const { width: tw, height: th } = Export.tileLayout(cols, rows, tile, ts, full.used.length, hasStats)
+      const hasStats = Boolean(opts.showBeadStats) && statsCounts[i] > 0
+      const { width: tw, height: th } = Export.tileLayout(cols, rows, tile, ts, statsCounts[i], hasStats)
       const canvas = document.createElement("canvas")
       canvas.width = tw
       canvas.height = th
       const ctx = canvas.getContext("2d")
       if (!ctx) return false
       const win = Export.windowForTile({ ...tile, scale: ts, width: tw, height: th, hasStats })
-      this.renderWindow(ctx, grid, palette, scale, opts, full, win)
+      const stats = Export.statsForWindow(
+        grid,
+        palette,
+        ts,
+        { colStart: win.colStart, colEnd: win.colEnd, rowStart: win.rowStart, rowEnd: win.rowEnd },
+        hasStats,
+        tw,
+        full.headerW,
+      )
+      this.renderWindow(ctx, grid, palette, scale, opts, full, win, stats)
       const blob = await new Promise<Blob | null>((resolve) => {
         canvas.toBlob(resolve, "image/png")
       })
       if (!blob) return false
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `pattern-${cols}x${rows}-tile-${tile.index}-of-${last}@${ts}x.png`
-      a.click()
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
-      // Yield to the event loop between sheets so the browser can flush the
-      // download and the page stays responsive while 16 images encode.
+      blobs.push({
+        name: `pattern-${cols}x${rows}-tile-${tile.index}-of-${last}@${ts}x.png`,
+        data: new Uint8Array(await blob.arrayBuffer()),
+      })
+      // Yield to the event loop between sheets so the page stays responsive
+      // while 16 images encode.
       await new Promise((resolve) => setTimeout(resolve, 0))
     }
+
+    // PNGs are already deflate-compressed, so zipping is a cheap container
+    // pass — sync compression is fine here and avoids worker overhead.
+    const zipped = zipSync(Object.fromEntries(blobs.map((b) => [b.name, b.data])))
+    const zipBlob = new Blob([zipped], { type: "application/zip" })
+    const url = URL.createObjectURL(zipBlob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `pattern-${cols}x${rows}-tiles-${last}.zip`
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
     return true
   }
 }
