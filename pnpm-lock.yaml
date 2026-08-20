@@ -29,6 +29,9 @@ importers:
       '@pindou/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@pindou/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@upstash/ratelimit':
         specifier: ^2.0.8
         version: 2.0.8(@upstash/redis@1.38.2)
@@ -169,6 +172,43 @@ importers:
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
+      typescript:
+        specifier: ^5.8.0
+        version: 5.9.3
+
+  packages/ui:
+    dependencies:
+      '@base-ui/react':
+        specifier: ^1.6.0
+        version: 1.6.0(@types/react@19.2.17)(date-fns@4.4.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@pindou/shared':
+        specifier: workspace:*
+        version: link:../shared
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      culori:
+        specifier: ^4.0.2
+        version: 4.0.2
+      lucide-react:
+        specifier: ^1.27.0
+        version: 1.27.0(react@19.2.4)
+    devDependencies:
+      '@types/culori':
+        specifier: ^4.0.1
+        version: 4.0.1
+      '@types/react':
+        specifier: ^19.2.0
+        version: 19.2.17
+      '@types/react-dom':
+        specifier: ^19.2.0
+        version: 19.2.3(@types/react@19.2.17)
+      react:
+        specifier: ^19.2.4
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.2.4
+        version: 19.2.4(react@19.2.4)
       typescript:
         specifier: ^5.8.0
         version: 5.9.3
