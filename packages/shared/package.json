@@ -1,0 +1,36 @@
+{
+  "name": "@pindou/shared",
+  "version": "0.1.0",
+  "description": "Shared domain logic, types and validation for the pindou web + desktop apps",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./constants": "./src/constants.ts",
+    "./date": "./src/date.ts",
+    "./editor": "./src/editor.ts",
+    "./export": "./src/export.ts",
+    "./schema": "./src/schema.ts",
+    "./transform": "./src/transform.ts",
+    "./types": "./src/types.ts",
+    "./utils": "./src/utils.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "culori": "^4.0.2",
+    "date-fns": "^4.4.0",
+    "fflate": "^0.8.3",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "pixi.js": "^8.19.0",
+    "typescript": "^5.8.0",
+    "@types/culori": "^4.0.1"
+  }
+}

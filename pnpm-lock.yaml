@@ -26,6 +26,9 @@ importers:
       '@neondatabase/serverless':
         specifier: ^1.1.0
         version: 1.1.0
+      '@pindou/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@upstash/ratelimit':
         specifier: ^2.0.8
         version: 2.0.8(@upstash/redis@1.38.2)
@@ -137,6 +140,37 @@ importers:
         version: 4.23.5
       typescript:
         specifier: ^5
+        version: 5.9.3
+
+  packages/shared:
+    dependencies:
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      culori:
+        specifier: ^4.0.2
+        version: 4.0.2
+      date-fns:
+        specifier: ^4.4.0
+        version: 4.4.0
+      fflate:
+        specifier: ^0.8.3
+        version: 0.8.3
+      tailwind-merge:
+        specifier: ^3.6.0
+        version: 3.6.0
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@types/culori':
+        specifier: ^4.0.1
+        version: 4.0.1
+      pixi.js:
+        specifier: ^8.19.0
+        version: 8.19.0
+      typescript:
+        specifier: ^5.8.0
         version: 5.9.3
 
 packages:
