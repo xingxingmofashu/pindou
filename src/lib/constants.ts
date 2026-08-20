@@ -52,6 +52,9 @@ export const PATTERNS_PAGE_SIZE = 20
 /** Default step (in data cells) of the export major grid that groups beads in blocks. */
 export const MAJOR_GRID_STEP = 8
 
+/** Fixed watermark text applied to every exported PNG chart. */
+export const EXPORT_WATERMARK_TEXT = "@xingxingmofashu"
+
 /** Repository URL used in the layout footer/header links. */
 export const GITHUB_URL = "https://github.com/xingxingmofashu/pindou"
 

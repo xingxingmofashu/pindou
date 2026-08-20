@@ -147,6 +147,12 @@ export interface ExportGridOptions {
    * painted cell.
    */
   tileCount?: 1 | 4 | 9 | 16
+  /**
+   * Watermark text tiled diagonally across the image (drawn above everything).
+   * Empty or omitted disables the watermark. Applies to every sheet of a
+   * split export, so the tiled watermark stays continuous after assembly.
+   */
+  watermarkText?: string
 }
 
 /** One sheet of a split export. */
@@ -998,6 +1004,34 @@ export class Export {
           tctx.fillStyle = "#111"
           tctx.fillText(text, textX, y)
         })
+      }
+
+      // Watermark: semi-transparent italic text tiled across the whole image
+      // (grid, bands, and stats area), drawn last so it sits above everything.
+      // On a split export every sheet tiles the watermark over its own window,
+      // so the assembled image shows one continuous watermark.
+      if (opts.watermarkText) {
+        const wm = opts.watermarkText
+        // Scale with the image so a 16k export gets a proportionally larger
+        // mark than a small one; clamp to keep very wide images sane.
+        const wmFont = Math.max(14, Math.round(Math.min(canvasW, canvasH) / 50))
+        tctx.save()
+        tctx.globalAlpha = 0.18
+        tctx.fillStyle = "#000"
+        tctx.font = `italic ${wmFont}px ui-monospace, monospace`
+        tctx.textAlign = "center"
+        tctx.textBaseline = "middle"
+        const wmW = tctx.measureText(wm).width
+        const rowH = wmFont * 3
+        const step = wmW + rowH
+        for (let y = rowH / 2; y < canvasH; y += rowH) {
+          for (let x = (canvasW % step) / 2; x < canvasW; x += step) {
+            if (overlaps({ x, y, w: wmW, h: wmFont, centered: true }, padded)) {
+              tctx.fillText(wm, x, y)
+            }
+          }
+        }
+        tctx.restore()
       }
     }
 
