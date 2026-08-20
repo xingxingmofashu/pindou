@@ -567,13 +567,13 @@ export class Export {
     canvas.height = layout.height + (stats?.detail?.height ?? 0)
     const ctx = canvas.getContext("2d")
     if (!ctx) return false
-    this.renderWindow(ctx, grid, palette, scale, opts, layout, {
+    this.renderWindow(ctx, grid, palette, opts, layout, {
       colStart: 0,
       colEnd: layout.cols,
       rowStart: 0,
       rowEnd: layout.rows,
       showStats: true,
-    }, stats)
+    }, stats, layout.s)
     const blob = await new Promise<Blob | null>((resolve) => {
       canvas.toBlob(resolve, "image/png")
     })
@@ -664,13 +664,19 @@ export class Export {
     ctx: CanvasRenderingContext2D,
     grid: string[][],
     palette: Palette,
-    scale: number,
     opts: ExportGridOptions,
     layout: Layout & { rows: number; cols: number },
     win: { colStart: number; colEnd: number; rowStart: number; rowEnd: number; showStats: boolean },
     stats: WindowStats | null,
+    s: number,
   ): void {
-    const { rows, cols, s, numFont, headerW, headerH } = layout
+    const { rows, cols } = layout
+    // Geometry derives from the *effective* pixels-per-bead `s` (the full-image
+    // clamp for a single export, the per-sheet clamp for a split export), so a
+    // sheet renders at the same bead size its canvas was laid out with.
+    const numFont = Math.max(4, Math.round(s * 0.6))
+    const headerW = Math.ceil(String(rows).length * numFont * 0.7) + s
+    const headerH = s
     const { used, detail } = stats ?? { used: [], detail: null }
     // The actual canvas dimensions — for a single-image export these equal the
     // full layout, for a sheet they are the sheet's own size.
@@ -1023,6 +1029,10 @@ export class Export {
       const ctx = canvas.getContext("2d")
       if (!ctx) return false
       const win = Export.windowForTile({ ...tile, scale: ts, width: tw, height: th, hasStats })
+      // Recompute the header geometry at the effective `ts` (the sheet's actual
+      // bead size), not the full-image clamp.
+      const tileNumFont = Math.max(4, Math.round(ts * 0.6))
+      const tileHeaderW = Math.ceil(String(rows).length * tileNumFont * 0.7) + ts
       const stats = Export.statsForWindow(
         grid,
         palette,
@@ -1030,9 +1040,9 @@ export class Export {
         { colStart: win.colStart, colEnd: win.colEnd, rowStart: win.rowStart, rowEnd: win.rowEnd },
         hasStats,
         tw,
-        full.headerW,
+        tileHeaderW,
       )
-      this.renderWindow(ctx, grid, palette, scale, opts, full, win, stats)
+      this.renderWindow(ctx, grid, palette, opts, full, win, stats, ts)
       const blob = await new Promise<Blob | null>((resolve) => {
         canvas.toBlob(resolve, "image/png")
       })
