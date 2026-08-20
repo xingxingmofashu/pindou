@@ -451,6 +451,35 @@ export function forEachPaintedCell(
 }
 
 /**
+ * Visit every painted cell inside a half-open window of a code grid, skipping
+ * empty cells. Only rows within the window's row range are scanned, and each
+ * scanned row only walks its column slice — so split-export windows cost
+ * O(window) instead of O(whole grid) per sheet.
+ *
+ * @param grid - The rectangular `string[][]` ("" = empty).
+ * @param win  - Half-open window bounds (`colStart ≤ c < colEnd`, same for rows).
+ * @param fn   - Called with the colour code and the cell's row/column.
+ */
+export function forEachPaintedCellInWindow(
+  grid: string[][],
+  win: { colStart: number; colEnd: number; rowStart: number; rowEnd: number },
+  fn: (code: string, row: number, col: number) => void,
+): void {
+  const rowStart = Math.max(0, win.rowStart)
+  const rowEnd = Math.min(grid.length, win.rowEnd)
+  for (let r = rowStart; r < rowEnd; r++) {
+    const row = grid[r]
+    const colStart = Math.max(0, win.colStart)
+    const colEnd = Math.min(row.length, win.colEnd)
+    for (let c = colStart; c < colEnd; c++) {
+      const code = row[c]
+      if (code === "") continue
+      fn(code, r, c)
+    }
+  }
+}
+
+/**
  * Compute LOD parameters for a given zoom level.
  *
  * The visual cell size is chosen so that each visual cell is at least
