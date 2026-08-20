@@ -191,7 +191,11 @@
     "unknownPaletteDescription": "This pattern's palette could not be loaded.",
     "canvasUnavailable": "Canvas unavailable",
     "canvasUnavailableDescription": "The WebGL canvas was lost. Please reload the page.",
-    "webglUnavailableDescription": "Your browser could not start the WebGL canvas. Please try a different browser."
+    "webglUnavailableDescription": "Your browser could not start the WebGL canvas. Please try a different browser.",
+    "tileCount": "Split into",
+    "tileSingle": "One image",
+    "tileSplit": "{count} sheets",
+    "tileSize": "Each sheet: {cols} × {rows} beads · {width} × {height} px"
   },
   "footer": {
     "tagline": "Fuse bead pattern editor & community",

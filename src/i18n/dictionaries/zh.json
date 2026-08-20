@@ -191,7 +191,11 @@
     "unknownPaletteDescription": "无法加载这个图案的色板。",
     "canvasUnavailable": "画布不可用",
     "canvasUnavailableDescription": "WebGL 画布已丢失，请刷新页面。",
-    "webglUnavailableDescription": "浏览器无法启动 WebGL 画布，请尝试更换浏览器。"
+    "webglUnavailableDescription": "浏览器无法启动 WebGL 画布，请尝试更换浏览器。",
+    "tileCount": "分割成",
+    "tileSingle": "一张图",
+    "tileSplit": "{count} 张",
+    "tileSize": "每张：{cols} × {rows} 颗拼豆 · {width} × {height} px"
   },
   "footer": {
     "tagline": "拼豆图案编辑器与社区",
