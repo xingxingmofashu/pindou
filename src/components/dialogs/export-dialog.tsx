@@ -17,7 +17,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { toast } from "@/components/ui/toast"
 import { usePalette } from "@/hooks/use-palette"
 import { useI18n } from "@/i18n/client"
-import { MAJOR_GRID_STEP } from "@/lib/constants"
+import { EXPORT_WATERMARK_TEXT, MAJOR_GRID_STEP } from "@/lib/constants"
 import { Export, EXPORT_TILE_COUNTS, DEFAULT_EXPORT_SCALE } from "@/lib/export"
 import { gridSize, type CellsData } from "@/lib/editor"
 import type { Palette } from "@/types"
@@ -101,6 +101,7 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
         majorGridStep: majorStep,
         beadStatsTitle: t("editor.beadStatsTitle"),
         tileCount,
+        watermarkText: EXPORT_WATERMARK_TEXT,
       },
     )
     if (!ok) {
