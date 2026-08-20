@@ -173,8 +173,9 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-2">
+        <div className="grid gap-1.5">
           <Label htmlFor="export-tile-count">{t("editor.tileCount")}</Label>
+          <p className="text-xs text-muted-foreground">{t("editor.tileCountDescription")}</p>
           {/* Base UI ToggleGroup: value is always a string[] even in single-select mode. */}
           <ToggleGroup
             value={[String(tileCount)]}
