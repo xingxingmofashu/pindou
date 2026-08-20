@@ -13,11 +13,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { toast } from "@/components/ui/toast"
 import { usePalette } from "@/hooks/use-palette"
 import { useI18n } from "@/i18n/client"
 import { MAJOR_GRID_STEP } from "@/lib/constants"
-import { Export, DEFAULT_EXPORT_SCALE } from "@/lib/export"
+import { Export, EXPORT_TILE_COUNTS, DEFAULT_EXPORT_SCALE } from "@/lib/export"
 import { gridSize, type CellsData } from "@/lib/editor"
 import type { Palette } from "@/types"
 
@@ -48,6 +49,8 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
   const [majorGridOn, setMajorGridOn] = useState(true)
   // Step (in data cells) of the major grid; defaults to MAJOR_GRID_STEP (8).
   const [majorGridStep, setMajorGridStep] = useState(String(MAJOR_GRID_STEP))
+  // How many sheets to split the export into (1 = one full image). Defaults to 1.
+  const [tileCount, setTileCount] = useState<1 | 4 | 9 | 16>(1)
 
   // Snapshot the grid once when the dialog opens — it can't change behind the
   // modal, so re-serializing on every scale keystroke would be wasted work.
@@ -62,7 +65,7 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
   const { rows, cols } = (grid ? gridSize(grid) : null) ?? { rows: 0, cols: 0 }
   const scale = Math.max(1, Math.floor(Number(scaleInput)) || 1)
   const majorStep = Math.max(1, Math.floor(Number(majorGridStep)) || MAJOR_GRID_STEP)
-  const size = grid ? exporter.size(grid, scale, { showBeadStats: beadStatsOn }) : null
+  const size = grid ? exporter.size(grid, scale, { showBeadStats: beadStatsOn, tileCount }) : null
 
   const handleExport = useCallback(async () => {
     if (!data) {
@@ -91,6 +94,7 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
         showMajorGrid: majorGridOn,
         majorGridStep: majorStep,
         beadStatsTitle: t("editor.beadStatsTitle"),
+        tileCount,
       },
     )
     if (!ok) {
@@ -102,7 +106,7 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
       return
     }
     onClose()
-  }, [data, palette, scale, labelsOn, beadStatsOn, majorGridOn, majorStep, exporter, onClose, t])
+  }, [data, palette, scale, labelsOn, beadStatsOn, majorGridOn, majorStep, tileCount, exporter, onClose, t])
 
   return (
     <Dialog
@@ -118,6 +122,31 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
             {t("editor.exportDescription")}
           </DialogDescription>
         </DialogHeader>
+
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="export-tile-count">{t("editor.tileCount")}</Label>
+          {/* Base UI ToggleGroup: value is always a string[] even in single-select mode. */}
+          <ToggleGroup
+            value={[String(tileCount)]}
+            onValueChange={(values) => {
+              const n = Number(values[0])
+              if (EXPORT_TILE_COUNTS.includes(n as (typeof EXPORT_TILE_COUNTS)[number])) {
+                setTileCount(n as 1 | 4 | 9 | 16)
+              }
+            }}
+            multiple={false}
+          >
+            {EXPORT_TILE_COUNTS.map((n) => (
+              <ToggleGroupItem
+                key={n}
+                value={String(n)}
+                aria-label={n === 1 ? t("editor.tileSingle") : t("editor.tileSplit", { count: n })}
+              >
+                {n === 1 ? t("editor.tileSingle") : n}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
 
         <div className="flex items-center justify-between gap-2">
           <Label htmlFor="export-labels">{t("editor.showColourCodes")}</Label>
@@ -190,6 +219,16 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
                   .join(" · ")
               : t("editor.scaleHint")}
           </p>
+          {tileCount > 1 && size?.tiles && (
+            <p className="text-xs text-muted-foreground">
+              {t("editor.tileSize", {
+                cols: size.tiles[0].dataCols,
+                rows: size.tiles[0].dataRows,
+                width: size.tiles[0].width,
+                height: size.tiles[0].height,
+              })}
+            </p>
+          )}
         </div>
 
         <DialogFooter>
