@@ -1,3 +1,7 @@
+// Theme (framework-agnostic light/dark provider)
+export * from "./components/theme"
+
+// Primitives
 export * from "./components/ui/alert-dialog"
 export * from "./components/ui/button"
 export * from "./components/ui/card"
@@ -21,5 +25,7 @@ export * from "./components/ui/toast"
 export * from "./components/ui/toggle"
 export * from "./components/ui/toggle-group"
 export * from "./components/ui/tooltip"
+
+// Branding
 export * from "./components/logo"
 export * from "./components/icon/github"

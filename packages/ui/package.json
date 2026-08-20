@@ -8,6 +8,9 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./theme": "./src/components/theme.tsx",
+    "./logo": "./src/components/logo.tsx",
+    "./icon/github": "./src/components/icon/github.tsx",
     "./alert-dialog": "./src/components/ui/alert-dialog.tsx",
     "./button": "./src/components/ui/button.tsx",
     "./card": "./src/components/ui/card.tsx",
@@ -30,19 +33,18 @@
     "./toast": "./src/components/ui/toast.tsx",
     "./toggle": "./src/components/ui/toggle.tsx",
     "./toggle-group": "./src/components/ui/toggle-group.tsx",
-    "./tooltip": "./src/components/ui/tooltip.tsx",
-    "./logo": "./src/components/logo.tsx",
-    "./icon/github": "./src/components/icon/github.tsx"
+    "./tooltip": "./src/components/ui/tooltip.tsx"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
-    "@pindou/shared": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "culori": "^4.0.2",
-    "lucide-react": "^1.27.0"
+    "lucide-react": "^1.27.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.6.0"
   },
   "peerDependencies": {
     "react": "^19.0.0",

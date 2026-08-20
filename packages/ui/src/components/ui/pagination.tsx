@@ -1,6 +1,6 @@
 import * as React from "react"
 
-import { cn } from "@pindou/shared"
+import { cn } from "../../utils"
 import { Button } from "./button"
 import { ChevronLeftIcon, ChevronRightIcon, MoreHorizontalIcon } from "lucide-react"
 

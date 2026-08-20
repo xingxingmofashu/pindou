@@ -1,4 +1,7 @@
 import { integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core"
+import { z } from "zod"
+import { createSchemaFactory } from "drizzle-zod"
+import { MAX_GRID_CELLS, MAX_GRID_DIMENSION, PATTERNS_PAGE_SIZE } from "../lib/constants"
 import { users } from "./auth-schema"
 
 export const patterns = pgTable("patterns", {
@@ -60,10 +63,110 @@ export const colors = pgTable(
 )
 
 /**
- * Zod wire schemas, shared types and validation moved to `@pindou/shared`
- * (database-agnostic). Re-exported here so existing `@/db/schema` imports
- * keep working; the drizzle table definitions above remain web-specific.
+ * Zod mirrors of the tables plus the composite wire shapes, generated from the
+ * tables above via drizzle-zod instead of hand-written. Dates are coerced so
+ * the ISO strings JSON responses serve parse cleanly.
  */
-export * from "@pindou/shared/schema"
+const { createSelectSchema, createInsertSchema } = createSchemaFactory({
+  coerce: { date: true },
+})
+
+/** A `brands` row as served over JSON. */
+export const BrandSelectSchema = createSelectSchema(brands)
+
+/** A `colors` row as served over JSON. */
+export const ColorSelectSchema = createSelectSchema(colors)
+
+/**
+ * Shared `gridData` wire schema (used by both the select and insert schemas):
+ * a rectangular `string[][]` whose rows/columns stay within
+ * {@link MAX_GRID_DIMENSION}; `""` = empty cell, any other value is a brand
+ * colour code (e.g. "A1"). The total cell count is additionally bounded by
+ * {@link MAX_GRID_CELLS} so a single pattern can't blow up the wire/DB payload.
+ */
+const gridDataSchema = z
+  .array(z.array(z.string().max(16)))
+  .min(1, `Grid rows must be 1–${MAX_GRID_DIMENSION}`)
+  .max(MAX_GRID_DIMENSION, `Grid rows must be 1–${MAX_GRID_DIMENSION}`)
+  .refine(
+    (rows) => rows[0].length > 0 && rows[0].length <= MAX_GRID_DIMENSION,
+    { message: `Grid columns must be 1–${MAX_GRID_DIMENSION}` },
+  )
+  .refine((rows) => rows.every((row) => row.length === rows[0].length), {
+    message: "Grid must be rectangular",
+  })
+  .refine((rows) => rows.length * rows[0].length <= MAX_GRID_CELLS, {
+    message: `Grid must be at most ${MAX_GRID_CELLS} cells (rows × columns)`,
+  })
+
+/**
+ * Wire shape of a published pattern (GET /api/patterns/[id]): the `patterns`
+ * row joined with the brand code, `gridData` fetched from R2 and parsed to a
+ * code `string[][]`, and the brand FK surfaced as `brandId` alongside the wire
+ * `brandCode`. `gridKey` is server-internal and never sent to the client.
+ */
+export const PatternSelectSchema = createSelectSchema(patterns, {
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+  .omit({ fkBrandId: true, fkUserId: true, gridKey: true })
+  .extend({ gridData: gridDataSchema, brandCode: z.string(), brandId: z.uuid() })
+
+/**
+ * Client-supplied fields for POST /api/patterns. `beadStats` is computed
+ * client-side at publish time; server-generated fields (thumbUrl, timestamps)
+ * are added on the route. Text lengths are capped so a single request can't
+ * carry an unbounded payload.
+ */
+export const PatternInsertSchema = createInsertSchema(patterns, {
+  title: z.string().max(200, "Title must be at most 200 characters"),
+  description: z.string().max(2000, "Description must be at most 2000 characters"),
+  beadStats: z.string().max(100_000, "Bead stats must be at most 100,000 characters"),
+})
+  .omit({
+    id: true,
+    fkBrandId: true,
+    fkUserId: true,
+    authorName: true,
+    thumbUrl: true,
+    gridKey: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({ gridData: gridDataSchema, brandCode: z.string() })
+
+/** Query-parameter pagination for GET /api/patterns. */
+export const PaginationSchema = z.object({
+  total: z.number().int().min(0).catch(0),
+  page: z.coerce.number().int().min(1).catch(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(PATTERNS_PAGE_SIZE).catch(PATTERNS_PAGE_SIZE),
+})
+
+/** Response shape for the paginated GET /api/patterns. */
+export const PatternsResponseSchema = z.object({
+  patterns: z.array(PatternSelectSchema),
+  pagination: PaginationSchema,
+})
+
+/**
+ * Wire shape of GET /api/patterns/[id]: {@link PatternSelectSchema} plus a
+ * server-computed `canEdit` flag (whether the requester owns the pattern).
+ */
+export const PatternDetailSchema = PatternSelectSchema.extend({
+  canEdit: z.boolean(),
+})
+
+/**
+ * Client-supplied fields for PATCH /api/patterns/[id]. Same shape as the
+ * publish body minus the brand code — the pattern's brand is preserved.
+ */
+export const PatternUpdateSchema = PatternInsertSchema.omit({ brandCode: true })
+
+/** Every API error response shares this `{ error }` envelope. */
+export const ErrorSchema = z.object({ error: z.string() })
+
+export type PaletteSelectType = z.infer<typeof PatternSelectSchema>
+export type PatternDetailType = z.infer<typeof PatternDetailSchema>
+export type PatternResponseType = z.infer<typeof PatternsResponseSchema>
 
 export * from "./auth-schema"
