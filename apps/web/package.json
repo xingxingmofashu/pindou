@@ -42,7 +42,8 @@
     "zod": "^4.4.3",
     "zustand": "^5.0.14",
     "@pindou/ui": "workspace:*",
-    "@pindou/core": "workspace:*"
+    "@pindou/core": "workspace:*",
+    "@pindou/shared": "workspace:*"
   },
   "devDependencies": {
     "@next/bundle-analyzer": "^16.3.0",

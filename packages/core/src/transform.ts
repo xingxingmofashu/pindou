@@ -1,7 +1,7 @@
 import { converter } from "culori"
-import { MAX_GRID_CELLS, MAX_GRID_DIMENSION } from "./constants"
+import { MAX_GRID_CELLS, MAX_GRID_DIMENSION } from "@pindou/shared/constants"
 import { countGridBeads, mostFrequent } from "./editor"
-import type { Palette } from "./types"
+import type { Palette } from "@pindou/shared/types"
 
 /** Pixels with alpha below this are treated as empty cells. */
 const ALPHA_THRESHOLD = 128

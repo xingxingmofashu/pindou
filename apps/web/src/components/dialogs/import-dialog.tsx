@@ -19,13 +19,13 @@ import { Label } from "@pindou/ui/components/ui/label"
 import { Switch } from "@pindou/ui/components/ui/switch"
 import { Spinner } from "@pindou/ui/components/ui/spinner"
 import { toast } from "@pindou/ui/components/ui/toast"
-import { MAX_FILE_BYTES, MAX_GRID_DIMENSION } from "@pindou/core/constants"
+import { MAX_FILE_BYTES, MAX_GRID_DIMENSION } from "@pindou/shared/constants"
 import { buildHexByCode, gridSize, mostFrequent, groupColorsBySeries } from "@pindou/core/editor"
 import { usePalette } from "@pindou/core/hooks/use-palette"
 import { useI18n } from "@pindou/core/i18n/client"
 import type { TransformMode, TransformResult } from "@pindou/core/transform"
 import type { TransformRequest, TransformResponse } from "@/workers/transform.worker"
-import type { Palette } from "@pindou/core/types"
+import type { Palette } from "@pindou/shared/types"
 
 /** Preview canvas is drawn at most this many pixels per side. */
 const PREVIEW_MAX = 320

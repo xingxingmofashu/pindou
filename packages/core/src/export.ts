@@ -5,8 +5,8 @@ import {
   forEachPaintedCellInWindow,
   gridSize,
 } from "./editor"
-import { MAJOR_GRID_STEP } from "./constants"
-import type { Palette } from "./types"
+import { MAJOR_GRID_STEP } from "@pindou/shared/constants"
+import type { Palette } from "@pindou/shared/types"
 
 /** Default pixels per bead when the caller doesn't specify a scale. */
 export const DEFAULT_EXPORT_SCALE = 32

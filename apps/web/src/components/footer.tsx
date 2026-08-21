@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Logo } from "@pindou/ui/components/logo"
-import { GITHUB_URL } from "@pindou/core/constants"
+import { GITHUB_URL } from "@pindou/shared/constants"
 import { localizedPath } from "@pindou/core/i18n/config"
 import { getDictionary, getLocale } from "@/i18n/server"
 

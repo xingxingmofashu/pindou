@@ -2,8 +2,8 @@
 
 import { Transform } from "@pindou/core/transform"
 import type { TransformMode, TransformResult } from "@pindou/core/transform"
-import { MAX_INPUT_PIXELS } from "@pindou/core/constants"
-import type { Palette } from "@pindou/core/types"
+import { MAX_INPUT_PIXELS } from "@pindou/shared/constants"
+import type { Palette } from "@pindou/shared/types"
 
 /** A request to convert an image file into a bead grid. */
 export interface TransformRequest {
