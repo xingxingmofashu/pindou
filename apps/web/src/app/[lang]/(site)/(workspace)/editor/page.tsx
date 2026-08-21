@@ -428,7 +428,7 @@ function EditorDialogs({
           insertSchema={PatternInsertSchema}
           useAuth={useSession}
           onSignIn={handleSignIn}
-          onPublish={(payload) => publishTrigger(JSON.stringify(payload))}
+          onPublish={(payload: unknown) => publishTrigger(JSON.stringify(payload))}
         />
       )}
       {importOpen && (
