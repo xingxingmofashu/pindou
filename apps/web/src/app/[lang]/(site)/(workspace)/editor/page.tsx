@@ -26,7 +26,7 @@ import { useShortcuts } from "@pindou/core/hooks/use-shortcuts"
 import { useEditorStore } from "@pindou/core/hooks/use-editor"
 import { usePalette } from "@pindou/core/hooks/use-palette"
 import { UnsavedChangesGuard } from "@/components/unsaved-changes-guard"
-import { useI18n } from "@pindou/core/i18n/client"
+import { useI18n } from "@pindou/core/i18n/client.tsx"
 import type { ToolKind, CellsData } from "@pindou/core/editor"
 
 // Dialogs are only opened on demand — load them (and their heavy deps like

@@ -23,8 +23,8 @@ import { postJson } from "@/lib/utils"
 import type { CellsData } from "@pindou/core/editor"
 import { GithubIcon } from "@pindou/ui/components/icon/github"
 import { signIn, useSession } from "@/lib/auth/client"
-import { localizedPath } from "@pindou/core/i18n/config"
-import { useI18n } from "@pindou/core/i18n/client"
+import { localizedPath } from "@pindou/core/i18n/config.ts"
+import { useI18n } from "@pindou/core/i18n/client.tsx"
 
 interface PublishDialogProps {
   open: boolean

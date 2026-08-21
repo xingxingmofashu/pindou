@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { Button } from "@pindou/ui/components/ui/button"
-import { useI18n } from "@pindou/core/i18n/client"
+import { useI18n } from "@pindou/core/i18n/client.tsx"
 
 export default function Error({
   error,
