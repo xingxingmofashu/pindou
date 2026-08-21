@@ -28,25 +28,24 @@ import { useShortcuts } from "@pindou/core/hooks/use-shortcuts"
 import { useEditorStore } from "@pindou/core/hooks/use-editor"
 import { usePalette } from "@pindou/core/hooks/use-palette"
 import { UnsavedChangesGuard } from "@pindou/ui/components/unsaved-changes-guard"
-import { useI18n } from "@pindou/core/i18n/client.tsx"
+import { useI18n } from "@pindou/core/i18n/client"
 import type { ToolKind, CellsData } from "@pindou/core/editor"
 import { PatternInsertSchema } from "@/db/schema"
 import { signIn, useSession } from "@/lib/auth/client"
-import { localizedPath } from "@pindou/core/i18n/config.ts"
 
 // Dialogs are only opened on demand — load them (and their heavy deps like
 // the export PNG canvas + image transform) lazily instead of blocking the
 // editor's initial bundle.
 const PublishDialog = dynamic(() =>
-  import("@pindou/ui/dialogs/publish-dialog").then((m) => m.PublishDialog),
+  import("@pindou/ui/components/dialogs/publish-dialog").then((m) => m.PublishDialog),
   { ssr: false },
 )
 const ImportDialog = dynamic(() =>
-  import("@pindou/ui/dialogs/import-dialog").then((m) => m.ImportDialog),
+  import("@pindou/ui/components/dialogs/import-dialog").then((m) => m.ImportDialog),
   { ssr: false },
 )
 const ExportDialog = dynamic(() =>
-  import("@pindou/ui/dialogs/export-dialog").then((m) => m.ExportDialog),
+  import("@pindou/ui/components/dialogs/export-dialog").then((m) => m.ExportDialog),
   { ssr: false },
 )
 
@@ -399,15 +398,14 @@ function EditorDialogs({
   const closeImport = useEditorStore((s) => s.closeImport)
   const exportOpen = useEditorStore((s) => s.exportOpen)
   const closeExport = useEditorStore((s) => s.closeExport)
-  const { locale } = useI18n()
 
   const handleSignIn = useCallback(
-    () =>
+    (callbackURL: string) =>
       signIn.popup({
         provider: "github",
-        callbackURL: localizedPath(locale, "/editor"),
+        callbackURL,
       }),
-    [locale],
+    [],
   )
   const createWorker = useCallback(
     () => new Worker(new URL("../../../../../workers/transform.worker", import.meta.url)),

@@ -7,7 +7,7 @@ import { usePixiCanvas } from "@pindou/core/hooks/use-pixi-canvas"
 import { usePalette } from "@pindou/core/hooks/use-palette"
 import { Tooltip, TooltipTrigger, TooltipContent } from "./ui/tooltip"
 import { toast } from "./ui/toast"
-import { useI18n } from "@pindou/core/i18n/client.tsx"
+import { useI18n } from "@pindou/core/i18n/client"
 import type { PixiCanvasApi, ToolKind } from "@pindou/core/editor"
 import type { Palette } from "@pindou/shared/types"
 

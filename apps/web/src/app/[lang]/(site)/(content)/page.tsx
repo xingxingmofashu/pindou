@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from "@pindou/ui/components/ui/card"
 import { Logo } from "@pindou/ui/components/logo"
-import { localizedPath } from "@pindou/core/i18n/config.ts"
+import { localizedPath } from "@pindou/core/i18n/config"
 import { getDictionary, getLocale } from "@/i18n/server"
 import { pageMetadata } from "@/lib/server/meta"
 
