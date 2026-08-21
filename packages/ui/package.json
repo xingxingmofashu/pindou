@@ -6,6 +6,7 @@
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "style": "./src/globals.css",
   "exports": {
     ".": "./src/index.ts",
     "./components/*": "./src/components/*.tsx",
@@ -31,7 +32,6 @@
     "@types/culori": "^4.0.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "typescript": "^5.8.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "shadcn": "^4.16.0"
