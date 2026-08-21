@@ -1,8 +1,8 @@
 import sharp from "sharp"
-import { buildHexByCode, gridSize } from "@pindou/core/editor"
+import { buildHexByCode, gridSize } from "../editor"
 import { EDITOR_BG } from "@pindou/shared/constants"
-import { hexToRgb } from "@/lib/utils"
-import { R2 } from "@/lib/r2"
+import { hexToRgb } from "../utils"
+import { R2 } from "./r2"
 import type { Palette } from "@pindou/shared/types"
 
 /** Maximum cells per axis before downsampling kicks in. */

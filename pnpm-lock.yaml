@@ -20,9 +20,6 @@ importers:
 
   apps/web:
     dependencies:
-      '@aws-sdk/client-s3':
-        specifier: ^3.1103.0
-        version: 3.1103.0
       '@better-auth/drizzle-adapter':
         specifier: ^1.6.26
         version: 1.6.26(@better-auth/core@1.6.26(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.3.7(zod@4.4.3))(jose@6.2.4)(kysely@0.29.4)(nanostores@1.4.2))(@better-auth/utils@0.4.2)(drizzle-orm@0.45.2(@neondatabase/serverless@1.1.0)(@types/better-sqlite3@7.6.13)(@upstash/redis@1.38.2)(kysely@0.29.4))
@@ -38,12 +35,6 @@ importers:
       '@pindou/ui':
         specifier: workspace:*
         version: link:../../packages/ui
-      '@upstash/ratelimit':
-        specifier: ^2.0.8
-        version: 2.0.8(@upstash/redis@1.38.2)
-      '@upstash/redis':
-        specifier: ^1.38.2
-        version: 1.38.2
       '@vercel/analytics':
         specifier: ^2.0.1
         version: 2.0.1(next@16.2.12(@babel/core@7.29.7(supports-color@7.2.0))(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)
@@ -71,9 +62,6 @@ importers:
       react-dom:
         specifier: 19.2.4
         version: 19.2.4(react@19.2.4)
-      sharp:
-        specifier: ^0.34.4
-        version: 0.34.5
       swr:
         specifier: ^2.4.2
         version: 2.4.2(react@19.2.4)
@@ -114,9 +102,18 @@ importers:
 
   packages/core:
     dependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.1103.0
+        version: 3.1103.0
       '@pindou/shared':
         specifier: workspace:*
         version: link:../shared
+      '@upstash/ratelimit':
+        specifier: ^2.0.8
+        version: 2.0.8(@upstash/redis@1.38.2)
+      '@upstash/redis':
+        specifier: ^1.38.2
+        version: 1.38.2
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -132,6 +129,9 @@ importers:
       pixi.js:
         specifier: ^8.8.1
         version: 8.19.0
+      sharp:
+        specifier: ^0.34.4
+        version: 0.34.5
       tailwind-merge:
         specifier: ^3.6.0
         version: 3.6.0

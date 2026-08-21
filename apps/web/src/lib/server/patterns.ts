@@ -3,7 +3,7 @@ import { unstable_cache } from "next/cache"
 import { desc, eq, ilike, or, sql } from "drizzle-orm"
 import { db } from "@/db"
 import { brands, patterns } from "@/db/schema"
-import { GridStorage } from "@/lib/grid-storage"
+import { GridStorage } from "@pindou/core/server/grid-storage"
 import { escapeLike } from "@/lib/utils"
 
 /** Grid JSON storage (R2) shared by the data-access functions below. */

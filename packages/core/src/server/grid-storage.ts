@@ -1,4 +1,4 @@
-import { R2 } from "@/lib/r2"
+import { R2 } from "./r2"
 
 /**
  * Object-key prefix under which pattern grids are stored in the R2 bucket.

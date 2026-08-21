@@ -8,9 +8,9 @@ import { getPattern } from "@/lib/server/patterns"
 import { getPaletteById } from "@/lib/server/palettes"
 import { MAX_BODY_BYTES, PATTERN_WRITE_LIMIT, PATTERN_WRITE_WINDOW_MS } from "@pindou/shared/constants"
 import { auth } from "@/lib/auth/server"
-import { rateLimit } from "@/lib/rate-limit"
-import { Thumbnail } from "@/lib/thumbnail"
-import { GridStorage } from "@/lib/grid-storage"
+import { rateLimit } from "@pindou/core/server/rate-limit"
+import { Thumbnail } from "@pindou/core/server/thumbnail"
+import { GridStorage } from "@pindou/core/server/grid-storage"
 
 /** Thumbnail renderer + R2 uploader for this route. */
 const thumbnail = new Thumbnail()
