@@ -7,16 +7,27 @@
  * produce, so pattern data is portable between the web and desktop apps.
  */
 
-/** A pattern's metadata row (as stored in SQLite). */
+/**
+ * A pattern's metadata row (as stored in SQLite).
+ *
+ * Mirrors the web app's `patterns` table (apps/web/src/db/schema.ts) so the
+ * two stores stay interchangeable; `fk_brand_id` holds the brand's uuid from
+ * the bundled palette catalog (same ids the web DB uses). Desktop-only
+ * differences: `grid` is stored on the filesystem, and there is no auth, so
+ * `fk_user_id`/`author_name` are absent.
+ */
 export interface PatternMeta {
   id: string
   title: string
   description: string
-  brandCode: string
+  /** Brand uuid (matches the web DB's brands.id via the bundled catalog). */
+  fkBrandId: string
   /** Relative path under the patterns dir; the absolute path is resolved in main. */
   gridKey: string
-  /** Relative path to the thumbnail PNG under the patterns dir, if any. */
-  thumbPath: string | null
+  /** Serialized bead stats (JSON string), same wire format as the web. */
+  beadStats: string
+  /** Public thumbnail URL/path; empty string when none (like the web default). */
+  thumbUrl: string
   createdAt: string
   updatedAt: string
 }
@@ -30,7 +41,9 @@ export interface PatternRecord extends PatternMeta {
 export interface CreatePatternInput {
   title?: string
   description?: string
-  brandCode: string
+  /** Brand uuid (from the bundled catalog). */
+  fkBrandId: string
+  beadStats?: string
   grid: string[][]
 }
 
@@ -38,7 +51,8 @@ export interface CreatePatternInput {
 export interface UpdatePatternInput {
   title?: string
   description?: string
-  brandCode?: string
+  fkBrandId?: string
+  beadStats?: string
   grid?: string[][]
 }
 

@@ -5,15 +5,23 @@ import type { PatternMeta } from "../shared/types"
 
 let db: Database.Database | null = null
 
-/** Patterns table DDL — mirrors the web app's `patterns` table (minus auth). */
+/**
+ * Patterns table DDL — mirrors the web app's `patterns` table
+ * (apps/web/src/db/schema.ts) column-for-column. `fk_brand_id` holds the
+ * brand uuid from the bundled palette catalog (same ids the web DB uses), so
+ * rows are interchangeable between the stores. Auth-only columns
+ * (`fk_user_id`) and the DB-generated defaults are intentionally omitted or
+ * handled in the app layer.
+ */
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS patterns (
   id          TEXT PRIMARY KEY,
-  title       TEXT NOT NULL DEFAULT '',
+  title       TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
-  brand_code  TEXT NOT NULL,
-  grid_key    TEXT NOT NULL,
-  thumb_path  TEXT,
+  grid_key    TEXT NOT NULL DEFAULT '',
+  fk_brand_id TEXT NOT NULL,
+  bead_stats  TEXT NOT NULL DEFAULT '{}',
+  thumb_url   TEXT NOT NULL DEFAULT '',
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL
 );
@@ -36,9 +44,10 @@ function rowToMeta(row: Record<string, unknown>): PatternMeta {
     id: String(row.id),
     title: String(row.title),
     description: String(row.description),
-    brandCode: String(row.brand_code),
+    fkBrandId: String(row.fk_brand_id),
     gridKey: String(row.grid_key),
-    thumbPath: row.thumb_path ? String(row.thumb_path) : null,
+    beadStats: String(row.bead_stats),
+    thumbUrl: String(row.thumb_url),
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
   }
@@ -62,8 +71,8 @@ export const patternQueries = {
   insert(meta: PatternMeta): void {
     getDb()
       .prepare(
-        `INSERT INTO patterns (id, title, description, brand_code, grid_key, thumb_path, created_at, updated_at)
-         VALUES (@id, @title, @description, @brandCode, @gridKey, @thumbPath, @createdAt, @updatedAt)`,
+        `INSERT INTO patterns (id, title, description, fk_brand_id, grid_key, bead_stats, thumb_url, created_at, updated_at)
+         VALUES (@id, @title, @description, @fkBrandId, @gridKey, @beadStats, @thumbUrl, @createdAt, @updatedAt)`,
       )
       .run(meta)
   },
@@ -72,8 +81,9 @@ export const patternQueries = {
     getDb()
       .prepare(
         `UPDATE patterns
-         SET title = @title, description = @description, brand_code = @brandCode,
-             grid_key = @gridKey, thumb_path = @thumbPath, updated_at = @updatedAt
+         SET title = @title, description = @description, fk_brand_id = @fkBrandId,
+             grid_key = @gridKey, bead_stats = @beadStats, thumb_url = @thumbUrl,
+             updated_at = @updatedAt
          WHERE id = @id`,
       )
       .run(meta)

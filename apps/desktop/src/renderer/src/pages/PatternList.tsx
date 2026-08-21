@@ -56,7 +56,7 @@ export default function PatternList({ brands, onOpen, onNew }: PatternListProps)
         ) : (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-4">
             {patterns.map((p) => {
-              const brand = brands.find((b) => b.code === p.brandCode)
+              const brand = brands.find((b) => b.id === p.fkBrandId)
               const colors = brand?.colors ?? []
               return (
                 <Card
@@ -73,7 +73,7 @@ export default function PatternList({ brands, onOpen, onNew }: PatternListProps)
                     <div className="p-3">
                       <p className="truncate text-sm font-medium">{p.title || t("desktop.untitled")}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        {brand?.name ?? p.brandCode} · {new Date(p.updatedAt).toLocaleDateString()}
+                        {brand?.name ?? ""} · {new Date(p.updatedAt).toLocaleDateString()}
                       </p>
                     </div>
                   </CardContent>
