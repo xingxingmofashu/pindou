@@ -1,6 +1,3 @@
-// Theme (framework-agnostic light/dark provider)
-export * from "./providers/theme"
-
 // Primitives
 export * from "./components/ui/alert-dialog"
 export * from "./components/ui/badge"

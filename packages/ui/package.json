@@ -9,8 +9,8 @@
   "style": "./src/index.css",
   "exports": {
     ".": "./src/index.ts",
-    "./components/*": "./src/components/*.tsx",
     "./utils": "./src/utils.ts",
+    "./components/*": "./src/components/*.tsx",
     "./index.css": "./src/index.css"
   },
   "scripts": {
