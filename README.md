@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/lockup.svg" alt="PINDOU" width="280" />
+  <img src="apps/web/public/lockup.svg" alt="PINDOU" width="280" />
 </p>
 <p align="center">Fuse bead pattern editor and community.</p>
 <p align="center">
@@ -56,7 +56,7 @@ Create pixel-art patterns, sign in with GitHub, and share them with the world.
 # Install dependencies
 pnpm install
 
-# Start dev server (http://localhost:3000)
+# Start the dev server (http://localhost:3000)
 pnpm dev
 
 # Production build
@@ -68,64 +68,52 @@ pnpm lint
 
 ## Project Structure
 
+pnpm monorepo with a strict one-way dependency chain: `@pindou/shared ← @pindou/core ← @pindou/ui ← @pindou/web`.
+
 ```
-src/
-  app/                  # Next.js App Router routes — server pages fetch data and render a
+apps/
+  web/                  # @pindou/web — Next.js 16 app (the deployable)
+    src/
+      app/              # App Router routes — server pages fetch data and render a
                         # client.tsx content component, each route with loading.tsx (skeleton)
                         # and error.tsx (error boundary)
-    [lang]/             # Locale-prefixed routes (en / zh)
-      (site)/           # Main site layout (header + footer chrome)
-        (content)/      # Home + pattern gallery + pattern detail
-          patterns/     # Gallery: page.tsx (server) + client.tsx + loading.tsx + error.tsx
-          patterns/[id]/# Detail: page.tsx (server) + client.tsx + loading.tsx + error.tsx
-        (workspace)/    # Editor + pattern edit pages
-          editor/       # Editor: page.tsx (client canvas) + loading.tsx + error.tsx
-          patterns/[id]/edit/ # Edit: page.tsx (server) + client.tsx + loading.tsx + error.tsx
-      sign-in/          # GitHub sign-in page
-    api/auth/[...all]/  # Better Auth route handlers
-    api/patterns/       # REST API (GET list, POST publish)
-    api/patterns/[id]/  # GET single pattern, PATCH update
-    api/brands/         # GET palette catalog (all brands + colors)
-    api/brands/[id]/    # GET one brand + colors
-  components/
-    auth-nav.tsx        # Header auth area (sign-in link / user menu)
-    github-button.tsx   # GitHub OAuth sign-in button
-    header.tsx          # Site header (server component)
-    footer.tsx          # Site footer
-    logo.tsx            # Brand logo
-    pixi-canvas.tsx     # Reusable PixiJS canvas component
-    color-palette.tsx   # Brand palette sidebar panel
-    bead-stats.tsx      # Live bead-usage panel
-    zoom-controls.tsx   # Zoom in / out / fit controls
-    dialogs/            # publish-dialog.tsx, import-dialog.tsx, export-dialog.tsx
-    icon/               # GitHub icon
-    providers/          # SWR + web-vitals providers
-    ui/                 # shadcn/ui components (never edited manually)
-  hooks/
-    use-palette.ts      # Shared active-brand store (Zustand)
-    use-editor.ts       # Editor page state (tool, colour, panels, zoom, dialogs)
-    use-edit.ts         # Pattern edit page state (draft fields, panels, saving)
-    use-pattern.ts      # Pattern detail read-only state (canvas api + zoom + panels)
-    use-shortcuts.ts    # B/E/G tool-switching keybindings
-    use-pixi-app.ts     # PixiJS Application lifecycle (WebGL context management)
-    use-pixi-canvas.ts  # Zoom/pan/draw pointer events, fixed-resolution rebuild
-  workers/
-    transform.worker.ts # In-browser image decode + pre-scale (createImageBitmap/OffscreenCanvas)
-  lib/
-    auth/               # Better Auth: server.ts (config) + client.ts
-    editor.ts           # Pure functions: grid math, LOD, flood fill, serialization, counting
-    constants.ts        # Shared limits: grid dimensions, upload/body caps, zoom, page size
-    date.ts             # Localized date formatting (date-fns, relative + absolute)
-    export.ts           # Client-only PNG chart export (never on the server)
-    transform.ts        # Pure image→grid quantization (perceptual OKLab), shared by the import worker
-    thumbnail.ts        # Node-only thumbnail rendering (sharp)
-    grid-storage.ts     # R2 grid JSON storage (versioned keys)
-    r2.ts               # Generic Cloudflare R2 client (grids + thumbnails, Node-only)
-    rate-limit.ts       # Upstash sliding-window rate limiter
-    server/             # Server-only data access: palettes.ts, patterns.ts (cached), meta.ts
-    utils.ts            # Shared helpers
-  db/                   # Drizzle schema (auth + app tables) + Neon connection
+        [lang]/         # Locale-prefixed routes (en / zh)
+          (site)/       # Main site layout (header + footer chrome)
+            (content)/  # Home + pattern gallery + pattern detail
+            (workspace)/# Editor + pattern edit pages
+          sign-in/      # GitHub sign-in page
+        api/            # Better Auth handlers + REST API (patterns, brands)
+      components/       # Web-specific components (header, footer, color-palette, providers, ...)
+      db/               # Drizzle schema (auth + app tables) + Neon connection
+      i18n/             # Server-side dictionary loading (getDictionary)
+      lib/              # Web-only helpers: auth, server/{palettes,patterns,meta}, escapeLike
+      workers/          # In-browser image decode + pre-scale (transform.worker.ts)
+  vercel.json           # Vercel deployment config (Root Directory: apps/web)
+  netlify.toml          # Netlify deployment config (Base: apps/web)
+
+packages/
+  shared/               # @pindou/shared — pure constants + types (no dependencies)
+    src/constants.ts    #   Editor/upload limits, canvas bg
+    src/types.ts        #   Row types for the three tables + Palette
+  core/                 # @pindou/core — framework-agnostic business logic
+    src/editor.ts       #   Pure grid math: LOD, flood fill, serialization, counting
+    src/export.ts       #   Client-only PNG chart export (never on the server)
+    src/transform.ts    #   Pure image→grid quantization (perceptual OKLab)
+    src/date.ts         #   Localized date formatting (date-fns)
+    src/utils.ts        #   cn, fetcher, postJson, hexToRgb, bead-count helpers
+    src/i18n/           #   Locale config + dictionaries (en/zh) + client I18nProvider
+    src/hooks/          #   Zustand stores + PixiJS lifecycle hooks (use-editor, use-pixi-canvas, ...)
+    src/server/         #   Node-only infra: r2.ts, grid-storage.ts, rate-limit.ts, thumbnail.ts
+  ui/                   # @pindou/ui — component library (Base UI + Tailwind)
+    src/components/     #   Shared editor components (pixi-canvas, bead-stats, dialogs, ...)
+    src/components/ui/  #   shadcn/ui primitives (never edited manually)
+    src/index.css       #   Tailwind entry (tw-animate-css + @layer base)
+    src/index.ts        #   Root exports (primitives + branding + utils)
 ```
+
+Web-specific dependencies (auth, worker, router, theming) are injected into the
+shared components as props/hooks, keeping the package graph acyclic — the ui
+package never touches Next.js, and core never touches React state.
 
 ## Editor
 

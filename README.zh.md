@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/lockup.svg" alt="PINDOU" width="280" />
+  <img src="apps/web/public/lockup.svg" alt="PINDOU" width="280" />
 </p>
 <p align="center">拼豆图纸编辑器与分享社区。</p>
 <p align="center">
@@ -68,63 +68,50 @@ pnpm lint
 
 ## 项目结构
 
+pnpm monorepo，依赖方向严格单向：`@pindou/shared ← @pindou/core ← @pindou/ui ← @pindou/web`。
+
 ```
-src/
-  app/                  # Next.js App Router 路由 —— 服务端页面负责取数并渲染
+apps/
+  web/                  # @pindou/web —— Next.js 16 应用（可部署单元）
+    src/
+      app/              # App Router 路由 —— 服务端页面负责取数并渲染
                         # client.tsx 内容组件，每段路由配 loading.tsx（骨架屏）+ error.tsx（错误边界）
-    [lang]/             # 带语言前缀的路由（en / zh）
-      (site)/           # 站点主布局（页头 + 页脚外壳）
-        (content)/      # 首页 + 图纸画廊 + 图纸详情
-          patterns/     # 画廊：page.tsx（服务端）+ client.tsx + loading.tsx + error.tsx
-          patterns/[id]/# 详情：page.tsx（服务端）+ client.tsx + loading.tsx + error.tsx
-        (workspace)/    # 编辑器 + 图纸编辑页面
-          editor/       # 编辑器：page.tsx（客户端画布）+ loading.tsx + error.tsx
-          patterns/[id]/edit/ # 编辑：page.tsx（服务端）+ client.tsx + loading.tsx + error.tsx
-      sign-in/          # GitHub 登录页
-    api/auth/[...all]/  # Better Auth 路由处理
-    api/patterns/       # REST API（GET 列表、POST 发布）
-    api/patterns/[id]/  # GET 单张图纸、PATCH 更新
-    api/brands/         # GET 色号目录（所有品牌及色号）
-    api/brands/[id]/    # GET 单个品牌及色号
-  components/
-    auth-nav.tsx        # 页头登录区（登录链接 / 用户菜单）
-    github-button.tsx   # GitHub OAuth 登录按钮
-    header.tsx          # 站点页头（服务端组件）
-    footer.tsx          # 站点页脚
-    logo.tsx            # 品牌 logo
-    pixi-canvas.tsx     # 可复用 PixiJS 画布组件
-    color-palette.tsx   # 品牌色号面板
-    bead-stats.tsx      # 实时珠子用量面板
-    zoom-controls.tsx   # 放大 / 缩小 / 适应画布控件
-    dialogs/            # publish-dialog.tsx、import-dialog.tsx、export-dialog.tsx
-    icon/               # GitHub 图标
-    providers/          # SWR 与 web-vitals 提供者
-    ui/                 # shadcn/ui 组件（禁止手动修改）
-  hooks/
-    use-palette.ts      # 共享当前品牌 store（Zustand）
-    use-editor.ts       # 编辑器页面状态（工具、颜色、面板、缩放、弹窗）
-    use-edit.ts         # 图纸编辑页状态（草稿字段、面板、保存）
-    use-pattern.ts      # 图纸详情只读状态（画布 api + 缩放 + 面板）
-    use-shortcuts.ts    # B/E/G 工具切换快捷键
-    use-pixi-app.ts     # PixiJS Application 生命周期（WebGL 上下文管理）
-    use-pixi-canvas.ts  # 缩放/平移/绘制指针事件、固定分辨率重建
-  workers/
-    transform.worker.ts # 浏览器内图片解码 + 预缩放（createImageBitmap/OffscreenCanvas）
-  lib/
-    auth/               # Better Auth：server.ts（配置）+ client.ts
-    editor.ts           # 纯函数：网格计算、LOD、油漆桶、序列化、计数
-    constants.ts        # 共享常量：网格尺寸、上传/请求体上限、缩放、每页数量
-    date.ts             # 本地化日期格式化（date-fns，相对 + 绝对时间）
-    export.ts           # 仅客户端：PNG 图纸导出（禁止在服务端运行）
-    transform.ts        # 纯图片→图纸量化（OKLab 感知色差），供导入 worker 复用
-    thumbnail.ts        # 仅 Node：缩略图渲染（sharp）
-    grid-storage.ts     # R2 网格 JSON 存储（版本化键）
-    r2.ts               # 通用 Cloudflare R2 客户端（网格 + 缩略图，仅 Node）
-    rate-limit.ts       # Upstash 滑动窗口限流器
-    server/             # 仅服务端数据访问：palettes.ts、patterns.ts（带缓存）、meta.ts
-    utils.ts            # 通用工具函数
-  db/                   # Drizzle schema（认证 + 应用表）+ Neon 连接
+        [lang]/         # 带语言前缀的路由（en / zh）
+          (site)/       # 站点主布局（页头 + 页脚外壳）
+            (content)/  # 首页 + 图纸画廊 + 图纸详情
+            (workspace)/# 编辑器 + 图纸编辑页面
+          sign-in/      # GitHub 登录页
+        api/            # Better Auth 路由处理 + REST API（patterns、brands）
+      components/       # 仅 web 使用的组件（header、footer、color-palette、providers 等）
+      db/               # Drizzle schema（认证 + 应用表）+ Neon 连接
+      i18n/             # 服务端字典加载（getDictionary）
+      lib/              # 仅 web 的辅助模块：auth、server/{palettes,patterns,meta}、escapeLike
+      workers/          # 浏览器内图片解码 + 预缩放（transform.worker.ts）
+  vercel.json           # Vercel 部署配置（Root Directory: apps/web）
+  netlify.toml          # Netlify 部署配置（Base: apps/web）
+
+packages/
+  shared/               # @pindou/shared —— 纯常量 + 类型（无任何依赖）
+    src/constants.ts    #   编辑器/上传上限、画布背景色
+    src/types.ts        #   三张表的行类型 + Palette
+  core/                 # @pindou/core —— 框架无关的业务逻辑
+    src/editor.ts       #   纯函数：网格计算、LOD、油漆桶、序列化、计数
+    src/export.ts       #   仅客户端：PNG 图纸导出（禁止在服务端运行）
+    src/transform.ts    #   纯图片→图纸量化（OKLab 感知色差）
+    src/date.ts         #   本地化日期格式化（date-fns）
+    src/utils.ts        #   cn、fetcher、postJson、hexToRgb、珠子计数工具
+    src/i18n/           #   语言配置 + 字典（en/zh）+ 客户端 I18nProvider
+    src/hooks/          #   Zustand store + PixiJS 生命周期 hooks（use-editor、use-pixi-canvas 等）
+    src/server/         #   仅 Node 基础设施：r2.ts、grid-storage.ts、rate-limit.ts、thumbnail.ts
+  ui/                   # @pindou/ui —— 组件库（Base UI + Tailwind）
+    src/components/     #   共享编辑器组件（pixi-canvas、bead-stats、dialogs 等）
+    src/components/ui/  #   shadcn/ui 基础组件（禁止手动修改）
+    src/index.css       #   Tailwind 入口（tw-animate-css + @layer base）
+    src/index.ts        #   根导出（基础组件 + 品牌元素 + 工具函数）
 ```
+
+web 专属依赖（认证、worker、路由、主题）通过 props/hooks 注入共享组件，
+保证包依赖图无环——ui 包不碰 Next.js，core 不碰 React 状态。
 
 ## 编辑器
 
