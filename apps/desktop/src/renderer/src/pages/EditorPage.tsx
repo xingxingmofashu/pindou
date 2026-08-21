@@ -102,7 +102,7 @@ export default function EditorPage({ patternId, brands, onBack }: EditorPageProp
       if (cancelled || !record) return
       setTitle(record.title)
       setDescription(record.description)
-      const brand = brands.find((b) => b.code === record.brandCode)
+      const brand = brands.find((b) => b.id === record.fkBrandId)
       if (brand) setActivePalette(brand)
       canvasApiRef.current?.loadGrid(record.grid)
     })
@@ -152,14 +152,16 @@ export default function EditorPage({ patternId, brands, onBack }: EditorPageProp
         await window.pindou.patterns.update(patternId, {
           title,
           description,
-          brandCode: data.brandCode,
+          fkBrandId: activePalette.id,
+          beadStats: data.beadStats,
           grid: data.grid,
         })
       } else {
         await window.pindou.patterns.create({
           title,
           description,
-          brandCode: data.brandCode,
+          fkBrandId: activePalette.id,
+          beadStats: data.beadStats,
           grid: data.grid,
         })
       }
@@ -168,7 +170,7 @@ export default function EditorPage({ patternId, brands, onBack }: EditorPageProp
     } catch {
       toast.add({ id: "save-fail", type: "error", title: t("desktop.saveFailed") })
     }
-  }, [patternId, title, description, t])
+  }, [patternId, title, description, activePalette, t])
 
   // Brand switch: swap the canvas palette and reset to the first colour.
   // usePixiCanvas clears the canvas on brand change.
