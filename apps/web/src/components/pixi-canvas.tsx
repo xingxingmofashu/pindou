@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useRef, useImperativeHandle, useState, type RefObject } from "react"
+import { useCallback, useEffect, useRef, useImperativeHandle, useState, type RefObject } from "react"
 import { useTheme } from "next-themes"
 import { EDITOR_BG, EDITOR_BG_DARK } from "@pindou/shared/constants"
-import { usePixiApp } from "@pindou/core/hooks/use-pixi-app"
+import { usePixiApp, type PixiAppError } from "@pindou/core/hooks/use-pixi-app"
 import { usePixiCanvas } from "@pindou/core/hooks/use-pixi-canvas"
 import { usePalette } from "@pindou/core/hooks/use-palette"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@pindou/ui/components/ui/tooltip"
@@ -64,8 +64,8 @@ function PixiCanvasInner({
   const { resolvedTheme } = useTheme()
   const { t } = useI18n()
   const isDark = resolvedTheme === "dark"
-  const ctx = usePixiApp(canvasRef, isDark ? EDITOR_BG_DARK : EDITOR_BG, {
-    onError: (kind) => {
+  const handlePixiError = useCallback(
+    (kind: PixiAppError) => {
       toast.add({
         id: kind === "context-lost" ? "webgl-context-lost" : "webgl-unavailable",
         type: "error",
@@ -76,6 +76,10 @@ function PixiCanvasInner({
             : t("editor.webglUnavailableDescription"),
       })
     },
+    [t],
+  )
+  const ctx = usePixiApp(canvasRef, isDark ? EDITOR_BG_DARK : EDITOR_BG, {
+    onError: handlePixiError,
   })
   const { zoom, setZoom, fitToCanvas, clearCanvas, undo, redo, getCellsData, getBeadStats, loadGrid } =
     usePixiCanvas(ctx, palette, { activeTool, activeColorIndex, showLabels: label, readonly, isDark, onGridChange, onHistoryChange, onColorPick, onHoverCell })

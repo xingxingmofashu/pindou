@@ -25,11 +25,13 @@ import { GithubIcon } from "../icon/github"
 import { localizedPath } from "@pindou/core/i18n/config.ts"
 import { useI18n } from "@pindou/core/i18n/client.tsx"
 
+/** Minimal shape of the session the dialog reads; host apps may pass richer
+ *  session types (e.g. Better Auth's) and keep their full type information. */
 export interface AuthSession {
   user?: { name?: string | null } | null
 }
 
-interface PublishDialogProps {
+interface PublishDialogProps<TSession extends AuthSession = AuthSession> {
   open: boolean
   onClose: () => void
   /** Called after a successful publish (e.g. to clear the editor draft). */
@@ -42,12 +44,12 @@ interface PublishDialogProps {
    */
   insertSchema: z.ZodType
   /** Better Auth session hook — injected by the app (e.g. `useSession`). */
-  useAuth: () => { data?: AuthSession | null; isPending?: boolean }
+  useAuth: () => { data?: TSession | null; isPending?: boolean }
   /** GitHub OAuth popup — injected by the app (e.g. `signIn.popup`). */
   onSignIn: () => Promise<{ error?: unknown }>
 }
 
-export function PublishDialog({
+export function PublishDialog<TSession extends AuthSession = AuthSession>({
   open,
   onClose,
   onPublished,
@@ -55,7 +57,7 @@ export function PublishDialog({
   insertSchema,
   useAuth,
   onSignIn,
-}: PublishDialogProps) {
+}: PublishDialogProps<TSession>) {
   const { locale, t } = useI18n()
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")

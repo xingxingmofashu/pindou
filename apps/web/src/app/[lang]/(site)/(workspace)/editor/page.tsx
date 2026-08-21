@@ -396,6 +396,19 @@ function EditorDialogs({
   const closeExport = useEditorStore((s) => s.closeExport)
   const { locale } = useI18n()
 
+  const handleSignIn = useCallback(
+    () =>
+      signIn.popup({
+        provider: "github",
+        callbackURL: localizedPath(locale, "/editor"),
+      }),
+    [locale],
+  )
+  const createWorker = useCallback(
+    () => new Worker(new URL("../../../../../workers/transform.worker", import.meta.url)),
+    [],
+  )
+
   return (
     <>
       {publishOpen && (
@@ -405,12 +418,7 @@ function EditorDialogs({
           onGetCellsData={onGetCellsData}
           insertSchema={PatternInsertSchema}
           useAuth={useSession}
-          onSignIn={() =>
-            signIn.popup({
-              provider: "github",
-              callbackURL: localizedPath(locale, "/editor"),
-            })
-          }
+          onSignIn={handleSignIn}
         />
       )}
       {importOpen && (
@@ -418,7 +426,7 @@ function EditorDialogs({
           open={importOpen}
           onClose={closeImport}
           onApply={onLoadGrid}
-          createWorker={() => new Worker(new URL("../../../../../workers/transform.worker", import.meta.url))}
+          createWorker={createWorker}
         />
       )}
       {exportOpen && (
