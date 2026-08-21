@@ -208,6 +208,9 @@ importers:
       shadcn:
         specifier: ^4.16.0
         version: 4.16.0(supports-color@7.2.0)(typescript@5.9.3)
+      tailwindcss:
+        specifier: ^4
+        version: 4.3.3
 
 packages:
 
