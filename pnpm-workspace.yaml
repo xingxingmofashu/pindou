@@ -8,10 +8,6 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
 
-onlyBuiltDependencies:
-  - esbuild
-  - better-sqlite3
-
 supportedArchitectures:
   os:
     - darwin
