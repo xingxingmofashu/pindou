@@ -6,7 +6,7 @@ import { Spinner } from "@pindou/ui/components/ui/spinner"
 import { toast } from "@pindou/ui/components/ui/toast"
 import { signIn } from "@/lib/auth/client"
 import { GithubIcon } from "@pindou/ui/components/icon/github"
-import { useI18n } from "@pindou/core/i18n/client"
+import { useI18n } from "@pindou/core/i18n/client.tsx"
 
 interface GitHubButtonProps {
   label?: string
