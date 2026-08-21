@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Logo } from "@/components/logo"
+import { Logo } from "@pindou/ui/components/logo"
 import { GITHUB_URL } from "@/lib/constants"
 import { localizedPath } from "@/i18n/config"
 import { getDictionary, getLocale } from "@/i18n/server"

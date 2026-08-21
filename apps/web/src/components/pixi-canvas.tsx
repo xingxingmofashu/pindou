@@ -6,7 +6,7 @@ import { EDITOR_BG, EDITOR_BG_DARK } from "@/lib/constants"
 import { usePixiApp } from "@/hooks/use-pixi-app"
 import { usePixiCanvas } from "@/hooks/use-pixi-canvas"
 import { usePalette } from "@/hooks/use-palette"
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
+import { Tooltip, TooltipTrigger, TooltipContent } from "@pindou/ui/components/ui/tooltip"
 import type { ToolKind, BeadStats, CellsData } from "@/lib/editor"
 import type { Palette } from "@/types"
 

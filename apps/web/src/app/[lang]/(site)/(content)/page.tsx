@@ -1,14 +1,14 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { Download, ImageUp, Palette, Share2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Button } from "@pindou/ui/components/ui/button"
 import {
   Card,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Logo } from "@/components/logo"
+} from "@pindou/ui/components/ui/card"
+import { Logo } from "@pindou/ui/components/logo"
 import { localizedPath } from "@/i18n/config"
 import { getDictionary, getLocale } from "@/i18n/server"
 import { pageMetadata } from "@/lib/server/meta"

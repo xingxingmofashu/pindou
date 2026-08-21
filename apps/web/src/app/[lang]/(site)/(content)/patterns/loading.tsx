@@ -1,5 +1,5 @@
-import { Card, CardHeader } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Card, CardHeader } from "@pindou/ui/components/ui/card"
+import { Skeleton } from "@pindou/ui/components/ui/skeleton"
 
 export default function Loading() {
   return (

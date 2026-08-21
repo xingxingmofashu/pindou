@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type RefObject } from "react"
 import { Application, Container, Graphics } from "pixi.js"
-import { toast } from "@/components/ui/toast"
+import { toast } from "@pindou/ui/components/ui/toast"
 import { useI18n } from "@/i18n/client"
 import type { PixiContext } from "@/lib/editor"
 

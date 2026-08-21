@@ -11,10 +11,10 @@ import {
   PaginationItem,
   PaginationNext,
   PaginationPrevious,
-} from "@/components/ui/pagination"
-import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+} from "@pindou/ui/components/ui/pagination"
+import { Button } from "@pindou/ui/components/ui/button"
+import { Card, CardHeader, CardTitle } from "@pindou/ui/components/ui/card"
+import { Input } from "@pindou/ui/components/ui/input"
 import { totalBeadCount } from "@/lib/utils"
 import { formatRelativeDate } from "@/lib/date"
 import { localizedPath } from "@/i18n/config"

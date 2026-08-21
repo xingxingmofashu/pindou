@@ -22,13 +22,13 @@ import { ColorPalette } from "@/components/color-palette"
 import { BeadStatsPanel } from "@/components/bead-stats"
 import { ZoomControls } from "@/components/zoom-controls"
 import { ExportDialog } from "@/components/dialogs/export-dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { Spinner } from "@/components/ui/spinner"
-import { Textarea } from "@/components/ui/textarea"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Button } from "@pindou/ui/components/ui/button"
+import { Input } from "@pindou/ui/components/ui/input"
+import { Label } from "@pindou/ui/components/ui/label"
+import { Separator } from "@pindou/ui/components/ui/separator"
+import { Spinner } from "@pindou/ui/components/ui/spinner"
+import { Textarea } from "@pindou/ui/components/ui/textarea"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@pindou/ui/components/ui/tooltip"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,8 +39,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { toast } from "@/components/ui/toast"
+} from "@pindou/ui/components/ui/alert-dialog"
+import { toast } from "@pindou/ui/components/ui/toast"
 import { PatternUpdateSchema } from "@/db/schema"
 import { postJson } from "@/lib/utils"
 import { localizedPath } from "@/i18n/config"

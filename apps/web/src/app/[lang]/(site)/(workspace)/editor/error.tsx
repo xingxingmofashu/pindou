@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { Button } from "@/components/ui/button"
+import { Button } from "@pindou/ui/components/ui/button"
 import { useI18n } from "@/i18n/client"
 
 export default function Error({

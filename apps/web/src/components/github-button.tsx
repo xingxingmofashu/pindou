@@ -1,11 +1,11 @@
 "use client"
 
 import { useCallback, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Spinner } from "@/components/ui/spinner"
-import { toast } from "@/components/ui/toast"
+import { Button } from "@pindou/ui/components/ui/button"
+import { Spinner } from "@pindou/ui/components/ui/spinner"
+import { toast } from "@pindou/ui/components/ui/toast"
 import { signIn } from "@/lib/auth/client"
-import { GithubIcon } from "@/components/icon/github"
+import { GithubIcon } from "@pindou/ui/components/icon/github"
 import { useI18n } from "@/i18n/client"
 
 interface GitHubButtonProps {

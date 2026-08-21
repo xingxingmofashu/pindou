@@ -9,7 +9,7 @@ import { ThemeProvider } from "next-themes";
 import { SWRProvider } from "@/components/providers/swr-provider";
 import { WebVitals } from "@/components/providers/web-vitals";
 import { PwaRegister } from "@/components/pwa/pwa-register";
-import { Toaster } from "@/components/ui/toast";
+import { Toaster } from "@pindou/ui/components/ui/toast";
 import { SITE_URL } from "@/lib/server/meta";
 import "../globals.css";
 

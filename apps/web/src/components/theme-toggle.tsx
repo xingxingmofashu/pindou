@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react"
 import { Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
-import { Button } from "@/components/ui/button"
+import { Button } from "@pindou/ui/components/ui/button"
 import { useI18n } from "@/i18n/client"
 
 const emptySubscribe = () => () => {}
