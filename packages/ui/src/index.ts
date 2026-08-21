@@ -1,5 +1,5 @@
 // Theme (framework-agnostic light/dark provider)
-export * from "./components/theme"
+export * from "./providers/theme"
 
 // Primitives
 export * from "./components/ui/alert-dialog"

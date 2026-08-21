@@ -2,7 +2,6 @@
 
 import { useCallback, useState } from "react"
 import type { z } from "zod"
-import useSWRMutation from "swr/mutation"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,7 +18,6 @@ import { Label } from "../ui/label"
 import { Textarea } from "../ui/textarea"
 import { Spinner } from "../ui/spinner"
 import { toast } from "../ui/toast"
-import { postJson } from "@pindou/core/utils"
 import type { CellsData } from "@pindou/core/editor"
 import { GithubIcon } from "../icon/github"
 import { localizedPath } from "@pindou/core/i18n/config"
@@ -48,6 +46,12 @@ interface PublishDialogProps<TSession extends AuthSession = AuthSession> {
   /** GitHub OAuth popup — injected by the app (e.g. `signIn.popup`). Receives
    *  the callback URL, mirroring {@link GitHubButton}'s `onSignIn`. */
   onSignIn: (callbackURL: string) => Promise<{ error?: unknown }>
+  /**
+   * Publishes the validated payload — injected by the app (which owns the
+   * network layer, e.g. SWR + `postJson`). Resolves with the new pattern id
+   * or rejects with an error. Keeps the dialog free of data-fetching deps.
+   */
+  onPublish: (payload: unknown) => Promise<{ id: string }>
 }
 
 export function PublishDialog<TSession extends AuthSession = AuthSession>({
@@ -58,17 +62,14 @@ export function PublishDialog<TSession extends AuthSession = AuthSession>({
   insertSchema,
   useAuth,
   onSignIn,
+  onPublish,
 }: PublishDialogProps<TSession>) {
   const { locale, t } = useI18n()
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [patternId, setPatternId] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const { data: session, isPending } = useAuth()
-  const { trigger, isMutating } = useSWRMutation(
-    "/api/patterns",
-    (url, { arg }: { arg: string }) =>
-      postJson<{ id: string }>(url, arg, t("editor.publishFailedTitle")),
-  )
 
   const handleSubmit = useCallback(async () => {
     const data = onGetCellsData()
@@ -97,8 +98,9 @@ export function PublishDialog<TSession extends AuthSession = AuthSession>({
       return
     }
 
+    setIsSubmitting(true)
     try {
-      const result = await trigger(JSON.stringify(parsed.data))
+      const result = await onPublish(parsed.data)
       setPatternId(result.id)
       onPublished?.()
     } catch (e) {
@@ -107,8 +109,10 @@ export function PublishDialog<TSession extends AuthSession = AuthSession>({
         title: t("editor.publishFailedTitle"),
         description: e instanceof Error ? e.message : t("editor.networkError"),
       })
+    } finally {
+      setIsSubmitting(false)
     }
-  }, [title, description, insertSchema, onGetCellsData, trigger, t, onPublished])
+  }, [title, description, insertSchema, onGetCellsData, onPublish, t, onPublished])
 
   const handleClose = useCallback(() => {
     setTitle("")
@@ -222,9 +226,9 @@ export function PublishDialog<TSession extends AuthSession = AuthSession>({
                 <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleSubmit}
-                  disabled={isMutating || title.trim().length === 0}
+                  disabled={isSubmitting || title.trim().length === 0}
                 >
-                  {isMutating && <Spinner data-icon="inline-start" />}
+                  {isSubmitting && <Spinner data-icon="inline-start" />}
                   {t("editor.publish")}
                 </AlertDialogAction>
               </AlertDialogFooter>

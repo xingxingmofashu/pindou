@@ -32,6 +32,8 @@ import { useI18n } from "@pindou/core/i18n/client"
 import type { ToolKind, CellsData } from "@pindou/core/editor"
 import { PatternInsertSchema } from "@/db/schema"
 import { signIn, useSession } from "@/lib/auth/client"
+import { postJson } from "@/lib/utils"
+import useSWRMutation from "swr/mutation"
 
 // Dialogs are only opened on demand — load them (and their heavy deps like
 // the export PNG canvas + image transform) lazily instead of blocking the
@@ -398,6 +400,10 @@ function EditorDialogs({
   const closeImport = useEditorStore((s) => s.closeImport)
   const exportOpen = useEditorStore((s) => s.exportOpen)
   const closeExport = useEditorStore((s) => s.closeExport)
+  const { trigger: publishTrigger } = useSWRMutation(
+    "/api/patterns",
+    (url, { arg }: { arg: string }) => postJson<{ id: string }>(url, arg),
+  )
 
   const handleSignIn = useCallback(
     (callbackURL: string) =>
@@ -422,6 +428,7 @@ function EditorDialogs({
           insertSchema={PatternInsertSchema}
           useAuth={useSession}
           onSignIn={handleSignIn}
+          onPublish={(payload) => publishTrigger(JSON.stringify(payload))}
         />
       )}
       {importOpen && (
