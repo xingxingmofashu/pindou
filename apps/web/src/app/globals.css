@@ -1,4 +1,7 @@
 @import "tailwindcss";
+/* Scan @pindou/ui source so utility classes used in shared components
+   (bg-primary, text-foreground, ...) are generated. */
+@source "../../../../packages/ui/src";
 /* Everything below (tw-animate-css, shadcn preset, theme tokens, @theme
    mapping, :root/.dark variables) lives in the @pindou/ui package. */
-@import "@pindou/ui/globals.css";
+@import "@pindou/ui/index.css";
