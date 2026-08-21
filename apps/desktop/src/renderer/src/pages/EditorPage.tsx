@@ -73,7 +73,7 @@ export default function EditorPage({ patternId, brands, onBack }: EditorPageProp
   const [saved, setSaved] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
-  const [pinnedPalette, setPinnedPalette] = useState<Palette | undefined>(undefined)
+  const [activePalette, setActivePalette] = useState<Palette>(() => brands[0])
   const [isDark, setIsDark] = useState(false)
 
   const setApi = useEditorStore((s) => s.setApi)
@@ -103,7 +103,7 @@ export default function EditorPage({ patternId, brands, onBack }: EditorPageProp
       setTitle(record.title)
       setDescription(record.description)
       const brand = brands.find((b) => b.code === record.brandCode)
-      setPinnedPalette(brand)
+      if (brand) setActivePalette(brand)
       canvasApiRef.current?.loadGrid(record.grid)
     })
     return () => {
@@ -112,11 +112,12 @@ export default function EditorPage({ patternId, brands, onBack }: EditorPageProp
   }, [patternId, brands])
 
   // Registers the canvas's imperative API into the shared store so the toolbar
-  // and dialogs can drive it.
+  // and dialogs can drive it. Re-register on palette change — the canvas
+  // rebuilds its handle when the palette changes.
   useEffect(() => {
     setApi(canvasApiRef.current)
     return () => setApi(null)
-  }, [setApi])
+  }, [setApi, activePalette])
 
   // Stable callbacks for the dialogs.
   const onGetCellsData = useCallback(() => canvasApiRef.current?.getCellsData() ?? null, [])
@@ -169,6 +170,19 @@ export default function EditorPage({ patternId, brands, onBack }: EditorPageProp
     }
   }, [patternId, title, description, t])
 
+  // Brand switch: swap the canvas palette and reset to the first colour.
+  // usePixiCanvas clears the canvas on brand change.
+  const handleBrandChange = useCallback(
+    (code: string) => {
+      const brand = brands.find((b) => b.code === code)
+      if (brand) {
+        setActivePalette(brand)
+        setActiveColorIndex(1)
+      }
+    },
+    [brands, setActiveColorIndex],
+  )
+
   const createWorker = useCallback(
     () => new Worker(new URL("../worker/transform.worker.ts", import.meta.url), { type: "module" }),
     [],
@@ -213,7 +227,8 @@ export default function EditorPage({ patternId, brands, onBack }: EditorPageProp
               activeColorIndex={activeColorIndex}
               onColorPick={setActiveColorIndex}
               brands={brands}
-              palette={pinnedPalette}
+              palette={activePalette}
+              onBrandChange={handleBrandChange}
             />
           </div>
         )}
@@ -223,6 +238,7 @@ export default function EditorPage({ patternId, brands, onBack }: EditorPageProp
           activeColorIndex={activeColorIndex}
           label={showLabels}
           isDark={isDark}
+          palette={activePalette}
           apiRef={canvasApiRef}
           onZoomChange={setZoom}
           onGridChange={onGridChange}

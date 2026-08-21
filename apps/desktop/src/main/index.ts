@@ -2,6 +2,12 @@ import { app, BrowserWindow, shell } from "electron"
 import { join } from "node:path"
 import { registerIpc } from "./ipc"
 
+// WebGL needs a GPU or SwiftShader fallback. Chromium now blocks the software
+// rasterizer by default, so without this switch PixiJS's canvas init throws
+// ("WebGL unavailable") on machines without hardware acceleration — e.g.
+// VMs, remote desktops, and some older Macs.
+app.commandLine.appendSwitch("enable-unsafe-swiftshader")
+
 function createWindow(): void {
   const win = new BrowserWindow({
     width: 1280,
