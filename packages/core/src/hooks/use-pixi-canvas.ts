@@ -10,7 +10,7 @@ import {
   ZOOM_FACTOR,
   EDITOR_BG,
   EDITOR_BG_DARK,
-} from "../constants"
+} from "@pindou/shared/constants"
 import {
   EMPTY,
   paintBlock,
@@ -35,7 +35,7 @@ import {
   type GridRect,
 } from "../editor"
 import { hexToRgb, isTypingTarget } from "../utils"
-import type { Palette } from "../types"
+import type { Palette } from "@pindou/shared/types"
 
 /** Fraction of the viewport kept as pan slack around a padded rebuild. */
 const PAN_BUFFER = 0.5

@@ -1,7 +1,7 @@
 "use client"
 
 import { create } from "zustand"
-import { DEFAULT_ZOOM } from "../constants"
+import { DEFAULT_ZOOM } from "@pindou/shared/constants"
 import type { ToolKind, BeadStats } from "../editor"
 import type { PixiCanvasApi } from "../editor"
 

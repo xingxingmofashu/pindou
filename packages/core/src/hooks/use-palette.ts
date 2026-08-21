@@ -1,7 +1,7 @@
 "use client"
 
 import { create } from "zustand"
-import type { Palette } from "../types"
+import type { Palette } from "@pindou/shared/types"
 
 interface PaletteStore {
   /** The active palette; undefined until ColorPalette seeds one. */

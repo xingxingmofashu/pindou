@@ -3,7 +3,7 @@ import { unstable_cache } from "next/cache"
 import { eq } from "drizzle-orm"
 import { db } from "@/db"
 import { brands, colors } from "@/db/schema"
-import type { Palette } from "@pindou/core/types"
+import type { Palette } from "@pindou/shared/types"
 
 /**
  * Resolve a brand's palette by its wire `code` (e.g. `"mard"`), optionally

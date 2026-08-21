@@ -29,6 +29,9 @@ importers:
       '@pindou/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@pindou/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@pindou/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -147,6 +150,9 @@ importers:
 
   packages/core:
     dependencies:
+      '@pindou/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@pindou/ui':
         specifier: workspace:*
         version: link:../ui
@@ -187,6 +193,12 @@ importers:
       react-dom:
         specifier: ^19.2.4
         version: 19.2.4(react@19.2.4)
+      typescript:
+        specifier: ^5.8.0
+        version: 5.9.3
+
+  packages/shared:
+    devDependencies:
       typescript:
         specifier: ^5.8.0
         version: 5.9.3

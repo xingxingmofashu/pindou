@@ -10,7 +10,7 @@ import { useI18n } from "@pindou/core/i18n/client"
 import { ScrollArea } from "@pindou/ui/components/ui/scroll-area"
 import { Skeleton } from "@pindou/ui/components/ui/skeleton"
 import { toast } from "@pindou/ui/components/ui/toast"
-import type { Palette } from "@pindou/core/types"
+import type { Palette } from "@pindou/shared/types"
 
 interface ColorPaletteProps {
   /**

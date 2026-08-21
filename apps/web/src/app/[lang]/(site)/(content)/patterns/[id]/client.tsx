@@ -15,7 +15,7 @@ import { localizedPath } from "@pindou/core/i18n/config"
 import { useI18n } from "@pindou/core/i18n/client"
 import { usePatternStore } from "@pindou/core/hooks/use-pattern"
 import type { PatternDetailType } from "@/db/schema"
-import type { Palette } from "@pindou/core/types"
+import type { Palette } from "@pindou/shared/types"
 
 /** Read-only pattern viewer: toolbar, info panel, canvas, and bead-usage panel. */
 export function PatternDetailClient({

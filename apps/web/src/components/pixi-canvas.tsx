@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useImperativeHandle, useState, type RefObject } from "react"
 import { useTheme } from "next-themes"
-import { EDITOR_BG, EDITOR_BG_DARK } from "@pindou/core/constants"
+import { EDITOR_BG, EDITOR_BG_DARK } from "@pindou/shared/constants"
 import { usePixiApp } from "@pindou/core/hooks/use-pixi-app"
 import { usePixiCanvas } from "@pindou/core/hooks/use-pixi-canvas"
 import { usePalette } from "@pindou/core/hooks/use-palette"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@pindou/ui/components/ui/tooltip"
 import type { PixiCanvasApi, ToolKind } from "@pindou/core/editor"
-import type { Palette } from "@pindou/core/types"
+import type { Palette } from "@pindou/shared/types"
 
 
 export interface PixiCanvasProps {

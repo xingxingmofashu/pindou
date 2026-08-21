@@ -48,7 +48,7 @@ import { useI18n } from "@pindou/core/i18n/client"
 import { useEditStore } from "@pindou/core/hooks/use-edit"
 import { useShortcuts } from "@pindou/core/hooks/use-shortcuts"
 import type { PatternDetailType } from "@/db/schema"
-import type { Palette } from "@pindou/core/types"
+import type { Palette } from "@pindou/shared/types"
 import type { ToolKind } from "@pindou/core/editor"
 
 const TOOLS: { value: ToolKind; icon: typeof Pencil; shortcut: string }[] = [

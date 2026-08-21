@@ -1,6 +1,6 @@
 import type { Application, Container, Graphics } from "pixi.js"
-import { CELL, MAX_GRID_DIMENSION, MIN_PX } from "./constants"
-import type { Palette } from "./types"
+import { CELL, MAX_GRID_DIMENSION, MIN_PX } from "@pindou/shared/constants"
+import type { Palette } from "@pindou/shared/types"
 
 /** Sentinel for an unpainted cell. */
 export const EMPTY = 0
