@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,12 +10,17 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@pindou/ui/components/ui/alert-dialog"
+} from "./ui/alert-dialog"
 import { useI18n } from "@pindou/core/i18n/client.tsx"
 
 interface UnsavedChangesGuardProps {
   /** Whether there is unsaved canvas content. */
   dirty: boolean
+  /**
+   * Navigates to the confirmed href — injected by the host app (e.g. Next.js
+   * `useRouter().push`) so this guard stays framework-agnostic.
+   */
+  onNavigate: (href: string) => void
 }
 
 /**
@@ -29,9 +33,8 @@ interface UnsavedChangesGuardProps {
  *   AlertDialog, because Next.js client-side transitions never fire
  *   `beforeunload`.
  */
-export function UnsavedChangesGuard({ dirty }: UnsavedChangesGuardProps) {
+export function UnsavedChangesGuard({ dirty, onNavigate }: UnsavedChangesGuardProps) {
   const { t } = useI18n()
-  const router = useRouter()
   const [pendingHref, setPendingHref] = useState<string | null>(null)
 
   useEffect(() => {
@@ -78,8 +81,8 @@ export function UnsavedChangesGuard({ dirty }: UnsavedChangesGuardProps) {
   const handleConfirm = useCallback(() => {
     const href = pendingHref
     setPendingHref(null)
-    if (href) router.push(href)
-  }, [pendingHref, router])
+    if (href) onNavigate(href)
+  }, [pendingHref, onNavigate])
 
   return (
     <AlertDialog

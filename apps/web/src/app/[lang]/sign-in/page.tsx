@@ -1,9 +1,9 @@
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
-import { GitHubButton } from "@/components/github-button"
 import { Logo } from "@pindou/ui/components/logo"
 import { auth } from "@/lib/auth/server"
 import { getLocale } from "@/i18n/server"
+import { SignInWithGitHub } from "./sign-in-button"
 
 /** Keep the post-sign-in return path on-site to avoid open redirects. */
 function sanitizeCallback(value: string | undefined, locale: string): string {
@@ -26,7 +26,7 @@ export default async function SignInPage(props: PageProps<"/[lang]/sign-in">) {
     <div className="flex h-dvh items-center justify-center p-4">
       <div className="grid w-full max-w-sm place-items-center gap-6 border p-6">
         <Logo className="h-10 w-48" />
-        <GitHubButton callbackURL={callbackURL} className="w-full" />
+        <SignInWithGitHub callbackURL={callbackURL} className="w-full" />
       </div>
     </div>
   )

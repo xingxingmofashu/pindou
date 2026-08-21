@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
+import { useRouter } from "next/navigation"
+import { useTheme } from "next-themes"
 import { useShallow } from "zustand/react/shallow"
 import { Pencil, Eraser, PaintBucket, Pipette, Trash2, CaseSensitive, ImagePlus, Download, List, Palette as PaletteIcon, Undo2, Redo2 } from "lucide-react"
-import { PixiCanvas, type PixiCanvasApi } from "@/components/pixi-canvas"
+import { PixiCanvas, type PixiCanvasApi } from "@pindou/ui/components/pixi-canvas"
 import { ColorPalette } from "@/components/color-palette"
-import { BeadStatsPanel } from "@/components/bead-stats"
-import { ZoomControls } from "@/components/zoom-controls"
+import { BeadStatsPanel } from "@pindou/ui/components/bead-stats"
+import { ZoomControls } from "@pindou/ui/components/zoom-controls"
 import { Button } from "@pindou/ui/components/ui/button"
 import { Separator } from "@pindou/ui/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@pindou/ui/components/ui/tooltip"
@@ -25,7 +27,7 @@ import {
 import { useShortcuts } from "@pindou/core/hooks/use-shortcuts"
 import { useEditorStore } from "@pindou/core/hooks/use-editor"
 import { usePalette } from "@pindou/core/hooks/use-palette"
-import { UnsavedChangesGuard } from "@/components/unsaved-changes-guard"
+import { UnsavedChangesGuard } from "@pindou/ui/components/unsaved-changes-guard"
 import { useI18n } from "@pindou/core/i18n/client.tsx"
 import type { ToolKind, CellsData } from "@pindou/core/editor"
 import { PatternInsertSchema } from "@/db/schema"
@@ -73,6 +75,8 @@ export default function EditorContent() {
   const showBeadStats = useEditorStore((s) => s.showBeadStats)
   const beadStats = useEditorStore((s) => s.beadStats)
   const { palette } = usePalette()
+  const { resolvedTheme } = useTheme()
+  const router = useRouter()
 
   // Registers the canvas's imperative API into the shared store so the toolbar
   // and dialogs can drive it. The canvas only mounts once the palette resolves
@@ -114,7 +118,7 @@ export default function EditorContent() {
 
   return (
     <div className="flex h-full flex-col gap-2 overflow-hidden">
-      <UnsavedChangesGuard dirty={beadStats !== null} />
+      <UnsavedChangesGuard dirty={beadStats !== null} onNavigate={(href) => router.push(href)} />
       <EditorToolbar />
       <div className="flex-1 min-h-0 flex gap-2">
         {showColorPalette && <EditorColorPalettePanel />}
@@ -123,6 +127,7 @@ export default function EditorContent() {
           activeTool={activeTool}
           activeColorIndex={activeColorIndex}
           label={showLabels}
+          isDark={resolvedTheme === "dark"}
           apiRef={canvasApiRef}
           onZoomChange={setZoom}
           onGridChange={onGridChange}
