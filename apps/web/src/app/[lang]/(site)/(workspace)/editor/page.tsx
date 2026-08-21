@@ -28,20 +28,23 @@ import { usePalette } from "@pindou/core/hooks/use-palette"
 import { UnsavedChangesGuard } from "@/components/unsaved-changes-guard"
 import { useI18n } from "@pindou/core/i18n/client.tsx"
 import type { ToolKind, CellsData } from "@pindou/core/editor"
+import { PatternInsertSchema } from "@/db/schema"
+import { signIn, useSession } from "@/lib/auth/client"
+import { localizedPath } from "@pindou/core/i18n/config.ts"
 
 // Dialogs are only opened on demand — load them (and their heavy deps like
 // the export PNG canvas + image transform) lazily instead of blocking the
 // editor's initial bundle.
 const PublishDialog = dynamic(() =>
-  import("@/components/dialogs/publish-dialog").then((m) => m.PublishDialog),
+  import("@pindou/ui/dialogs/publish-dialog").then((m) => m.PublishDialog),
   { ssr: false },
 )
 const ImportDialog = dynamic(() =>
-  import("@/components/dialogs/import-dialog").then((m) => m.ImportDialog),
+  import("@pindou/ui/dialogs/import-dialog").then((m) => m.ImportDialog),
   { ssr: false },
 )
 const ExportDialog = dynamic(() =>
-  import("@/components/dialogs/export-dialog").then((m) => m.ExportDialog),
+  import("@pindou/ui/dialogs/export-dialog").then((m) => m.ExportDialog),
   { ssr: false },
 )
 
@@ -391,6 +394,7 @@ function EditorDialogs({
   const closeImport = useEditorStore((s) => s.closeImport)
   const exportOpen = useEditorStore((s) => s.exportOpen)
   const closeExport = useEditorStore((s) => s.closeExport)
+  const { locale } = useI18n()
 
   return (
     <>
@@ -399,6 +403,14 @@ function EditorDialogs({
           open={publishOpen}
           onClose={closePublish}
           onGetCellsData={onGetCellsData}
+          insertSchema={PatternInsertSchema}
+          useAuth={useSession}
+          onSignIn={() =>
+            signIn.popup({
+              provider: "github",
+              callbackURL: localizedPath(locale, "/editor"),
+            })
+          }
         />
       )}
       {importOpen && (
@@ -406,6 +418,7 @@ function EditorDialogs({
           open={importOpen}
           onClose={closeImport}
           onApply={onLoadGrid}
+          createWorker={() => new Worker(new URL("../../../../../workers/transform.worker", import.meta.url))}
         />
       )}
       {exportOpen && (

@@ -8,13 +8,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@pindou/ui/components/ui/dialog"
-import { Button } from "@pindou/ui/components/ui/button"
-import { Input } from "@pindou/ui/components/ui/input"
-import { Label } from "@pindou/ui/components/ui/label"
-import { Switch } from "@pindou/ui/components/ui/switch"
-import { ToggleGroup, ToggleGroupItem } from "@pindou/ui/components/ui/toggle-group"
-import { toast } from "@pindou/ui/components/ui/toast"
+} from "../ui/dialog"
+import { Button } from "../ui/button"
+import { Input } from "../ui/input"
+import { Label } from "../ui/label"
+import { Switch } from "../ui/switch"
+import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group"
+import { toast } from "../ui/toast"
 import { usePalette } from "@pindou/core/hooks/use-palette"
 import { useI18n } from "@pindou/core/i18n/client.tsx"
 import { EXPORT_WATERMARK_TEXT, MAJOR_GRID_STEP } from "@pindou/shared/constants"

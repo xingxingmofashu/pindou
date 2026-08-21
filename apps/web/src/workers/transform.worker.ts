@@ -1,26 +1,14 @@
 /// <reference lib="webworker" />
 
 import { Transform } from "@pindou/core/transform"
-import type { TransformMode, TransformResult } from "@pindou/core/transform"
+import type {
+  TransformMode,
+  TransformRequest,
+  TransformResponse,
+  TransformResult,
+} from "@pindou/core/transform"
 import { MAX_INPUT_PIXELS } from "@pindou/shared/constants"
 import type { Palette } from "@pindou/shared/types"
-
-/** A request to convert an image file into a bead grid. */
-export interface TransformRequest {
-  id: number
-  file: File
-  width: number
-  mode: TransformMode
-  mergeSimilarity: number
-  removeBackground: boolean
-  excludedCodes: string[]
-  palette: Palette
-}
-
-/** Success or failure, tagged with the originating request id. */
-export type TransformResponse =
-  | { id: number; ok: true; result: TransformResult }
-  | { id: number; ok: false; error: string }
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope
 

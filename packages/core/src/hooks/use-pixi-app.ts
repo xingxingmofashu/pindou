@@ -2,9 +2,18 @@
 
 import { useEffect, useRef, useState, type RefObject } from "react"
 import { Application, Container, Graphics } from "pixi.js"
-import { toast } from "@pindou/ui/components/ui/toast"
-import { useI18n } from "../i18n/client"
 import type { PixiContext } from "../editor"
+
+/** Failure kinds the host app can surface (e.g. via a toast). */
+export type PixiAppError = "context-lost" | "webgl-unavailable"
+
+interface UsePixiAppOptions {
+  /**
+   * Called when the WebGL context is lost or unavailable. The host app owns
+   * error presentation (core stays UI-framework-agnostic).
+   */
+  onError?: (kind: PixiAppError) => void
+}
 
 /**
  * Owns a PixiJS {@link Application} (and the "world" scene graph) inside a
@@ -17,16 +26,14 @@ import type { PixiContext } from "../editor"
 export function usePixiApp(
   canvasRef: RefObject<HTMLCanvasElement | null>,
   backgroundColor: string,
+  options: UsePixiAppOptions = {},
 ): PixiContext | null {
   const [ctx, setCtx] = useState<PixiContext | null>(null)
   const rafRef = useRef(0)
-  const { t } = useI18n()
-  // Latest `t` behind a ref so the one-shot init effect doesn't need `t` in
-  // its deps (re-running it would tear down and rebuild the WebGL context).
-  const tRef = useRef(t)
+  const onErrorRef = useRef(options.onError)
   useEffect(() => {
-    tRef.current = t
-  }, [t])
+    onErrorRef.current = options.onError
+  }, [options.onError])
 
   // Latest background behind a ref for the same reason: `app.init` must use
   // the theme-aware colour of the first render, but a later theme change
@@ -50,12 +57,7 @@ export function usePixiApp(
     const onContextLost = (e: Event) => {
       e.preventDefault()
       setCtx(null)
-      toast.add({
-        id: "webgl-context-lost",
-        type: "error",
-        title: tRef.current("editor.canvasUnavailable"),
-        description: tRef.current("editor.canvasUnavailableDescription"),
-      })
+      onErrorRef.current?.("context-lost")
     }
     canvas.addEventListener("webglcontextlost", onContextLost)
 
@@ -70,12 +72,7 @@ export function usePixiApp(
           autoDensity: true,
         })
       } catch {
-        toast.add({
-          id: "webgl-unavailable",
-          type: "error",
-          title: tRef.current("editor.canvasUnavailable"),
-          description: tRef.current("editor.webglUnavailableDescription"),
-        })
+        onErrorRef.current?.("webgl-unavailable")
         return /* WebGL unavailable */
       }
       if (cancelled) {
