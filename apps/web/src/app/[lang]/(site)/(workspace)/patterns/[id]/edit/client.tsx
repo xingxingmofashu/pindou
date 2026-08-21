@@ -43,13 +43,13 @@ import {
 import { toast } from "@pindou/ui/components/ui/toast"
 import { PatternUpdateSchema } from "@/db/schema"
 import { postJson } from "@/lib/utils"
-import { localizedPath } from "@/i18n/config"
-import { useI18n } from "@/i18n/client"
-import { useEditStore } from "@/hooks/use-edit"
-import { useShortcuts } from "@/hooks/use-shortcuts"
+import { localizedPath } from "@pindou/core/i18n/config"
+import { useI18n } from "@pindou/core/i18n/client"
+import { useEditStore } from "@pindou/core/hooks/use-edit"
+import { useShortcuts } from "@pindou/core/hooks/use-shortcuts"
 import type { PatternDetailType } from "@/db/schema"
-import type { Palette } from "@/types"
-import type { ToolKind } from "@/lib/editor"
+import type { Palette } from "@pindou/core/types"
+import type { ToolKind } from "@pindou/core/editor"
 
 const TOOLS: { value: ToolKind; icon: typeof Pencil; shortcut: string }[] = [
   { value: "pen", icon: Pencil, shortcut: "B" },

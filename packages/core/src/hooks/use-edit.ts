@@ -1,9 +1,9 @@
 "use client"
 
 import { create } from "zustand"
-import { DEFAULT_ZOOM } from "@/lib/constants"
-import type { BeadStats, ToolKind } from "@/lib/editor"
-import type { PixiCanvasApi } from "@/components/pixi-canvas"
+import { DEFAULT_ZOOM } from "../constants"
+import type { BeadStats, ToolKind } from "../editor"
+import type { PixiCanvasApi } from "../editor"
 
 interface EditStore {
   /** Imperative canvas API, registered by the edit form on mount. */

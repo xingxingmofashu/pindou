@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next"
 import { getAllPatternIds } from "@/lib/server/patterns"
 import { SITE_URL } from "@/lib/server/meta"
-import { localizedPath, locales } from "@/i18n/config"
+import { localizedPath, locales } from "@pindou/core/i18n/config"
 
 const STATIC_PATHS = ["/", "/patterns", "/editor"] as const
 

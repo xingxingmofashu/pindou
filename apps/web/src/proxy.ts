@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { detectLocale, isLocale } from "@/i18n/config"
+import { detectLocale, isLocale } from "@pindou/core/i18n/config"
 
 /**
  * Locale-aware routing proxy: prefixes every page request with the detected

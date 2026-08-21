@@ -1,7 +1,7 @@
 import { integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core"
 import { z } from "zod"
 import { createSchemaFactory } from "drizzle-zod"
-import { MAX_GRID_CELLS, MAX_GRID_DIMENSION, PATTERNS_PAGE_SIZE } from "../lib/constants"
+import { MAX_GRID_CELLS, MAX_GRID_DIMENSION, PATTERNS_PAGE_SIZE } from "@pindou/core/constants"
 import { users } from "./auth-schema"
 
 export const patterns = pgTable("patterns", {

@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from "react"
 import { Text, type Graphics } from "pixi.js"
-import { useTheme } from "next-themes"
 import {
   CELL,
   DEFAULT_ZOOM,
@@ -11,7 +10,7 @@ import {
   ZOOM_FACTOR,
   EDITOR_BG,
   EDITOR_BG_DARK,
-} from "@/lib/constants"
+} from "../constants"
 import {
   EMPTY,
   paintBlock,
@@ -34,9 +33,9 @@ import {
   type CellsData,
   type PixiContext,
   type GridRect,
-} from "@/lib/editor"
-import { hexToRgb, isTypingTarget } from "@/lib/utils"
-import type { Palette } from "@/types"
+} from "../editor"
+import { hexToRgb, isTypingTarget } from "../utils"
+import type { Palette } from "../types"
 
 /** Fraction of the viewport kept as pan slack around a padded rebuild. */
 const PAN_BUFFER = 0.5
@@ -73,6 +72,9 @@ interface UsePixiCanvasOptions {
    *  hovering a non-empty cell; `null` when hovering empty space or leaving
    *  the canvas. Only fired when the sampled colour actually changes. */
   onHoverCell?: (cell: { code: string; hex: string } | null) => void
+  /** Dark-mode flag for theme-dependent grid/label colours. Injected by the
+   *  host app (it owns the theme context) to keep this hook framework-agnostic. */
+  isDark?: boolean
 }
 
 /** Mutable per-render options mirrored into refs for the event handlers. */
@@ -134,14 +136,13 @@ export function usePixiCanvas(
     onHistoryChange,
     onColorPick,
     onHoverCell,
+    isDark = false,
   } = options
 
   const [zoom, setZoomState] = useState(initialZoom)
   const zoomRef = useRef(initialZoom)
   const rafRef = useRef(0)
 
-  const { resolvedTheme } = useTheme()
-  const isDark = resolvedTheme === "dark"
   const gridColor = isDark ? GRID_COLOR_DARK : GRID_COLOR_LIGHT
   const labelFill = isDark ? LABEL_FILL_DARK : LABEL_FILL_LIGHT
 

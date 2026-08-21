@@ -7,7 +7,7 @@ import { GridStorage } from "@/lib/grid-storage"
 import { PatternInsertSchema, PaginationSchema } from "@/db/schema"
 import { getPatternsPage } from "@/lib/server/patterns"
 import { getPaletteByCode } from "@/lib/server/palettes"
-import { MAX_BODY_BYTES, PATTERN_WRITE_LIMIT, PATTERN_WRITE_WINDOW_MS } from "@/lib/constants"
+import { MAX_BODY_BYTES, PATTERN_WRITE_LIMIT, PATTERN_WRITE_WINDOW_MS } from "@pindou/core/constants"
 import { auth } from "@/lib/auth/server"
 import { rateLimit } from "@/lib/rate-limit"
 
