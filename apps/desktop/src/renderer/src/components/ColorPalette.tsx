@@ -1,6 +1,5 @@
-import { useEffect, useMemo } from "react"
+import { useMemo } from "react"
 import { ChevronDown } from "lucide-react"
-import { usePalette } from "@pindou/core/hooks/use-palette"
 import { groupColorsBySeries } from "@pindou/core/editor"
 import { cn } from "@pindou/ui/utils"
 import { useI18n } from "@pindou/core/i18n/client"
@@ -17,67 +16,36 @@ interface ColorPaletteProps {
   onColorPick: (index: number) => void
   /** All brands loaded from the local catalog (for the brand switcher). */
   brands: Palette[]
-  /**
-   * Pin a specific brand palette (e.g. an opened pattern's own brand). When
-   * set, the component skips the shared active-palette store and hides the
-   * brand switcher.
-   */
-  palette?: Palette
+  /** The active brand (controlled by the host). */
+  palette: Palette
+  /** Called when the user picks a different brand. */
+  onBrandChange: (code: string) => void
 }
 
 /**
  * Scrollable colour palette sidebar panel — desktop variant.
  *
- * Unlike the web version (which fetches the catalog over SWR), the desktop
- * app receives the full catalog via `brands` (loaded once from the main
- * process) and seeds the shared store from it.
+ * Unlike the web version (which fetches the catalog over SWR and seeds the
+ * shared store), the desktop app passes the full catalog and the active brand
+ * as controlled props, so the host owns palette state.
  */
 export function ColorPalette({
   activeColorIndex,
   onColorPick,
   brands,
-  palette: pinned,
+  palette,
+  onBrandChange,
 }: ColorPaletteProps) {
-  const { palette: storePalette, setActivePalette } = usePalette()
   const { t } = useI18n()
-  const palette = pinned ?? storePalette
-
-  // Seed the active palette once the catalog arrives.
-  useEffect(() => {
-    const first = brands[0]
-    if (pinned || !first || storePalette) return
-    setActivePalette(first)
-  }, [brands, pinned, storePalette, setActivePalette])
 
   /** Colours grouped by series letter, with 1‑based palette indices. */
   const seriesGroups = useMemo(() => {
-    if (!palette) return []
     // Indices are palette-wide (1..N), so decorate colors before grouping.
     return groupColorsBySeries(
       palette.colors.map((color, i) => ({ ...color, index: i + 1 })),
       (c) => c.series ?? "?",
     )
   }, [palette])
-
-  /**
-   * Switch the active brand and reset to the first colour.
-   * The canvas is cleared on brand switch by usePixiCanvas.
-   */
-  const handleBrandChange = (code: string) => {
-    const brand = brands.find((b) => b.code === code)
-    if (brand) {
-      setActivePalette(brand)
-      onColorPick(1)
-    }
-  }
-
-  if (!palette) {
-    return (
-      <div className="flex h-full flex-col border px-3 py-2">
-        <div className="text-xs text-muted-foreground">{t("editor.paletteLoadFailed")}</div>
-      </div>
-    )
-  }
 
   return (
     <div className="flex h-full flex-col border">
@@ -86,7 +54,7 @@ export function ColorPalette({
           <div className="relative min-w-0 flex-1">
             <select
               value={palette.code}
-              onChange={(e) => handleBrandChange(e.target.value)}
+              onChange={(e) => onBrandChange(e.target.value)}
               aria-label={t("editor.beadBrand")}
               className="w-full cursor-pointer appearance-none rounded-none border-0 bg-transparent px-0 py-0 pr-4 text-xs font-medium text-muted-foreground focus:outline-none"
             >
