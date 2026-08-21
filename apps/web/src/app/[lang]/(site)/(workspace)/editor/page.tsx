@@ -8,9 +8,9 @@ import { PixiCanvas, type PixiCanvasApi } from "@/components/pixi-canvas"
 import { ColorPalette } from "@/components/color-palette"
 import { BeadStatsPanel } from "@/components/bead-stats"
 import { ZoomControls } from "@/components/zoom-controls"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Button } from "@pindou/ui/components/ui/button"
+import { Separator } from "@pindou/ui/components/ui/separator"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@pindou/ui/components/ui/tooltip"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@pindou/ui/components/ui/alert-dialog"
 import { useShortcuts } from "@/hooks/use-shortcuts"
 import { useEditorStore } from "@/hooks/use-editor"
 import { usePalette } from "@/hooks/use-palette"

@@ -7,9 +7,9 @@ import { usePalette } from "@/hooks/use-palette"
 import { groupColorsBySeries } from "@/lib/editor"
 import { cn, fetcher } from "@/lib/utils"
 import { useI18n } from "@/i18n/client"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Skeleton } from "@/components/ui/skeleton"
-import { toast } from "@/components/ui/toast"
+import { ScrollArea } from "@pindou/ui/components/ui/scroll-area"
+import { Skeleton } from "@pindou/ui/components/ui/skeleton"
+import { toast } from "@pindou/ui/components/ui/toast"
 import type { Palette } from "@/types"
 
 interface ColorPaletteProps {

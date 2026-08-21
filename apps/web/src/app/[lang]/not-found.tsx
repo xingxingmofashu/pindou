@@ -1,6 +1,6 @@
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Logo } from "@/components/logo"
+import { Button } from "@pindou/ui/components/ui/button"
+import { Logo } from "@pindou/ui/components/logo"
 import { localizedPath } from "@/i18n/config"
 import { getDictionary, getLocale } from "@/i18n/server"
 

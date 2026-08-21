@@ -8,7 +8,7 @@ import { pageMetadata } from "@/lib/server/meta"
 import { getDictionary, getLocale } from "@/i18n/server"
 import { isLocale, localizedPath } from "@/i18n/config"
 import { auth } from "@/lib/auth/server"
-import { Button } from "@/components/ui/button"
+import { Button } from "@pindou/ui/components/ui/button"
 import { PatternEditContentClient } from "./client"
 import type { PatternDetailType } from "@/db/schema"
 

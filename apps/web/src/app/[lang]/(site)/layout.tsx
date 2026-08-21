@@ -1,4 +1,4 @@
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@pindou/ui/components/ui/tooltip";
 import { Header } from "@/components/header";
 
 export default function SiteLayout({ children }: LayoutProps<"/[lang]">) {

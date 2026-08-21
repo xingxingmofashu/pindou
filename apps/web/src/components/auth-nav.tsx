@@ -4,13 +4,13 @@ import { useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ChevronDown } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Button } from "@pindou/ui/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@pindou/ui/components/ui/dropdown-menu"
 import { useSession, signOut } from "@/lib/auth/client"
 import { localizedPath } from "@/i18n/config"
 import { useI18n } from "@/i18n/client"

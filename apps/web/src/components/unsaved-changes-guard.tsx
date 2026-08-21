@@ -11,7 +11,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@pindou/ui/components/ui/alert-dialog"
 import { useI18n } from "@/i18n/client"
 
 interface UnsavedChangesGuardProps {
