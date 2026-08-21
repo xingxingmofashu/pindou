@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { db } from "@/db"
 import { brands } from "@/db/schema"
 import { getBrandPalette } from "@/lib/server/palettes"
-import type { Palette } from "@/types"
+import type { Palette } from "@pindou/core/types"
 
 /**
  * GET /api/brands/[id] — one brand with its colors nested.

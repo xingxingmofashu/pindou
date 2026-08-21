@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import type { ToolKind } from "@/lib/editor"
+import type { ToolKind } from "../editor"
 
 /** Keyboard shortcut matching each tool, mirroring the ToolBar tooltips. */
 const TOOL_SHORTCUTS: Record<string, ToolKind> = {

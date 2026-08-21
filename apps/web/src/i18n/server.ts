@@ -1,12 +1,9 @@
 import "server-only"
 import { lang } from "next/root-params"
 import { notFound } from "next/navigation"
-import { isLocale, type Locale } from "./config"
-import type { Messages } from "./types"
-import en from "./dictionaries/en.json"
-import zh from "./dictionaries/zh.json"
+import { isLocale, enDictionary, zhDictionary, type Locale, type Messages } from "@pindou/core"
 
-const dictionaries = { en, zh } satisfies Record<Locale, Messages>
+const dictionaries = { en: enDictionary, zh: zhDictionary } satisfies Record<Locale, Messages>
 
 /** Resolve the current route's locale, 404ing when the segment is unsupported. */
 export async function getLocale(): Promise<Locale> {

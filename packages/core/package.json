@@ -1,0 +1,54 @@
+{
+  "name": "@pindou/core",
+  "version": "0.1.0",
+  "description": "Framework-agnostic business logic for pindou: editor/export/transform, i18n, and React hooks shared by the web and desktop apps",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./constants": "./src/constants.ts",
+    "./date": "./src/date.ts",
+    "./editor": "./src/editor.ts",
+    "./export": "./src/export.ts",
+    "./transform": "./src/transform.ts",
+    "./types": "./src/types.ts",
+    "./utils": "./src/utils.ts",
+    "./i18n": "./src/i18n/index.ts",
+    "./i18n/client": "./src/i18n/client.tsx",
+    "./i18n/config": "./src/i18n/config.ts",
+    "./hooks/use-palette": "./src/hooks/use-palette.ts",
+    "./hooks/use-pixi-app": "./src/hooks/use-pixi-app.ts",
+    "./hooks/use-pixi-canvas": "./src/hooks/use-pixi-canvas.ts",
+    "./hooks/use-shortcuts": "./src/hooks/use-shortcuts.ts",
+    "./hooks/use-edit": "./src/hooks/use-edit.ts",
+    "./hooks/use-editor": "./src/hooks/use-editor.ts",
+    "./hooks/use-pattern": "./src/hooks/use-pattern.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pindou/ui": "workspace:*",
+    "clsx": "^2.1.1",
+    "culori": "^4.0.2",
+    "date-fns": "^4.1.0",
+    "fflate": "^0.8.2",
+    "pixi.js": "^8.8.1",
+    "tailwind-merge": "^3.6.0",
+    "zustand": "^5.0.3"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/culori": "^4.0.1",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "typescript": "^5.8.0"
+  }
+}

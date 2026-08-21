@@ -1,6 +1,6 @@
 import { headers } from "next/headers"
 import type { MetadataRoute } from "next"
-import { detectLocale } from "@/i18n/config"
+import { detectLocale } from "@pindou/core/i18n/config"
 
 /**
  * PWA web app manifest. Served at `/manifest.webmanifest` (root, outside the

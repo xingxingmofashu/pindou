@@ -1,8 +1,8 @@
 "use client"
 
 import { create } from "zustand"
-import { DEFAULT_ZOOM } from "@/lib/constants"
-import type { PixiCanvasApi } from "@/components/pixi-canvas"
+import { DEFAULT_ZOOM } from "../constants"
+import type { PixiCanvasApi } from "../editor"
 
 interface PatternStore {
   /** Imperative canvas API, registered by the pattern page on mount. */

@@ -26,6 +26,9 @@ importers:
       '@neondatabase/serverless':
         specifier: ^1.1.0
         version: 1.1.0
+      '@pindou/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@pindou/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -140,6 +143,52 @@ importers:
         version: 4.23.5
       typescript:
         specifier: ^5
+        version: 5.9.3
+
+  packages/core:
+    dependencies:
+      '@pindou/ui':
+        specifier: workspace:*
+        version: link:../ui
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      culori:
+        specifier: ^4.0.2
+        version: 4.0.2
+      date-fns:
+        specifier: ^4.1.0
+        version: 4.4.0
+      fflate:
+        specifier: ^0.8.2
+        version: 0.8.3
+      pixi.js:
+        specifier: ^8.8.1
+        version: 8.19.0
+      tailwind-merge:
+        specifier: ^3.6.0
+        version: 3.6.0
+      zustand:
+        specifier: ^5.0.3
+        version: 5.0.14(@types/react@19.2.17)(react@19.2.4)(use-sync-external-store@1.6.0(react@19.2.4))
+    devDependencies:
+      '@types/culori':
+        specifier: ^4.0.1
+        version: 4.0.1
+      '@types/react':
+        specifier: ^19.2.0
+        version: 19.2.17
+      '@types/react-dom':
+        specifier: ^19.2.0
+        version: 19.2.3(@types/react@19.2.17)
+      react:
+        specifier: ^19.2.4
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.2.4
+        version: 19.2.4(react@19.2.4)
+      typescript:
+        specifier: ^5.8.0
         version: 5.9.3
 
   packages/ui:

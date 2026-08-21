@@ -2,30 +2,14 @@
 
 import { useEffect, useRef, useImperativeHandle, useState, type RefObject } from "react"
 import { useTheme } from "next-themes"
-import { EDITOR_BG, EDITOR_BG_DARK } from "@/lib/constants"
-import { usePixiApp } from "@/hooks/use-pixi-app"
-import { usePixiCanvas } from "@/hooks/use-pixi-canvas"
-import { usePalette } from "@/hooks/use-palette"
+import { EDITOR_BG, EDITOR_BG_DARK } from "@pindou/core/constants"
+import { usePixiApp } from "@pindou/core/hooks/use-pixi-app"
+import { usePixiCanvas } from "@pindou/core/hooks/use-pixi-canvas"
+import { usePalette } from "@pindou/core/hooks/use-palette"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@pindou/ui/components/ui/tooltip"
-import type { ToolKind, BeadStats, CellsData } from "@/lib/editor"
-import type { Palette } from "@/types"
+import type { PixiCanvasApi, ToolKind } from "@pindou/core/editor"
+import type { Palette } from "@pindou/core/types"
 
-export interface PixiCanvasApi {
-  setZoom: (z: number | ((prev: number) => number)) => void
-  /** Fit the view to the painted grid's bounding box. */
-  fitToCanvas: () => void
-  /** Empty the canvas (undoable). */
-  clearCanvas: () => void
-  undo: () => void
-  redo: () => void
-  getCellsData: () => CellsData | null
-  /** Live per-colour bead counts + painted dims (null when the grid is empty). */
-  getBeadStats: () => BeadStats | null
-  /** Replace the canvas contents with a serialized code grid. When `seed` is
-   *  true (initial load of an existing pattern), the loaded grid becomes the
-   *  history baseline instead of an undoable step. */
-  loadGrid: (grid: string[][], seed?: boolean) => void
-}
 
 export interface PixiCanvasProps {
   activeTool?: ToolKind
@@ -76,9 +60,10 @@ function PixiCanvasInner({
   onHoverCell,
 }: InnerProps) {
   const { resolvedTheme } = useTheme()
-  const ctx = usePixiApp(canvasRef, resolvedTheme === "dark" ? EDITOR_BG_DARK : EDITOR_BG)
+  const isDark = resolvedTheme === "dark"
+  const ctx = usePixiApp(canvasRef, isDark ? EDITOR_BG_DARK : EDITOR_BG)
   const { zoom, setZoom, fitToCanvas, clearCanvas, undo, redo, getCellsData, getBeadStats, loadGrid } =
-    usePixiCanvas(ctx, palette, { activeTool, activeColorIndex, showLabels: label, readonly, onGridChange, onHistoryChange, onColorPick, onHoverCell })
+    usePixiCanvas(ctx, palette, { activeTool, activeColorIndex, showLabels: label, readonly, isDark, onGridChange, onHistoryChange, onColorPick, onHoverCell })
 
   useEffect(() => {
     onZoomChange?.(zoom)
@@ -175,3 +160,4 @@ function EditablePaletteBridge({
   if (!palette) return null
   return <PixiCanvasInner canvasRef={canvasRef} palette={palette} {...props} />
 }
+export type { PixiCanvasApi } from "@pindou/core/editor"

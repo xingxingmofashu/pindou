@@ -1,10 +1,10 @@
 "use client"
 
 import { ZoomIn, ZoomOut, Maximize } from "lucide-react"
-import { ZOOM_STEP } from "@/lib/constants"
+import { ZOOM_STEP } from "@pindou/core/constants"
 import { Button } from "@pindou/ui/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@pindou/ui/components/ui/tooltip"
-import { useI18n } from "@/i18n/client"
+import { useI18n } from "@pindou/core/i18n/client"
 
 interface ZoomControlsProps {
   /** Current zoom factor (screen pixels per world unit). */

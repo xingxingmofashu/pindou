@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { Logo } from "@pindou/ui/components/logo"
-import { GITHUB_URL } from "@/lib/constants"
-import { localizedPath } from "@/i18n/config"
+import { GITHUB_URL } from "@pindou/core/constants"
+import { localizedPath } from "@pindou/core/i18n/config"
 import { getDictionary, getLocale } from "@/i18n/server"
 
 export async function Footer() {

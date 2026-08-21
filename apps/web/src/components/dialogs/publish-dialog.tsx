@@ -20,11 +20,11 @@ import { Spinner } from "@pindou/ui/components/ui/spinner"
 import { toast } from "@pindou/ui/components/ui/toast"
 import { PatternInsertSchema } from "@/db/schema"
 import { postJson } from "@/lib/utils"
-import type { CellsData } from "@/lib/editor"
+import type { CellsData } from "@pindou/core/editor"
 import { GithubIcon } from "@pindou/ui/components/icon/github"
 import { signIn, useSession } from "@/lib/auth/client"
-import { localizedPath } from "@/i18n/config"
-import { useI18n } from "@/i18n/client"
+import { localizedPath } from "@pindou/core/i18n/config"
+import { useI18n } from "@pindou/core/i18n/client"
 
 interface PublishDialogProps {
   open: boolean

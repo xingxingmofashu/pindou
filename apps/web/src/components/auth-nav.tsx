@@ -12,8 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "@pindou/ui/components/ui/dropdown-menu"
 import { useSession, signOut } from "@/lib/auth/client"
-import { localizedPath } from "@/i18n/config"
-import { useI18n } from "@/i18n/client"
+import { localizedPath } from "@pindou/core/i18n/config"
+import { useI18n } from "@pindou/core/i18n/client"
 
 /** Session-aware auth area: shows the sign-in link or the user menu. */
 export function AuthNav() {

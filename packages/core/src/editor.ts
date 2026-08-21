@@ -1,6 +1,6 @@
 import type { Application, Container, Graphics } from "pixi.js"
-import { CELL, MAX_GRID_DIMENSION, MIN_PX } from "@/lib/constants"
-import type { Palette } from "@/types"
+import { CELL, MAX_GRID_DIMENSION, MIN_PX } from "./constants"
+import type { Palette } from "./types"
 
 /** Sentinel for an unpainted cell. */
 export const EMPTY = 0
@@ -625,4 +625,26 @@ export function buildBeadEntries(
   }
 
   return entries
+}
+
+/**
+ * Imperative canvas API surfaced to parent components (via a ref) by the
+ * canvas wrapper. Declared here (not in the component) so state hooks that
+ * store the API can import the type without depending on the component.
+ */
+export interface PixiCanvasApi {
+  setZoom: (z: number | ((prev: number) => number)) => void
+  /** Fit the view to the painted grid's bounding box. */
+  fitToCanvas: () => void
+  /** Empty the canvas (undoable). */
+  clearCanvas: () => void
+  undo: () => void
+  redo: () => void
+  getCellsData: () => CellsData | null
+  /** Live per-colour bead counts + painted dims (null when the grid is empty). */
+  getBeadStats: () => BeadStats | null
+  /** Replace the canvas contents with a serialized code grid. When `seed` is
+   *  true (initial load of an existing pattern), the loaded grid becomes the
+   *  history baseline instead of an undoable step. */
+  loadGrid: (grid: string[][], seed?: boolean) => void
 }

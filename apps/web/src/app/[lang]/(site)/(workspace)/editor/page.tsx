@@ -22,12 +22,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@pindou/ui/components/ui/alert-dialog"
-import { useShortcuts } from "@/hooks/use-shortcuts"
-import { useEditorStore } from "@/hooks/use-editor"
-import { usePalette } from "@/hooks/use-palette"
+import { useShortcuts } from "@pindou/core/hooks/use-shortcuts"
+import { useEditorStore } from "@pindou/core/hooks/use-editor"
+import { usePalette } from "@pindou/core/hooks/use-palette"
 import { UnsavedChangesGuard } from "@/components/unsaved-changes-guard"
-import { useI18n } from "@/i18n/client"
-import type { ToolKind, CellsData } from "@/lib/editor"
+import { useI18n } from "@pindou/core/i18n/client"
+import type { ToolKind, CellsData } from "@pindou/core/editor"
 
 // Dialogs are only opened on demand — load them (and their heavy deps like
 // the export PNG canvas + image transform) lazily instead of blocking the

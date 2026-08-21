@@ -1,7 +1,7 @@
 import { converter } from "culori"
-import { MAX_GRID_CELLS, MAX_GRID_DIMENSION } from "@/lib/constants"
-import { countGridBeads, mostFrequent } from "@/lib/editor"
-import type { Palette } from "@/types"
+import { MAX_GRID_CELLS, MAX_GRID_DIMENSION } from "./constants"
+import { countGridBeads, mostFrequent } from "./editor"
+import type { Palette } from "./types"
 
 /** Pixels with alpha below this are treated as empty cells. */
 const ALPHA_THRESHOLD = 128

@@ -1,6 +1,6 @@
 import "server-only"
 import type { Metadata } from "next"
-import { localizedPath, locales, type Locale } from "@/i18n/config"
+import { localizedPath, locales, type Locale } from "@pindou/core/i18n/config"
 
 /**
  * Absolute site origin used to build canonical/OG URLs. Must be set in the

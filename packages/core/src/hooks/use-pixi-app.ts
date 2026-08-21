@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState, type RefObject } from "react"
 import { Application, Container, Graphics } from "pixi.js"
 import { toast } from "@pindou/ui/components/ui/toast"
-import { useI18n } from "@/i18n/client"
-import type { PixiContext } from "@/lib/editor"
+import { useI18n } from "../i18n/client"
+import type { PixiContext } from "../editor"
 
 /**
  * Owns a PixiJS {@link Application} (and the "world" scene graph) inside a

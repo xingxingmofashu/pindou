@@ -1,9 +1,9 @@
 /// <reference lib="webworker" />
 
-import { Transform } from "@/lib/transform"
-import type { TransformMode, TransformResult } from "@/lib/transform"
-import { MAX_INPUT_PIXELS } from "@/lib/constants"
-import type { Palette } from "@/types"
+import { Transform } from "@pindou/core/transform"
+import type { TransformMode, TransformResult } from "@pindou/core/transform"
+import { MAX_INPUT_PIXELS } from "@pindou/core/constants"
+import type { Palette } from "@pindou/core/types"
 
 /** A request to convert an image file into a bead grid. */
 export interface TransformRequest {

@@ -3,14 +3,14 @@
 import { useEffect, useMemo } from "react"
 import useSWR from "swr"
 import { ChevronDown } from "lucide-react"
-import { usePalette } from "@/hooks/use-palette"
-import { groupColorsBySeries } from "@/lib/editor"
+import { usePalette } from "@pindou/core/hooks/use-palette"
+import { groupColorsBySeries } from "@pindou/core/editor"
 import { cn, fetcher } from "@/lib/utils"
-import { useI18n } from "@/i18n/client"
+import { useI18n } from "@pindou/core/i18n/client"
 import { ScrollArea } from "@pindou/ui/components/ui/scroll-area"
 import { Skeleton } from "@pindou/ui/components/ui/skeleton"
 import { toast } from "@pindou/ui/components/ui/toast"
-import type { Palette } from "@/types"
+import type { Palette } from "@pindou/core/types"
 
 interface ColorPaletteProps {
   /**
