@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
+import { useTheme } from "next-themes"
 import { Download, Info, List } from "lucide-react"
-import { PixiCanvas, type PixiCanvasApi } from "@/components/pixi-canvas"
-import { ZoomControls } from "@/components/zoom-controls"
+import { PixiCanvas, type PixiCanvasApi } from "@pindou/ui/components/pixi-canvas"
+import { ZoomControls } from "@pindou/ui/components/zoom-controls"
 import { ExportDialog } from "@pindou/ui/dialogs/export-dialog"
 import { Button } from "@pindou/ui/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@pindou/ui/components/ui/tooltip"
@@ -28,6 +29,7 @@ export function PatternDetailClient({
   palette: Palette
 }) {
   const { locale, t } = useI18n()
+  const { resolvedTheme } = useTheme()
 
   // Registers the canvas's imperative API into the shared store so the
   // toolbar's zoom controls can drive it.
@@ -87,6 +89,7 @@ export function PatternDetailClient({
           grid={grid}
           palette={palette}
           readonly
+          isDark={resolvedTheme === "dark"}
           apiRef={canvasApiRef}
           onZoomChange={setZoom}
           className="min-h-0 min-w-0 flex-1 border"

@@ -1,11 +1,10 @@
 "use client"
 
 import { useCallback, useState } from "react"
-import { Button } from "@pindou/ui/components/ui/button"
-import { Spinner } from "@pindou/ui/components/ui/spinner"
-import { toast } from "@pindou/ui/components/ui/toast"
-import { signIn } from "@/lib/auth/client"
-import { GithubIcon } from "@pindou/ui/components/icon/github"
+import { Button } from "./ui/button"
+import { Spinner } from "./ui/spinner"
+import { toast } from "./ui/toast"
+import { GithubIcon } from "./icon/github"
 import { useI18n } from "@pindou/core/i18n/client.tsx"
 
 interface GitHubButtonProps {
@@ -13,12 +12,18 @@ interface GitHubButtonProps {
   className?: string
   /** URL to return to after OAuth. */
   callbackURL: string
+  /**
+   * Starts the GitHub OAuth flow — injected by the host app (e.g.
+   * `signIn.social({ provider: "github", callbackURL })`).
+   */
+  onSignIn: (callbackURL: string) => Promise<{ error?: unknown }>
 }
 
 export function GitHubButton({
   label,
   className,
   callbackURL,
+  onSignIn,
 }: GitHubButtonProps) {
   const { t } = useI18n()
   const [pending, setPending] = useState(false)
@@ -26,10 +31,7 @@ export function GitHubButton({
   const handleSignIn = useCallback(async () => {
     if (pending) return
     setPending(true)
-    const { error } = await signIn.social({
-      provider: "github",
-      callbackURL,
-    })
+    const { error } = await onSignIn(callbackURL)
     // On success the client redirects to GitHub (full page load), so keep
     // `pending` true — resetting it here would re-enable the button during
     // the navigation gap and allow a second click that overwrites the OAuth
@@ -43,7 +45,7 @@ export function GitHubButton({
         description: t("auth.signInFailedDescription"),
       })
     }
-  }, [callbackURL, pending, t])
+  }, [callbackURL, pending, t, onSignIn])
 
   return (
     <Button

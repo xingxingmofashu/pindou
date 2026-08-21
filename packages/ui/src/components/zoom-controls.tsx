@@ -2,8 +2,8 @@
 
 import { ZoomIn, ZoomOut, Maximize } from "lucide-react"
 import { ZOOM_STEP } from "@pindou/shared/constants"
-import { Button } from "@pindou/ui/components/ui/button"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@pindou/ui/components/ui/tooltip"
+import { Button } from "./ui/button"
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip"
 import { useI18n } from "@pindou/core/i18n/client.tsx"
 
 interface ZoomControlsProps {

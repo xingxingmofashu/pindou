@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useTheme } from "next-themes"
 import {
   ArrowLeft,
   CaseSensitive,
@@ -17,10 +18,10 @@ import {
   Trash2,
   Undo2,
 } from "lucide-react"
-import { PixiCanvas, type PixiCanvasApi } from "@/components/pixi-canvas"
+import { PixiCanvas, type PixiCanvasApi } from "@pindou/ui/components/pixi-canvas"
 import { ColorPalette } from "@/components/color-palette"
-import { BeadStatsPanel } from "@/components/bead-stats"
-import { ZoomControls } from "@/components/zoom-controls"
+import { BeadStatsPanel } from "@pindou/ui/components/bead-stats"
+import { ZoomControls } from "@pindou/ui/components/zoom-controls"
 import { ExportDialog } from "@pindou/ui/dialogs/export-dialog"
 import { Button } from "@pindou/ui/components/ui/button"
 import { Input } from "@pindou/ui/components/ui/input"
@@ -74,6 +75,7 @@ export function PatternEditContentClient({
 }) {
   const router = useRouter()
   const { locale, t } = useI18n()
+  const { resolvedTheme } = useTheme()
   const canvasApiRef = useRef<PixiCanvasApi>(null)
   const setApi = useEditStore((s) => s.setApi)
   const setZoom = useEditStore((s) => s.setZoom)
@@ -201,6 +203,7 @@ export function PatternEditContentClient({
           activeTool={activeTool}
           activeColorIndex={activeColorIndex}
           label={showLabels}
+          isDark={resolvedTheme === "dark"}
           apiRef={canvasApiRef}
           onZoomChange={setZoom}
           onGridChange={onGridChange}
