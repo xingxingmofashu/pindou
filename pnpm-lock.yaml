@@ -117,9 +117,6 @@ importers:
       '@pindou/shared':
         specifier: workspace:*
         version: link:../shared
-      '@pindou/ui':
-        specifier: workspace:*
-        version: link:../ui
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -165,6 +162,12 @@ importers:
       '@base-ui/react':
         specifier: ^1.6.0
         version: 1.6.0(@types/react@19.2.17)(date-fns@4.4.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@pindou/core':
+        specifier: workspace:*
+        version: link:../core
+      '@pindou/shared':
+        specifier: workspace:*
+        version: link:../shared
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -177,12 +180,18 @@ importers:
       lucide-react:
         specifier: ^1.27.0
         version: 1.27.0(react@19.2.4)
+      swr:
+        specifier: ^2.4.2
+        version: 2.4.2(react@19.2.4)
       tailwind-merge:
         specifier: ^3.6.0
         version: 3.6.0
       tw-animate-css:
         specifier: ^1.4.0
         version: 1.4.0
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@types/culori':
         specifier: ^4.0.1

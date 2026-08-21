@@ -9,22 +9,21 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@pindou/ui/components/ui/dialog"
-import { Button } from "@pindou/ui/components/ui/button"
-import { Checkbox } from "@pindou/ui/components/ui/checkbox"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@pindou/ui/components/ui/collapsible"
-import { Input } from "@pindou/ui/components/ui/input"
-import { Popover, PopoverContent, PopoverTrigger } from "@pindou/ui/components/ui/popover"
-import { Label } from "@pindou/ui/components/ui/label"
-import { Switch } from "@pindou/ui/components/ui/switch"
-import { Spinner } from "@pindou/ui/components/ui/spinner"
-import { toast } from "@pindou/ui/components/ui/toast"
+} from "../ui/dialog"
+import { Button } from "../ui/button"
+import { Checkbox } from "../ui/checkbox"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible"
+import { Input } from "../ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
+import { Label } from "../ui/label"
+import { Switch } from "../ui/switch"
+import { Spinner } from "../ui/spinner"
+import { toast } from "../ui/toast"
 import { MAX_FILE_BYTES, MAX_GRID_DIMENSION } from "@pindou/shared/constants"
 import { buildHexByCode, gridSize, mostFrequent, groupColorsBySeries } from "@pindou/core/editor"
 import { usePalette } from "@pindou/core/hooks/use-palette"
 import { useI18n } from "@pindou/core/i18n/client.tsx"
-import type { TransformMode, TransformResult } from "@pindou/core/transform"
-import type { TransformRequest, TransformResponse } from "@/workers/transform.worker"
+import type { TransformMode, TransformRequest, TransformResponse, TransformResult } from "@pindou/core/transform"
 import type { Palette } from "@pindou/shared/types"
 
 /** Preview canvas is drawn at most this many pixels per side. */
@@ -42,6 +41,12 @@ interface ImportDialogProps {
   onClose: () => void
   /** Called with the converted code grid (`grid[row][col]`, "" = empty) when the user applies. */
   onApply: (grid: string[][]) => void
+  /**
+   * Creates the conversion Web Worker — injected by the app because the worker
+   * URL is bundle-specific (`new Worker(new URL("...", import.meta.url))`).
+   * Return `null` when workers are unavailable.
+   */
+  createWorker: () => Worker | null
 }
 
 /**
@@ -257,7 +262,7 @@ function ExcludeColours({ palette, excluded, onToggle, onToggleGroup, onReset }:
   )
 }
 
-export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
+export function ImportDialog({ open, onClose, onApply, createWorker }: ImportDialogProps) {
   const { palette } = usePalette()
   const { t } = useI18n()
   const [file, setFile] = useState<File | null>(null)
@@ -302,10 +307,20 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
     const timeout = setTimeout(() => {
       const id = ++reqId.current
       if (!workerRef.current) {
-        let worker: Worker
+        let worker: Worker | null
         try {
-          worker = new Worker(new URL("../../workers/transform.worker.ts", import.meta.url))
+          worker = createWorker()
         } catch {
+          setIsProcessing(false)
+          toast.add({
+            id: "import-conversion-failed",
+            type: "error",
+            title: tRef.current("editor.conversionFailed"),
+            description: tRef.current("editor.networkError"),
+          })
+          return
+        }
+        if (!worker) {
           setIsProcessing(false)
           toast.add({
             id: "import-conversion-failed",
@@ -357,7 +372,7 @@ export function ImportDialog({ open, onClose, onApply }: ImportDialogProps) {
       workerRef.current.postMessage(request)
     }, DEBOUNCE_MS)
     return () => clearTimeout(timeout)
-  }, [file, widthInput, palette, mode, mergeOn, mergeSimilarity, removeBg, excludedCodes])
+  }, [file, widthInput, palette, mode, mergeOn, mergeSimilarity, removeBg, excludedCodes, createWorker])
 
   // Render the preview whenever a result arrives.
   useEffect(() => {

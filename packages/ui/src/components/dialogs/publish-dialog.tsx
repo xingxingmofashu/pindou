@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useState } from "react"
+import type { z } from "zod"
 import useSWRMutation from "swr/mutation"
 import {
   AlertDialog,
@@ -11,20 +12,22 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@pindou/ui/components/ui/alert-dialog"
-import { Button } from "@pindou/ui/components/ui/button"
-import { Input } from "@pindou/ui/components/ui/input"
-import { Label } from "@pindou/ui/components/ui/label"
-import { Textarea } from "@pindou/ui/components/ui/textarea"
-import { Spinner } from "@pindou/ui/components/ui/spinner"
-import { toast } from "@pindou/ui/components/ui/toast"
-import { PatternInsertSchema } from "@/db/schema"
-import { postJson } from "@/lib/utils"
+} from "../ui/alert-dialog"
+import { Button } from "../ui/button"
+import { Input } from "../ui/input"
+import { Label } from "../ui/label"
+import { Textarea } from "../ui/textarea"
+import { Spinner } from "../ui/spinner"
+import { toast } from "../ui/toast"
+import { postJson } from "@pindou/core/utils"
 import type { CellsData } from "@pindou/core/editor"
-import { GithubIcon } from "@pindou/ui/components/icon/github"
-import { signIn, useSession } from "@/lib/auth/client"
+import { GithubIcon } from "../icon/github"
 import { localizedPath } from "@pindou/core/i18n/config.ts"
 import { useI18n } from "@pindou/core/i18n/client.tsx"
+
+export interface AuthSession {
+  user?: { name?: string | null } | null
+}
 
 interface PublishDialogProps {
   open: boolean
@@ -33,14 +36,31 @@ interface PublishDialogProps {
   onPublished?: () => void
   /** Reads the canvas grid — same contract as the API method. */
   onGetCellsData: () => CellsData | null
+  /**
+   * Zod schema for the publish payload — injected so the dialog stays free of
+   * app/db imports (the web app passes its `PatternInsertSchema`).
+   */
+  insertSchema: z.ZodType
+  /** Better Auth session hook — injected by the app (e.g. `useSession`). */
+  useAuth: () => { data?: AuthSession | null; isPending?: boolean }
+  /** GitHub OAuth popup — injected by the app (e.g. `signIn.popup`). */
+  onSignIn: () => Promise<{ error?: unknown }>
 }
 
-export function PublishDialog({ open, onClose, onPublished, onGetCellsData }: PublishDialogProps) {
+export function PublishDialog({
+  open,
+  onClose,
+  onPublished,
+  onGetCellsData,
+  insertSchema,
+  useAuth,
+  onSignIn,
+}: PublishDialogProps) {
   const { locale, t } = useI18n()
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [patternId, setPatternId] = useState<string | null>(null)
-  const { data: session, isPending } = useSession()
+  const { data: session, isPending } = useAuth()
   const { trigger, isMutating } = useSWRMutation(
     "/api/patterns",
     (url, { arg }: { arg: string }) =>
@@ -58,7 +78,7 @@ export function PublishDialog({ open, onClose, onPublished, onGetCellsData }: Pu
       return
     }
 
-    const parsed = PatternInsertSchema.safeParse({
+    const parsed = insertSchema.safeParse({
       title,
       description,
       gridData: data.grid,
@@ -85,7 +105,7 @@ export function PublishDialog({ open, onClose, onPublished, onGetCellsData }: Pu
         description: e instanceof Error ? e.message : t("editor.networkError"),
       })
     }
-  }, [title, description, onGetCellsData, trigger, t, onPublished])
+  }, [title, description, insertSchema, onGetCellsData, trigger, t, onPublished])
 
   const handleClose = useCallback(() => {
     setTitle("")
@@ -94,14 +114,11 @@ export function PublishDialog({ open, onClose, onPublished, onGetCellsData }: Pu
     onClose()
   }, [onClose])
 
-  // Runs the GitHub OAuth flow in a popup so the editor page never navigates
+  // Runs the injected GitHub OAuth popup so the editor page never navigates
   // away and the in-memory draft survives the sign-in. On success the reactive
-  // `useSession` updates and this dialog swaps to the publish form.
+  // session hook updates and this dialog swaps to the publish form.
   const handleSignInPopup = useCallback(async () => {
-    const { error } = await signIn.popup({
-      provider: "github",
-      callbackURL: localizedPath(locale, "/editor"),
-    })
+    const { error } = await onSignIn()
     if (error) {
       toast.add({
         id: "sign-in-failed",
@@ -110,7 +127,7 @@ export function PublishDialog({ open, onClose, onPublished, onGetCellsData }: Pu
         description: t("auth.signInFailedDescription"),
       })
     }
-  }, [locale, t])
+  }, [onSignIn, t])
 
   return (
     <AlertDialog
@@ -192,7 +209,7 @@ export function PublishDialog({ open, onClose, onPublished, onGetCellsData }: Pu
                 </div>
 
                 <p className="text-xs text-muted-foreground">
-                  {t("auth.publishedAs", { name: session.user.name })}
+                  {t("auth.publishedAs", { name: session.user.name ?? "" })}
                 </p>
               </div>
             )}

@@ -7,6 +7,8 @@ import { usePixiApp } from "@pindou/core/hooks/use-pixi-app"
 import { usePixiCanvas } from "@pindou/core/hooks/use-pixi-canvas"
 import { usePalette } from "@pindou/core/hooks/use-palette"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@pindou/ui/components/ui/tooltip"
+import { toast } from "@pindou/ui/components/ui/toast"
+import { useI18n } from "@pindou/core/i18n/client.tsx"
 import type { PixiCanvasApi, ToolKind } from "@pindou/core/editor"
 import type { Palette } from "@pindou/shared/types"
 
@@ -60,8 +62,21 @@ function PixiCanvasInner({
   onHoverCell,
 }: InnerProps) {
   const { resolvedTheme } = useTheme()
+  const { t } = useI18n()
   const isDark = resolvedTheme === "dark"
-  const ctx = usePixiApp(canvasRef, isDark ? EDITOR_BG_DARK : EDITOR_BG)
+  const ctx = usePixiApp(canvasRef, isDark ? EDITOR_BG_DARK : EDITOR_BG, {
+    onError: (kind) => {
+      toast.add({
+        id: kind === "context-lost" ? "webgl-context-lost" : "webgl-unavailable",
+        type: "error",
+        title: t("editor.canvasUnavailable"),
+        description:
+          kind === "context-lost"
+            ? t("editor.canvasUnavailableDescription")
+            : t("editor.webglUnavailableDescription"),
+      })
+    },
+  })
   const { zoom, setZoom, fitToCanvas, clearCanvas, undo, redo, getCellsData, getBeadStats, loadGrid } =
     usePixiCanvas(ctx, palette, { activeTool, activeColorIndex, showLabels: label, readonly, isDark, onGridChange, onHistoryChange, onColorPick, onHoverCell })
 

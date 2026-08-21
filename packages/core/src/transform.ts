@@ -45,6 +45,23 @@ export interface TransformResult {
   beadCount: number
 }
 
+/** A request to convert an image file into a bead grid (Web Worker protocol). */
+export interface TransformRequest {
+  id: number
+  file: File
+  width: number
+  mode: TransformMode
+  mergeSimilarity: number
+  removeBackground: boolean
+  excludedCodes: string[]
+  palette: Palette
+}
+
+/** Success or failure, tagged with the originating request id. */
+export type TransformResponse =
+  | { id: number; ok: true; result: TransformResult }
+  | { id: number; ok: false; error: string }
+
 /** A single RGB colour. */
 interface RgbColor {
   r: number
