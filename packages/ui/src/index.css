@@ -1,17 +1,6 @@
 @import "tailwindcss";
-@import "tw-animate.css";
+@import "tw-animate-css";
 @import "shadcn/tailwind.css";
-
-/**
- * Theme tokens for the pindou UI package.
- *
- * Consumed by apps that use @pindou/ui: import this file from the app's
- * globals.css (e.g. `@import "@pindou/ui/globals.css"`) AFTER the Tailwind
- * entry so the utility classes defined in the app (bg-background, etc.)
- * resolve these variables. The `@theme inline` mapping and Tailwind entry
- * stay in each app (they need the Tailwind compile pipeline).
- */
-
 
 @custom-variant dark (&:is(.dark *));
 
@@ -58,19 +47,6 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 }
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-  html {
-    @apply font-sans;
-  }
-}
-
 
 :root {
   color-scheme: light;
@@ -143,4 +119,14 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
-
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
