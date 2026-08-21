@@ -43,9 +43,10 @@ export const store = {
       id,
       title: input.title ?? "",
       description: input.description ?? "",
-      brandCode: input.brandCode,
+      fkBrandId: input.fkBrandId,
       gridKey: GRID_FILE,
-      thumbPath: null,
+      beadStats: input.beadStats ?? "{}",
+      thumbUrl: "",
       createdAt: now,
       updatedAt: now,
     }
@@ -66,7 +67,8 @@ export const store = {
       ...existing,
       title: input.title ?? existing.title,
       description: input.description ?? existing.description,
-      brandCode: input.brandCode ?? existing.brandCode,
+      fkBrandId: input.fkBrandId ?? existing.fkBrandId,
+      beadStats: input.beadStats ?? existing.beadStats,
       updatedAt: new Date().toISOString(),
     }
     patternQueries.update(meta)
