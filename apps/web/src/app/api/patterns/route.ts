@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server"
 import { revalidateTag } from "next/cache"
 import { db } from "@/db"
 import { patterns } from "@/db/schema"
-import { Thumbnail } from "@/lib/thumbnail"
-import { GridStorage } from "@/lib/grid-storage"
+import { Thumbnail } from "@pindou/core/server/thumbnail"
+import { GridStorage } from "@pindou/core/server/grid-storage"
 import { PatternInsertSchema, PaginationSchema } from "@/db/schema"
 import { getPatternsPage } from "@/lib/server/patterns"
 import { getPaletteByCode } from "@/lib/server/palettes"
 import { MAX_BODY_BYTES, PATTERN_WRITE_LIMIT, PATTERN_WRITE_WINDOW_MS } from "@pindou/shared/constants"
 import { auth } from "@/lib/auth/server"
-import { rateLimit } from "@/lib/rate-limit"
+import { rateLimit } from "@pindou/core/server/rate-limit"
 
 /** Thumbnail renderer + R2 uploader for this route. */
 const thumbnail = new Thumbnail()
