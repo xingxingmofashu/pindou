@@ -26,6 +26,7 @@
     "retry": "重试",
     "close": "关闭",
     "leave": "离开",
+    "loading": "加载中…",
     "pageNotFoundTitle": "页面未找到",
     "pageNotFoundDescription": "你访问的页面不存在。",
     "errorTitle": "出错了",
@@ -200,6 +201,24 @@
     "tileSingle": "一张图",
     "tileSplit": "{count} 张",
     "tileSize": "每张：{cols} × {rows} 颗拼豆 · {width} × {height} px"
+  },
+  "desktop": {
+    "appTitle": "拼豆",
+    "newPattern": "新建图案",
+    "emptyState": "还没有图案，创建第一个吧！",
+    "patternCount": "{count} 个图案",
+    "untitled": "未命名",
+    "deletePattern": "删除图案",
+    "deletePatternTitle": "删除图案？",
+    "deletePatternDescription": "该图案将从设备上永久删除。",
+    "backToList": "返回图案列表",
+    "save": "保存",
+    "saved": "图案已保存",
+    "saveFailed": "保存图案失败",
+    "title": "标题",
+    "titlePlaceholder": "我的图案",
+    "descriptionPlaceholder": "关于这个图案的备注…",
+    "unsavedWarning": "你有未保存的更改。"
   },
   "footer": {
     "tagline": "拼豆图案编辑器与社区",

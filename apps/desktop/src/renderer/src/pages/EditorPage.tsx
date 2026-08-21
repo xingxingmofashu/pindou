@@ -1,0 +1,476 @@
+import { useCallback, useEffect, useRef, useState } from "react"
+import { useShallow } from "zustand/react/shallow"
+import {
+  ArrowLeft,
+  Pencil,
+  Eraser,
+  PaintBucket,
+  Pipette,
+  Trash2,
+  CaseSensitive,
+  ImagePlus,
+  Download,
+  List,
+  Palette as PaletteIcon,
+  Save,
+  Undo2,
+  Redo2,
+} from "lucide-react"
+import { PixiCanvas, type PixiCanvasApi } from "@pindou/ui/components/pixi-canvas"
+import { BeadStatsPanel } from "@pindou/ui/components/bead-stats"
+import { ZoomControls } from "@pindou/ui/components/zoom-controls"
+import { Button } from "@pindou/ui/components/ui/button"
+import { Input } from "@pindou/ui/components/ui/input"
+import { Separator } from "@pindou/ui/components/ui/separator"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@pindou/ui/components/ui/tooltip"
+import { toast } from "@pindou/ui/components/ui/toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@pindou/ui/components/ui/alert-dialog"
+import { ImportDialog } from "@pindou/ui/components/dialogs/import-dialog"
+import { ExportDialog } from "@pindou/ui/components/dialogs/export-dialog"
+import { useShortcuts } from "@pindou/core/hooks/use-shortcuts"
+import { useEditorStore } from "@pindou/core/hooks/use-editor"
+import { useI18n } from "@pindou/core/i18n/client"
+import type { ToolKind, CellsData } from "@pindou/core/editor"
+import type { Palette } from "@pindou/shared/types"
+import { ColorPalette } from "../components/ColorPalette"
+
+const TOOLS: { value: ToolKind; icon: typeof Pencil; shortcut: string }[] = [
+  { value: "pen", icon: Pencil, shortcut: "B" },
+  { value: "eraser", icon: Eraser, shortcut: "E" },
+  { value: "fill", icon: PaintBucket, shortcut: "G" },
+  { value: "eyedropper", icon: Pipette, shortcut: "I" },
+]
+
+interface EditorPageProps {
+  /** Pattern being edited, or null for a new pattern. */
+  patternId: string | null
+  /** Full local catalog (loaded once by App). */
+  brands: Palette[]
+  /** Return to the pattern list. */
+  onBack: () => void
+}
+
+/**
+ * Desktop editor page. Composes the same shared components as the web editor
+ * (PixiCanvas, dialogs, stores), but publishes to the local SQLite store
+ * instead of the community API, and has no auth.
+ */
+export default function EditorPage({ patternId, brands, onBack }: EditorPageProps) {
+  const { t } = useI18n()
+  const canvasApiRef = useRef<PixiCanvasApi>(null)
+  const [title, setTitle] = useState("")
+  const [description, setDescription] = useState("")
+  const [saved, setSaved] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
+  const [pinnedPalette, setPinnedPalette] = useState<Palette | undefined>(undefined)
+  const [isDark, setIsDark] = useState(false)
+
+  const setApi = useEditorStore((s) => s.setApi)
+  const setZoom = useEditorStore((s) => s.setZoom)
+  const setActiveTool = useEditorStore((s) => s.setActiveTool)
+  const activeTool = useEditorStore((s) => s.activeTool)
+  const activeColorIndex = useEditorStore((s) => s.activeColorIndex)
+  const setActiveColorIndex = useEditorStore((s) => s.setActiveColorIndex)
+  const showLabels = useEditorStore((s) => s.showLabels)
+  const showColorPalette = useEditorStore((s) => s.showColorPalette)
+  const showBeadStats = useEditorStore((s) => s.showBeadStats)
+  const beadStats = useEditorStore((s) => s.beadStats)
+  const zoom = useEditorStore((s) => s.zoom)
+  const canUndo = useEditorStore((s) => s.canUndo)
+  const canRedo = useEditorStore((s) => s.canRedo)
+  const api = useEditorStore((s) => s.api)
+  const toggleLabels = useEditorStore((s) => s.toggleLabels)
+  const toggleBeadStats = useEditorStore((s) => s.toggleBeadStats)
+  const toggleColorPalette = useEditorStore((s) => s.toggleColorPalette)
+
+  // Load an existing pattern's grid + meta when editing.
+  useEffect(() => {
+    if (!patternId) return
+    let cancelled = false
+    window.pindou.patterns.get(patternId).then((record) => {
+      if (cancelled || !record) return
+      setTitle(record.title)
+      setDescription(record.description)
+      const brand = brands.find((b) => b.code === record.brandCode)
+      setPinnedPalette(brand)
+      canvasApiRef.current?.loadGrid(record.grid)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [patternId, brands])
+
+  // Registers the canvas's imperative API into the shared store so the toolbar
+  // and dialogs can drive it.
+  useEffect(() => {
+    setApi(canvasApiRef.current)
+    return () => setApi(null)
+  }, [setApi])
+
+  // Stable callbacks for the dialogs.
+  const onGetCellsData = useCallback(() => canvasApiRef.current?.getCellsData() ?? null, [])
+  const onLoadGrid = useCallback((grid: string[][]) => canvasApiRef.current?.loadGrid(grid), [])
+  const onGridChange = useCallback(() => {
+    useEditorStore.getState().setBeadStats(canvasApiRef.current?.getBeadStats() ?? null)
+    setSaved(false)
+  }, [])
+  const onHistoryChange = useCallback((u: boolean, r: boolean) => {
+    useEditorStore.getState().setHistory(u, r)
+  }, [])
+
+  useShortcuts(setActiveTool)
+
+  const handleColorPick = useCallback(
+    (index: number) => {
+      setActiveColorIndex(index)
+      setActiveTool("pen")
+    },
+    [setActiveColorIndex, setActiveTool],
+  )
+
+  // Save: serialize the canvas grid and write it to the local store.
+  const handleSave = useCallback(async () => {
+    const data = canvasApiRef.current?.getCellsData()
+    if (!data) {
+      toast.add({ id: "save-empty", type: "error", title: t("editor.canvasEmpty") })
+      return
+    }
+    try {
+      if (patternId) {
+        await window.pindou.patterns.update(patternId, {
+          title,
+          description,
+          brandCode: data.brandCode,
+          grid: data.grid,
+        })
+      } else {
+        await window.pindou.patterns.create({
+          title,
+          description,
+          brandCode: data.brandCode,
+          grid: data.grid,
+        })
+      }
+      setSaved(true)
+      toast.add({ id: "save-ok", type: "success", title: t("desktop.saved") })
+    } catch {
+      toast.add({ id: "save-fail", type: "error", title: t("desktop.saveFailed") })
+    }
+  }, [patternId, title, description, t])
+
+  const createWorker = useCallback(
+    () => new Worker(new URL("../worker/transform.worker.ts", import.meta.url), { type: "module" }),
+    [],
+  )
+
+  return (
+    <div className="flex h-full flex-col overflow-hidden">
+      <EditorToolbar
+        title={title}
+        onTitleChange={setTitle}
+        description={description}
+        onDescriptionChange={setDescription}
+        saved={saved}
+        dirty={beadStats !== null}
+        onSave={handleSave}
+        onBack={onBack}
+        onToggleLabels={toggleLabels}
+        showLabels={showLabels}
+        onToggleBeadStats={toggleBeadStats}
+        showBeadStats={showBeadStats}
+        onToggleColorPalette={toggleColorPalette}
+        showColorPalette={showColorPalette}
+        onOpenImport={() => setImportOpen(true)}
+        onOpenExport={() => setExportOpen(true)}
+        activeTool={activeTool}
+        onSetTool={setActiveTool}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={() => api?.undo()}
+        onRedo={() => api?.redo()}
+        onClear={() => api?.clearCanvas()}
+        zoom={zoom}
+        onSetZoom={(z) => api?.setZoom(z)}
+        onFit={() => api?.fitToCanvas()}
+        onToggleDark={() => setIsDark((d) => !d)}
+        isDark={isDark}
+      />
+      <div className="flex min-h-0 flex-1 gap-2 p-2">
+        {showColorPalette && (
+          <div className="w-56 shrink-0 overflow-hidden">
+            <ColorPalette
+              activeColorIndex={activeColorIndex}
+              onColorPick={setActiveColorIndex}
+              brands={brands}
+              palette={pinnedPalette}
+            />
+          </div>
+        )}
+        <PixiCanvas
+          className="min-w-0 flex-1 border"
+          activeTool={activeTool}
+          activeColorIndex={activeColorIndex}
+          label={showLabels}
+          isDark={isDark}
+          apiRef={canvasApiRef}
+          onZoomChange={setZoom}
+          onGridChange={onGridChange}
+          onHistoryChange={onHistoryChange}
+          onColorPick={handleColorPick}
+        />
+        {showBeadStats && (
+          <div className="w-56 shrink-0 overflow-hidden">
+            <BeadStatsPanel stats={beadStats} />
+          </div>
+        )}
+      </div>
+      {importOpen && (
+        <ImportDialog
+          open={importOpen}
+          onClose={() => setImportOpen(false)}
+          onApply={onLoadGrid}
+          createWorker={createWorker}
+        />
+      )}
+      {exportOpen && (
+        <ExportDialog
+          open={exportOpen}
+          onClose={() => setExportOpen(false)}
+          onGetCellsData={onGetCellsData}
+        />
+      )}
+    </div>
+  )
+}
+
+interface EditorToolbarProps {
+  title: string
+  onTitleChange: (v: string) => void
+  description: string
+  onDescriptionChange: (v: string) => void
+  saved: boolean
+  dirty: boolean
+  onSave: () => void
+  onBack: () => void
+  onToggleLabels: () => void
+  showLabels: boolean
+  onToggleBeadStats: () => void
+  showBeadStats: boolean
+  onToggleColorPalette: () => void
+  showColorPalette: boolean
+  onOpenImport: () => void
+  onOpenExport: () => void
+  activeTool: ToolKind
+  onSetTool: (tool: ToolKind) => void
+  canUndo: boolean
+  canRedo: boolean
+  onUndo: () => void
+  onRedo: () => void
+  onClear: () => void
+  zoom: number
+  onSetZoom: (z: number | ((prev: number) => number)) => void
+  onFit: () => void
+  onToggleDark: () => void
+  isDark: boolean
+}
+
+/** Top bar: navigation, title, tools, save + import/export. */
+function EditorToolbar(props: EditorToolbarProps) {
+  const { t } = useI18n()
+  const [clearOpen, setClearOpen] = useState(false)
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button variant="ghost" size="icon-sm" aria-label={t("desktop.backToList")} onClick={props.onBack}>
+              <ArrowLeft data-icon="inline-start" />
+            </Button>
+          }
+        />
+        <TooltipContent side="bottom">{t("desktop.backToList")}</TooltipContent>
+      </Tooltip>
+
+      <div className="flex min-w-0 flex-col">
+        <Input
+          value={props.title}
+          onChange={(e) => props.onTitleChange(e.target.value)}
+          placeholder={t("desktop.titlePlaceholder")}
+          className="h-7 w-48 border-0 bg-transparent px-0 text-sm font-semibold focus-visible:ring-0"
+        />
+        <span className="text-[10px] text-muted-foreground">
+          {props.saved ? t("desktop.saved") : props.dirty ? t("desktop.unsavedWarning") : " "}
+        </span>
+      </div>
+
+      <Separator orientation="vertical" className="mx-1 h-6" />
+
+      <div className="flex items-center gap-0.5">
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button variant="outline" size="icon-xs" disabled={!props.canUndo} aria-label={t("editor.undo")} onClick={props.onUndo}>
+                <Undo2 data-icon="inline-start" />
+              </Button>
+            }
+          />
+          <TooltipContent side="bottom">{t("editor.undo")} (⌘Z)</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button variant="outline" size="icon-xs" disabled={!props.canRedo} aria-label={t("editor.redo")} onClick={props.onRedo}>
+                <Redo2 data-icon="inline-start" />
+              </Button>
+            }
+          />
+          <TooltipContent side="bottom">{t("editor.redo")} (⇧⌘Z)</TooltipContent>
+        </Tooltip>
+        <Separator orientation="vertical" className="mx-1 h-5" />
+        {TOOLS.map(({ value, icon: Icon, shortcut }) => {
+          const label = t(`editor.${value}`)
+          return (
+            <Tooltip key={value}>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant={props.activeTool === value ? "secondary" : "outline"}
+                    size="icon-xs"
+                    aria-label={label}
+                    onClick={() => props.onSetTool(value)}
+                  >
+                    <Icon data-icon="inline-start" />
+                  </Button>
+                }
+              />
+              <TooltipContent side="bottom">
+                {label} ({shortcut})
+              </TooltipContent>
+            </Tooltip>
+          )
+        })}
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant={props.showLabels ? "secondary" : "outline"}
+                size="icon-xs"
+                aria-label={t("editor.showLabels")}
+                onClick={props.onToggleLabels}
+              >
+                <CaseSensitive data-icon="inline-start" />
+              </Button>
+            }
+          />
+          <TooltipContent side="bottom">{t("editor.labels")}</TooltipContent>
+        </Tooltip>
+        <Separator orientation="vertical" className="mx-1 h-5" />
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant={props.showColorPalette ? "secondary" : "outline"}
+                size="icon-xs"
+                aria-label={t("editor.showColorPaletteToggle")}
+                onClick={props.onToggleColorPalette}
+              >
+                <PaletteIcon data-icon="inline-start" />
+              </Button>
+            }
+          />
+          <TooltipContent side="bottom">{t("editor.colorPalette")}</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant={props.showBeadStats ? "secondary" : "outline"}
+                size="icon-xs"
+                aria-label={t("editor.showBeadStatsToggle")}
+                onClick={props.onToggleBeadStats}
+              >
+                <List data-icon="inline-start" />
+              </Button>
+            }
+          />
+          <TooltipContent side="bottom">{t("editor.beadStats")}</TooltipContent>
+        </Tooltip>
+        <AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <AlertDialogTrigger
+                  render={
+                    <Button variant="outline" size="icon-xs" aria-label={t("editor.clearCanvasAria")}>
+                      <Trash2 data-icon="inline-start" />
+                    </Button>
+                  }
+                />
+              }
+            />
+            <TooltipContent side="bottom">{t("editor.clearCanvas")}</TooltipContent>
+          </Tooltip>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("editor.clearCanvas")}</AlertDialogTitle>
+              <AlertDialogDescription>{t("editor.clearCanvasDescription")}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  props.onClear()
+                  setClearOpen(false)
+                }}
+              >
+                {t("editor.clear")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+
+      <div className="ml-auto flex items-center gap-2">
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button size="sm" variant="outline" onClick={props.onOpenImport}>
+                <ImagePlus data-icon="inline-start" />
+                {t("editor.import")}
+              </Button>
+            }
+          />
+          <TooltipContent side="bottom">{t("editor.importFromImage")}</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button size="sm" variant="outline" onClick={props.onOpenExport}>
+                <Download data-icon="inline-start" />
+                {t("editor.export")}
+              </Button>
+            }
+          />
+          <TooltipContent side="bottom">{t("editor.exportAsPng")}</TooltipContent>
+        </Tooltip>
+        <Button size="sm" onClick={props.onSave}>
+          <Save data-icon="inline-start" />
+          {t("desktop.save")}
+        </Button>
+        <ZoomControls zoom={props.zoom} onSetZoom={props.onSetZoom} onReset={props.onFit} />
+      </div>
+    </div>
+  )
+}
