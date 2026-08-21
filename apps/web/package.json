@@ -38,15 +38,12 @@
   "devDependencies": {
     "@next/bundle-analyzer": "^16.3.0",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
-    "husky": "^9.1.7",
     "tailwindcss": "^4",
-    "tsx": "^4.23.5",
-    "typescript": "^5"
+    "tsx": "^4.23.5"
   }
 }

@@ -8,19 +8,18 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./hooks/*": "./src/hooks/*.ts",
     "./date": "./src/date.ts",
     "./editor": "./src/editor.ts",
     "./export": "./src/export.ts",
     "./transform": "./src/transform.ts",
     "./utils": "./src/utils.ts",
-    "./i18n/*": "./src/i18n/*"
+    "./i18n/*": "./src/i18n/*",
+    "./hooks/*": "./src/hooks/*.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@pindou/ui": "workspace:*",
     "clsx": "^2.1.1",
     "culori": "^4.0.2",
     "date-fns": "^4.1.0",
@@ -28,6 +27,7 @@
     "pixi.js": "^8.8.1",
     "tailwind-merge": "^3.6.0",
     "zustand": "^5.0.3",
+    "@pindou/ui": "workspace:*",
     "@pindou/shared": "workspace:*"
   },
   "peerDependencies": {
@@ -39,7 +39,6 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "typescript": "^5.8.0"
+    "react-dom": "^19.2.4"
   }
 }
