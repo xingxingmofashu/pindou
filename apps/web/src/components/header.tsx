@@ -5,7 +5,7 @@ import { Logo } from "@pindou/ui/components/logo"
 import { AuthNav } from "@/components/auth-nav"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { GITHUB_URL } from "@pindou/shared/constants"
-import { localizedPath } from "@pindou/core/i18n/config.ts"
+import { localizedPath } from "@pindou/core/i18n/config"
 import { getDictionary, getLocale } from "@/i18n/server"
 
 export async function Header() {

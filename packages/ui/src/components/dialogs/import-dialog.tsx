@@ -22,7 +22,7 @@ import { toast } from "../ui/toast"
 import { MAX_FILE_BYTES, MAX_GRID_DIMENSION } from "@pindou/shared/constants"
 import { buildHexByCode, gridSize, mostFrequent, groupColorsBySeries } from "@pindou/core/editor"
 import { usePalette } from "@pindou/core/hooks/use-palette"
-import { useI18n } from "@pindou/core/i18n/client.tsx"
+import { useI18n } from "@pindou/core/i18n/client"
 import type { TransformMode, TransformRequest, TransformResponse, TransformResult } from "@pindou/core/transform"
 import type { Palette } from "@pindou/shared/types"
 
@@ -41,6 +41,8 @@ interface ImportDialogProps {
   onClose: () => void
   /** Called with the converted code grid (`grid[row][col]`, "" = empty) when the user applies. */
   onApply: (grid: string[][]) => void
+  /** Pinned palette (pattern editor). Falls back to the active-brand store. */
+  palette?: Palette
   /**
    * Creates the conversion Web Worker — injected by the app because the worker
    * URL is bundle-specific (`new Worker(new URL("...", import.meta.url))`).
@@ -262,8 +264,9 @@ function ExcludeColours({ palette, excluded, onToggle, onToggleGroup, onReset }:
   )
 }
 
-export function ImportDialog({ open, onClose, onApply, createWorker }: ImportDialogProps) {
-  const { palette } = usePalette()
+export function ImportDialog({ open, onClose, onApply, palette: pinnedPalette, createWorker }: ImportDialogProps) {
+  const { palette: storePalette } = usePalette()
+  const palette = pinnedPalette ?? storePalette
   const { t } = useI18n()
   const [file, setFile] = useState<File | null>(null)
   const [widthInput, setWidthInput] = useState(String(DEFAULT_WIDTH))

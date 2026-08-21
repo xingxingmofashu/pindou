@@ -22,8 +22,8 @@ import { toast } from "../ui/toast"
 import { postJson } from "@pindou/core/utils"
 import type { CellsData } from "@pindou/core/editor"
 import { GithubIcon } from "../icon/github"
-import { localizedPath } from "@pindou/core/i18n/config.ts"
-import { useI18n } from "@pindou/core/i18n/client.tsx"
+import { localizedPath } from "@pindou/core/i18n/config"
+import { useI18n } from "@pindou/core/i18n/client"
 
 /** Minimal shape of the session the dialog reads; host apps may pass richer
  *  session types (e.g. Better Auth's) and keep their full type information. */
@@ -45,8 +45,9 @@ interface PublishDialogProps<TSession extends AuthSession = AuthSession> {
   insertSchema: z.ZodType
   /** Better Auth session hook — injected by the app (e.g. `useSession`). */
   useAuth: () => { data?: TSession | null; isPending?: boolean }
-  /** GitHub OAuth popup — injected by the app (e.g. `signIn.popup`). */
-  onSignIn: () => Promise<{ error?: unknown }>
+  /** GitHub OAuth popup — injected by the app (e.g. `signIn.popup`). Receives
+   *  the callback URL, mirroring {@link GitHubButton}'s `onSignIn`. */
+  onSignIn: (callbackURL: string) => Promise<{ error?: unknown }>
 }
 
 export function PublishDialog<TSession extends AuthSession = AuthSession>({
@@ -120,7 +121,7 @@ export function PublishDialog<TSession extends AuthSession = AuthSession>({
   // away and the in-memory draft survives the sign-in. On success the reactive
   // session hook updates and this dialog swaps to the publish form.
   const handleSignInPopup = useCallback(async () => {
-    const { error } = await onSignIn()
+    const { error } = await onSignIn(localizedPath(locale, "/editor"))
     if (error) {
       toast.add({
         id: "sign-in-failed",
@@ -129,7 +130,7 @@ export function PublishDialog<TSession extends AuthSession = AuthSession>({
         description: t("auth.signInFailedDescription"),
       })
     }
-  }, [onSignIn, t])
+  }, [onSignIn, t, locale])
 
   return (
     <AlertDialog

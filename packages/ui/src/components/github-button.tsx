@@ -5,7 +5,7 @@ import { Button } from "./ui/button"
 import { Spinner } from "./ui/spinner"
 import { toast } from "./ui/toast"
 import { GithubIcon } from "./icon/github"
-import { useI18n } from "@pindou/core/i18n/client.tsx"
+import { useI18n } from "@pindou/core/i18n/client"
 
 interface GitHubButtonProps {
   label?: string

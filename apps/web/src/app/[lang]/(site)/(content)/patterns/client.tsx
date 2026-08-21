@@ -17,8 +17,8 @@ import { Card, CardHeader, CardTitle } from "@pindou/ui/components/ui/card"
 import { Input } from "@pindou/ui/components/ui/input"
 import { totalBeadCount } from "@/lib/utils"
 import { formatRelativeDate } from "@pindou/core/date"
-import { localizedPath } from "@pindou/core/i18n/config.ts"
-import { useI18n } from "@pindou/core/i18n/client.tsx"
+import { localizedPath } from "@pindou/core/i18n/config"
+import { useI18n } from "@pindou/core/i18n/client"
 
 /** 1×1 transparent GIF — placeholder `src` for a failed/empty thumbnail. */
 const TRANSPARENT_PIXEL =

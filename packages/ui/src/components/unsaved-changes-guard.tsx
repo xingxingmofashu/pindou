@@ -11,7 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "./ui/alert-dialog"
-import { useI18n } from "@pindou/core/i18n/client.tsx"
+import { useI18n } from "@pindou/core/i18n/client"
 
 interface UnsavedChangesGuardProps {
   /** Whether there is unsaved canvas content. */

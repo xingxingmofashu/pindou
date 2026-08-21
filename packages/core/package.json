@@ -13,7 +13,9 @@
     "./export": "./src/export.ts",
     "./transform": "./src/transform.ts",
     "./utils": "./src/utils.ts",
-    "./i18n/*": "./src/i18n/*",
+    "./i18n/config": "./src/i18n/config.ts",
+    "./i18n/client": "./src/i18n/client.tsx",
+    "./i18n/types": "./src/i18n/types.ts",
     "./hooks/*": "./src/hooks/*.ts"
   },
   "scripts": {
