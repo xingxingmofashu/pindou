@@ -8,32 +8,7 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./theme": "./src/components/theme.tsx",
-    "./logo": "./src/components/logo.tsx",
-    "./icon/github": "./src/components/icon/github.tsx",
-    "./alert-dialog": "./src/components/ui/alert-dialog.tsx",
-    "./button": "./src/components/ui/button.tsx",
-    "./card": "./src/components/ui/card.tsx",
-    "./checkbox": "./src/components/ui/checkbox.tsx",
-    "./collapsible": "./src/components/ui/collapsible.tsx",
-    "./dialog": "./src/components/ui/dialog.tsx",
-    "./dropdown-menu": "./src/components/ui/dropdown-menu.tsx",
-    "./input": "./src/components/ui/input.tsx",
-    "./label": "./src/components/ui/label.tsx",
-    "./navigation-menu": "./src/components/ui/navigation-menu.tsx",
-    "./pagination": "./src/components/ui/pagination.tsx",
-    "./popover": "./src/components/ui/popover.tsx",
-    "./scroll-area": "./src/components/ui/scroll-area.tsx",
-    "./select": "./src/components/ui/select.tsx",
-    "./separator": "./src/components/ui/separator.tsx",
-    "./skeleton": "./src/components/ui/skeleton.tsx",
-    "./spinner": "./src/components/ui/spinner.tsx",
-    "./switch": "./src/components/ui/switch.tsx",
-    "./textarea": "./src/components/ui/textarea.tsx",
-    "./toast": "./src/components/ui/toast.tsx",
-    "./toggle": "./src/components/ui/toggle.tsx",
-    "./toggle-group": "./src/components/ui/toggle-group.tsx",
-    "./tooltip": "./src/components/ui/tooltip.tsx"
+    "./components/*": "./src/components/*.tsx"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
