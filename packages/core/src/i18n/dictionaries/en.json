@@ -26,6 +26,7 @@
     "retry": "Retry",
     "close": "Close",
     "leave": "Leave",
+    "loading": "Loading…",
     "pageNotFoundTitle": "Page not found",
     "pageNotFoundDescription": "The page you are looking for does not exist.",
     "errorTitle": "Something went wrong",
@@ -200,6 +201,24 @@
     "tileSingle": "One image",
     "tileSplit": "{count} sheets",
     "tileSize": "Each sheet: {cols} × {rows} beads · {width} × {height} px"
+  },
+  "desktop": {
+    "appTitle": "Pindou",
+    "newPattern": "New pattern",
+    "emptyState": "No patterns yet. Create your first pattern!",
+    "patternCount": "{count} patterns",
+    "untitled": "Untitled",
+    "deletePattern": "Delete pattern",
+    "deletePatternTitle": "Delete pattern?",
+    "deletePatternDescription": "This will permanently remove the pattern from your device.",
+    "backToList": "Back to patterns",
+    "save": "Save",
+    "saved": "Pattern saved",
+    "saveFailed": "Could not save the pattern",
+    "title": "Title",
+    "titlePlaceholder": "My pattern",
+    "descriptionPlaceholder": "Notes about this pattern…",
+    "unsavedWarning": "You have unsaved changes."
   },
   "footer": {
     "tagline": "Fuse bead pattern editor & community",
