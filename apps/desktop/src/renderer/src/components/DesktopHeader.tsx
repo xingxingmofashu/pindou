@@ -4,6 +4,7 @@ import { Button } from "@pindou/ui/components/ui/button"
 import { Separator } from "@pindou/ui/components/ui/separator"
 import { Logo } from "@pindou/ui/components/logo"
 import { useI18n } from "@pindou/core/i18n/client"
+import { WindowControls } from "./WindowControls"
 
 interface DesktopHeaderProps {
   isDark: boolean
@@ -16,7 +17,9 @@ interface DesktopHeaderProps {
 }
 
 /** Top navigation bar — mirrors the web header (logo + nav + theme toggle),
- *  minus the auth area (the desktop app has no sign-in). */
+ *  minus the auth area (the desktop app has no sign-in). The bar doubles as
+ *  the frameless window's drag region, so interactive children opt out with
+ *  `no-drag` and the window controls live at the far right. */
 export function DesktopHeader({
   isDark,
   onToggleDark,
@@ -28,8 +31,11 @@ export function DesktopHeader({
   const { t } = useI18n()
 
   return (
-    <header className="flex items-center justify-between border px-3 py-2">
-      <div className="flex items-center gap-4">
+    <header
+      className="drag flex items-center justify-between border px-3 py-2"
+      onDoubleClick={() => window.pindou.window.toggleMaximize()}
+    >
+      <div className="no-drag flex items-center gap-4">
         <button type="button" className="flex items-center" aria-label={t("header.homeAria")} onClick={onHome}>
           <Logo className="h-5 w-24" />
         </button>
@@ -52,7 +58,7 @@ export function DesktopHeader({
         </nav>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="no-drag flex items-center gap-2">
         <Button
           render={
             <a href={GITHUB_URL} target="_blank" rel="noreferrer" aria-label={t("header.githubAria")} />
@@ -66,6 +72,7 @@ export function DesktopHeader({
           <Sun className={isDark ? "hidden" : undefined} />
           <Moon className={isDark ? undefined : "hidden"} />
         </Button>
+        <WindowControls />
       </div>
     </header>
   )

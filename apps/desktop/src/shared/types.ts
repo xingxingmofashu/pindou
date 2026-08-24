@@ -70,4 +70,12 @@ export interface PindouApi {
   /** Show the system save dialog and write a PNG file. Resolves the written
    *  path, or null when the user cancels. */
   savePng: (data: Uint8Array, defaultName: string) => Promise<string | null>
+  /** Frameless-window controls. */
+  window: {
+    minimize: () => void
+    toggleMaximize: () => void
+    close: () => void
+    /** Subscribe to maximize-state changes. Returns an unsubscribe fn. */
+    onMaximized: (cb: (maximized: boolean) => void) => () => void
+  }
 }

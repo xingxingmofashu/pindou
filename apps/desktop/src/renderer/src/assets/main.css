@@ -16,3 +16,13 @@ body {
   overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
 }
+
+/* Frameless-window drag region: `drag` marks the title bar as draggable,
+   `no-drag` opts interactive children back out. */
+.drag {
+  -webkit-app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+}
