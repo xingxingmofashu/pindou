@@ -216,8 +216,10 @@
     "save": "保存",
     "saved": "图案已保存",
     "saveFailed": "保存图案失败",
+    "saveDescription": "为你的图案填写标题和描述。",
     "title": "标题",
     "titlePlaceholder": "我的图案",
+    "description": "描述",
     "descriptionPlaceholder": "关于这个图案的备注…",
     "unsavedWarning": "你有未保存的更改。",
     "nav": {

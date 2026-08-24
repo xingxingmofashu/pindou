@@ -216,8 +216,10 @@
     "save": "Save",
     "saved": "Pattern saved",
     "saveFailed": "Could not save the pattern",
+    "saveDescription": "Give your pattern a title and description.",
     "title": "Title",
     "titlePlaceholder": "My pattern",
+    "description": "Description",
     "descriptionPlaceholder": "Notes about this pattern…",
     "unsavedWarning": "You have unsaved changes.",
     "nav": {
