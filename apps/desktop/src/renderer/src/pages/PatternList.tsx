@@ -6,6 +6,7 @@ import { formatRelativeDate } from "@pindou/core/date"
 import { Button } from "@pindou/ui/components/ui/button"
 import { Card, CardContent } from "@pindou/ui/components/ui/card"
 import { Input } from "@pindou/ui/components/ui/input"
+import { PatternThumb } from "../components/PatternThumb"
 import type { Palette } from "@pindou/shared/types"
 import type { PatternMeta } from "../../../shared/types"
 
@@ -54,14 +55,14 @@ export default function PatternList({ brands, onOpen, onNew }: PatternListProps)
               role="search"
               onSubmit={(e) => {
                 e.preventDefault()
-                const input = new FormData(e.currentTarget).get("q")
-                setQuery(typeof input === "string" ? input : "")
+                setQuery(query.trim())
               }}
             >
               <div className="relative">
                 <Input
                   name="q"
-                  defaultValue={query}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
                   placeholder={t("patterns.searchPlaceholder")}
                   aria-label={t("patterns.searchAria")}
                   className="h-8 w-40 pr-8 sm:w-48"
@@ -93,16 +94,7 @@ export default function PatternList({ brands, onOpen, onNew }: PatternListProps)
                 {query ? t("patterns.noResults") : t("desktop.emptyState")}
               </p>
               {query ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setQuery("")
-                    // Reset the controlled search input.
-                    const input = document.querySelector<HTMLInputElement>('input[name="q"]')
-                    if (input) input.value = ""
-                  }}
-                >
+                <Button variant="outline" size="sm" onClick={() => setQuery("")}>
                   {t("patterns.clearSearch")}
                 </Button>
               ) : (
@@ -155,47 +147,6 @@ export default function PatternList({ brands, onOpen, onNew }: PatternListProps)
           )}
         </div>
       </div>
-    </div>
-  )
-}
-
-/** Card preview: the pattern's rendered thumbnail, or a brand colour-strip
- *  fallback while loading / when the thumbnail is missing. */
-function PatternThumb({
-  patternId,
-  colors,
-}: {
-  patternId: string
-  colors: { code: string; hex: string }[]
-}) {
-  const [src, setSrc] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    window.pindou.patterns.thumbnail(patternId).then((url) => {
-      if (!cancelled) setSrc(url)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [patternId])
-
-  if (src) {
-    return (
-      <img
-        src={src}
-        alt=""
-        className="block aspect-square w-full bg-muted object-cover [image-rendering:pixelated]"
-        onError={() => setSrc(null)}
-      />
-    )
-  }
-
-  return (
-    <div className="flex h-24 items-stretch overflow-hidden">
-      {colors.slice(0, 8).map((c) => (
-        <div key={c.code} className="flex-1" style={{ backgroundColor: c.hex }} />
-      ))}
     </div>
   )
 }

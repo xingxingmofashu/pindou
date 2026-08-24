@@ -8,9 +8,6 @@ export const IPC = {
     remove: "patterns:remove",
     thumbnail: "patterns:thumbnail",
   },
-  dialog: {
-    save: "dialog:save",
-  },
   file: {
     savePng: "file:savePng",
   },

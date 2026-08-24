@@ -29,6 +29,29 @@ function paletteOf(fkBrandId: string): Palette {
 const grids = new GridStorage()
 const thumbs = new ThumbnailStorage()
 
+/** Render + store a thumbnail for a grid. Best-effort: returns "" on any
+ *  failure so a render problem never loses the pattern. */
+async function thumbnailFor(
+  id: string,
+  grid: string[][],
+  brandId: string,
+): Promise<string> {
+  try {
+    const png = await thumbs.generate(grid, paletteOf(brandId))
+    return png ? await thumbs.upload(png, id) : ""
+  } catch {
+    return ""
+  }
+}
+
+/** Garbage-collect a pattern's superseded files (old grid + thumbnail). */
+function gcFiles(gridKey: string, thumbUrl: string): Promise<void> {
+  return Promise.allSettled([
+    gridKey ? grids.delete(gridKey) : Promise.resolve(),
+    thumbUrl ? thumbs.delete(thumbUrl) : Promise.resolve(),
+  ]).then(() => undefined)
+}
+
 export const store = {
   list(): PatternMeta[] {
     return db.select().from(patterns).orderBy(desc(patterns.updatedAt)).all()
@@ -64,14 +87,7 @@ export const store = {
     }
     // Write the grid first; only insert the DB row if the file landed.
     row.gridKey = await grids.upload(row.id, input.grid)
-    // The thumbnail is best-effort (mirrors the web publish flow): a render
-    // failure must not lose the pattern, but a thrown upload should.
-    try {
-      const png = await thumbs.generate(input.grid, await paletteOf(input.fkBrandId))
-      if (png) row.thumbUrl = await thumbs.upload(png, row.id)
-    } catch {
-      // keep thumbUrl ""
-    }
+    row.thumbUrl = await thumbnailFor(row.id, input.grid, input.fkBrandId)
     db.insert(patterns).values(row).run()
     return row
   },
@@ -81,45 +97,28 @@ export const store = {
     if (!existing) throw new Error(`pattern ${id} not found`)
 
     // Upload the new grid to a fresh key before touching the DB, then
-    // garbage-collect the superseded objects after a successful update.
-    let newGridKey = existing.gridKey
-    let newThumbUrl = existing.thumbUrl
-    if (input.grid) {
-      newGridKey = await grids.upload(id, input.grid)
-      try {
-        const png = await thumbs.generate(input.grid, await paletteOf(existing.fkBrandId))
-        if (png) newThumbUrl = await thumbs.upload(png, id)
-      } catch {
-        newThumbUrl = ""
-      }
-    }
+    // garbage-collect the superseded files after a successful update.
     const row: PatternMeta = {
       ...existing,
       title: input.title ?? existing.title,
       description: input.description ?? existing.description,
       fkBrandId: input.fkBrandId ?? existing.fkBrandId,
       beadStats: input.beadStats ?? existing.beadStats,
-      gridKey: newGridKey,
-      thumbUrl: newThumbUrl,
       updatedAt: new Date().toISOString(),
     }
-    db.update(patterns).set(row).where(eq(patterns.id, id)).run()
     if (input.grid) {
-      await Promise.allSettled([
-        existing.gridKey ? grids.delete(existing.gridKey) : Promise.resolve(),
-        existing.thumbUrl ? thumbs.delete(existing.thumbUrl) : Promise.resolve(),
-      ])
+      row.gridKey = await grids.upload(id, input.grid)
+      row.thumbUrl = await thumbnailFor(id, input.grid, row.fkBrandId)
     }
+    db.update(patterns).set(row).where(eq(patterns.id, id)).run()
+    if (input.grid) void gcFiles(existing.gridKey, existing.thumbUrl)
     return row
   },
 
   async remove(id: string): Promise<void> {
     const row = db.select().from(patterns).where(eq(patterns.id, id)).get()
     db.delete(patterns).where(eq(patterns.id, id)).run()
-    await Promise.allSettled([
-      row?.gridKey ? grids.delete(row.gridKey) : Promise.resolve(),
-      row?.thumbUrl ? thumbs.delete(row.thumbUrl) : Promise.resolve(),
-    ])
+    if (row) await gcFiles(row.gridKey, row.thumbUrl)
     // Remove the now-empty pattern directories.
     await Promise.allSettled([grids.removePatternDir(id), thumbs.removePatternDir(id)])
   },
