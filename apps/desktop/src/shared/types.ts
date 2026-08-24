@@ -67,7 +67,6 @@ export interface PindouApi {
     /** Read a pattern's thumbnail as a data URL, or null when missing. */
     thumbnail: (id: string) => Promise<string | null>
   }
-  saveDialog: (options: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) => Promise<string | null>
   /** Show the system save dialog and write a PNG file. Resolves the written
    *  path, or null when the user cancels. */
   savePng: (data: Uint8Array, defaultName: string) => Promise<string | null>
