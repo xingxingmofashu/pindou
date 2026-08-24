@@ -1,8 +1,5 @@
 @import "tailwindcss";
-/* Load the Geist fonts the shared UI theme expects (web serves them via
-   next/font; the desktop app loads the same families from fontsource). */
-@import "@fontsource-variable/geist";
-@import "@fontsource-variable/geist-mono";
+
 /* Scan @pindou/ui source so utility classes used in shared components
    (bg-primary, text-foreground, ...) are generated. */
 @source "../../../../../../packages/ui/src";
@@ -10,12 +7,6 @@
    mapping, :root/.dark variables) lives in the @pindou/ui package. */
 @import "@pindou/ui/index.css";
 
-/* Bind the theme's font variables (ui's `@theme inline` maps font-sans and
-   font-mono to these outer variables, which next/font defines on the web). */
-:root {
-  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-geist-mono: "Geist Mono Variable", ui-monospace, monospace;
-}
 
 html,
 body,
