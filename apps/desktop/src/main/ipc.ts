@@ -1,4 +1,6 @@
 import { BrowserWindow, dialog, ipcMain } from "electron"
+import { writeFile } from "node:fs/promises"
+import { basename } from "node:path"
 import { IPC } from "../shared/ipc"
 import { store } from "./store"
 import type { CreatePatternInput, UpdatePatternInput } from "../shared/types"
@@ -17,8 +19,25 @@ export function registerIpc(): void {
     IPC.dialog.save,
     async (e, options: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) => {
       const win = BrowserWindow.fromWebContents(e.sender)
-      const result = await dialog.showSaveDialog(win!, options)
+      if (!win) return null
+      const result = await dialog.showSaveDialog(win, options)
       return result.canceled ? null : result.filePath
     },
   )
+
+  // Desktop export: system save dialog + write the PNG bytes. `data` arrives
+  // as a structured-cloned Uint8Array (a plain object with index keys after
+  // the IPC round-trip), so normalize it before writing.
+  ipcMain.handle(IPC.file.savePng, async (e, data: Uint8Array | ArrayBuffer, defaultName: string) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    if (!win) return null
+    const result = await dialog.showSaveDialog(win, {
+      defaultPath: defaultName,
+      filters: [{ name: "PNG", extensions: ["png"] }],
+    })
+    if (result.canceled || !result.filePath) return null
+    const bytes = data instanceof Uint8Array ? data : new Uint8Array(data as ArrayBuffer)
+    await writeFile(result.filePath, bytes)
+    return basename(result.filePath)
+  })
 }

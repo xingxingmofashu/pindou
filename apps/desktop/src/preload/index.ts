@@ -11,6 +11,7 @@ const api: PindouApi = {
     remove: (id: string) => ipcRenderer.invoke(IPC.patterns.remove, id),
   },
   saveDialog: (options) => ipcRenderer.invoke(IPC.dialog.save, options),
+  savePng: (data, defaultName) => ipcRenderer.invoke(IPC.file.savePng, data, defaultName),
 }
 
 contextBridge.exposeInMainWorld("pindou", api)
