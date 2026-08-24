@@ -8,6 +8,21 @@ import { registerIpc } from "./ipc"
 // VMs, remote desktops, and some older Macs.
 app.commandLine.appendSwitch("enable-unsafe-swiftshader")
 
+// Single instance: the SQLite store is a local file, so a second window would
+// race writes against the first. Focus the existing window instead.
+const gotLock = app.requestSingleInstanceLock()
+if (!gotLock) {
+  app.quit()
+} else {
+  app.on("second-instance", () => {
+    const win = BrowserWindow.getAllWindows()[0]
+    if (win) {
+      if (win.isMinimized()) win.restore()
+      win.focus()
+    }
+  })
+}
+
 function createWindow(): void {
   const win = new BrowserWindow({
     width: 1280,

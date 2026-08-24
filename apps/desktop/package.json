@@ -10,6 +10,8 @@
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
     "dist": "electron-vite build && electron-builder"
   },
   "dependencies": {
@@ -17,6 +19,7 @@
     "@pindou/shared": "workspace:*",
     "@pindou/ui": "workspace:*",
     "better-sqlite3": "^12.4.1",
+    "drizzle-orm": "^0.45.2",
     "lucide-react": "^1.27.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
@@ -30,6 +33,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "drizzle-kit": "^0.31.10",
     "electron": "^37.2.0",
     "electron-builder": "^26.0.12",
     "electron-vite": "^4.0.0",
@@ -46,6 +50,12 @@
     "files": [
       "out/**",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "drizzle",
+        "to": "drizzle"
+      }
     ],
     "mac": {
       "target": "dmg",

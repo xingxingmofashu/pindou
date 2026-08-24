@@ -29,13 +29,20 @@ interface ExportDialogProps {
   onGetCellsData: () => CellsData | null
   /** Pinned palette (pattern editor). Falls back to the active-brand store. */
   palette?: Palette
+  /**
+   * Optional blob saver for hosts that persist files themselves (e.g. the
+   * desktop app's system save dialog). When provided, the single-image export
+   * calls `pngBlob` and hands the result here instead of triggering a browser
+   * download. Tile (zip) exports always use the default download path.
+   */
+  onSaveBlob?: (blob: Blob, defaultName: string) => void | Promise<void>
 }
 
 /**
  * Export dialog: pick pixels-per-bead, preview the output size, then download
  * the pattern as a PNG chart (grid + coordinates in the header bands).
  */
-export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPalette }: ExportDialogProps) {
+export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPalette, onSaveBlob }: ExportDialogProps) {
   const { t } = useI18n()
   const exporter = useMemo(() => new Export(), [])
   const [scaleInput, setScaleInput] = useState(String(DEFAULT_EXPORT_SCALE))
@@ -90,20 +97,32 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
       })
       return
     }
-    const ok = await exporter.png(
-      data.grid,
-      palette,
-      scale,
-      {
-        showLabels: labelsOn,
-        showBeadStats: beadStatsOn,
-        showMajorGrid: majorGridOn,
-        majorGridStep: majorStep,
-        beadStatsTitle: t("editor.beadStatsTitle"),
-        tileCount,
-        watermarkText: EXPORT_WATERMARK_TEXT,
-      },
-    )
+    const opts = {
+      showLabels: labelsOn,
+      showBeadStats: beadStatsOn,
+      showMajorGrid: majorGridOn,
+      majorGridStep: majorStep,
+      beadStatsTitle: t("editor.beadStatsTitle"),
+      tileCount,
+      watermarkText: EXPORT_WATERMARK_TEXT,
+    }
+    // Hosts with a blob saver (desktop save dialog) take the blob path for
+    // single images; tile exports still use the built-in download.
+    if (onSaveBlob && tileCount === 1) {
+      const blob = await exporter.pngBlob(data.grid, palette, scale, opts)
+      if (!blob) {
+        toast.add({
+          type: "error",
+          title: t("editor.exportFailedTitle"),
+          description: t("editor.exportFailedDescription"),
+        })
+        return
+      }
+      await onSaveBlob(blob, `pattern-${cols}x${rows}@${scale}x.png`)
+      onClose()
+      return
+    }
+    const ok = await exporter.png(data.grid, palette, scale, opts)
     if (!ok) {
       toast.add({
         type: "error",
@@ -113,7 +132,7 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
       return
     }
     onClose()
-  }, [data, palette, scale, labelsOn, beadStatsOn, majorGridOn, majorStep, tileCount, exporter, onClose, t])
+  }, [data, palette, scale, labelsOn, beadStatsOn, majorGridOn, majorStep, tileCount, exporter, onSaveBlob, cols, rows, onClose, t])
 
   return (
     <Dialog

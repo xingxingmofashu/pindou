@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { useShallow } from "zustand/react/shallow"
 import {
   Pencil,
   Eraser,
@@ -73,6 +72,7 @@ export default function EditorPage({ patternId, brands, isDark }: EditorPageProp
   const [importOpen, setImportOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [activePalette, setActivePalette] = useState<Palette>(() => brands[0])
+  const [loadedGrid, setLoadedGrid] = useState<string[][] | undefined>(undefined)
 
   const setApi = useEditorStore((s) => s.setApi)
   const setZoom = useEditorStore((s) => s.setZoom)
@@ -92,7 +92,9 @@ export default function EditorPage({ patternId, brands, isDark }: EditorPageProp
   const toggleBeadStats = useEditorStore((s) => s.toggleBeadStats)
   const toggleColorPalette = useEditorStore((s) => s.toggleColorPalette)
 
-  // Load an existing pattern's grid + meta when editing.
+  // Load an existing pattern's grid + meta when editing. The grid is handed to
+  // PixiCanvas as a prop so its pinned-grid effect loads it once the canvas
+  // initializes (calling api.loadGrid here races the canvas mount).
   useEffect(() => {
     if (!patternId) return
     let cancelled = false
@@ -102,7 +104,7 @@ export default function EditorPage({ patternId, brands, isDark }: EditorPageProp
       setDescription(record.description)
       const brand = brands.find((b) => b.id === record.fkBrandId)
       if (brand) setActivePalette(brand)
-      canvasApiRef.current?.loadGrid(record.grid)
+      setLoadedGrid(record.grid)
     })
     return () => {
       cancelled = true
@@ -251,6 +253,7 @@ export default function EditorPage({ patternId, brands, isDark }: EditorPageProp
           label={showLabels}
           isDark={isDark}
           palette={activePalette}
+          grid={loadedGrid}
           apiRef={canvasApiRef}
           onZoomChange={setZoom}
           onGridChange={onGridChange}
@@ -259,7 +262,7 @@ export default function EditorPage({ patternId, brands, isDark }: EditorPageProp
         />
         {showBeadStats && (
           <div className="w-56 shrink-0 overflow-hidden">
-            <BeadStatsPanel stats={beadStats} />
+            <BeadStatsPanel stats={beadStats} palette={activePalette} />
           </div>
         )}
       </div>
@@ -276,6 +279,10 @@ export default function EditorPage({ patternId, brands, isDark }: EditorPageProp
           open={exportOpen}
           onClose={() => setExportOpen(false)}
           onGetCellsData={onGetCellsData}
+          palette={activePalette}
+          onSaveBlob={async (blob, defaultName) => {
+            await window.pindou.savePng(new Uint8Array(await blob.arrayBuffer()), defaultName)
+          }}
         />
       )}
     </div>

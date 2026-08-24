@@ -10,6 +10,9 @@ export const IPC = {
   dialog: {
     save: "dialog:save",
   },
+  file: {
+    savePng: "file:savePng",
+  },
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC][keyof (typeof IPC)[keyof typeof IPC]]

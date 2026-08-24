@@ -659,8 +659,44 @@ export class Export {
     const tileCount = opts.tileCount ?? 1
     if (tileCount > 1) return this.renderTiles(grid, palette, scale, opts, tileCount)
 
+    const blob = await this.pngBlob(grid, palette, scale, opts)
+    if (!blob) return false
     const layout = this.fullLayout(grid, scale)
-    if (!layout) return false
+    const cols = layout?.cols ?? gridSize(grid)!.cols
+    const rows = layout?.rows ?? gridSize(grid)!.rows
+    const s = layout?.s ?? scale
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `pattern-${cols}x${rows}@${s}x.png`
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    return true
+  }
+
+  /**
+   * Render a serialized bead grid to a single PNG chart and return it as a
+   * {@link Blob} — for hosts that save the file themselves (e.g. the desktop
+   * app's save dialog) instead of triggering a browser download.
+   *
+   * @param grid    - The serialized code grid (`grid[row][col]`, "" = empty).
+   * @param palette - Palette used to resolve code → colour hex.
+   * @param scale   - Pixels per bead (integer; clamped to fit the canvas limit).
+   * @param opts    - Optional export options (only the single-image path).
+   * @returns The PNG blob, or `null` when the grid is empty or the browser
+   *          failed to encode the canvas (e.g. it is too large).
+   */
+  async pngBlob(
+    grid: string[][],
+    palette: Palette,
+    scale = DEFAULT_EXPORT_SCALE,
+    opts: ExportGridOptions = {},
+  ): Promise<Blob | null> {
+    const size = gridSize(grid)
+    if (!size) return null
+
+    const layout = this.fullLayout(grid, scale)
+    if (!layout) return null
     // Single-image export: the usage list covers the whole grid, so the canvas
     // must fit the grid area plus the usage section below it.
     const stats = Export.statsForWindow(
@@ -676,7 +712,7 @@ export class Export {
     canvas.width = layout.width
     canvas.height = layout.height + (stats?.detail?.height ?? 0)
     const ctx = canvas.getContext("2d")
-    if (!ctx) return false
+    if (!ctx) return null
     this.renderWindow(ctx, grid, palette, opts, layout, {
       colStart: 0,
       colEnd: layout.cols,
@@ -684,17 +720,9 @@ export class Export {
       rowEnd: layout.rows,
       showStats: true,
     }, stats, layout.s)
-    const blob = await new Promise<Blob | null>((resolve) => {
+    return new Promise<Blob | null>((resolve) => {
       canvas.toBlob(resolve, "image/png")
     })
-    if (!blob) return false
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `pattern-${layout.cols}x${layout.rows}@${layout.s}x.png`
-    a.click()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-    return true
   }
 
   /**

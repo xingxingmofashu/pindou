@@ -2,7 +2,9 @@ import { app } from "electron"
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { randomUUID } from "node:crypto"
-import { patternQueries } from "./db"
+import { eq } from "drizzle-orm"
+import { getDb } from "../db"
+import { patterns } from "../db/schema"
 import type {
   CreatePatternInput,
   PatternMeta,
@@ -20,20 +22,38 @@ function patternDir(id: string): string {
 }
 
 const GRID_FILE = "grid.json"
-const THUMB_FILE = "thumb.png"
+
+/** Map a Drizzle row (snake_case columns) to the camelCase {@link PatternMeta}. */
+function rowToMeta(row: typeof patterns.$inferSelect): PatternMeta {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    fkBrandId: row.fkBrandId,
+    gridKey: row.gridKey,
+    beadStats: row.beadStats,
+    thumbUrl: row.thumbUrl,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }
+}
 
 export const store = {
   async list(): Promise<PatternMeta[]> {
-    return patternQueries.list()
+    const rows = await getDb()
+      .select()
+      .from(patterns)
+      .orderBy(patterns.updatedAt, "desc")
+    return rows.map(rowToMeta)
   },
 
   async get(id: string): Promise<PatternRecord | null> {
-    const meta = patternQueries.get(id)
-    if (!meta) return null
+    const row = await getDb().select().from(patterns).where(eq(patterns.id, id)).get()
+    if (!row) return null
     const grid = JSON.parse(
       await readFile(join(patternDir(id), GRID_FILE), "utf8"),
     ) as string[][]
-    return { ...meta, grid }
+    return { ...rowToMeta(row), grid }
   },
 
   async create(input: CreatePatternInput): Promise<PatternMeta> {
@@ -53,30 +73,33 @@ export const store = {
     const dir = patternDir(id)
     await mkdir(dir, { recursive: true })
     await writeFile(join(dir, GRID_FILE), JSON.stringify(input.grid), "utf8")
-    patternQueries.insert(meta)
+    await getDb().insert(patterns).values(meta)
     return meta
   },
 
   async update(id: string, input: UpdatePatternInput): Promise<PatternMeta> {
-    const existing = patternQueries.get(id)
+    const existing = await getDb().select().from(patterns).where(eq(patterns.id, id)).get()
     if (!existing) throw new Error(`pattern ${id} not found`)
     if (input.grid) {
       await writeFile(join(patternDir(id), GRID_FILE), JSON.stringify(input.grid), "utf8")
     }
     const meta: PatternMeta = {
-      ...existing,
+      ...rowToMeta(existing),
       title: input.title ?? existing.title,
       description: input.description ?? existing.description,
       fkBrandId: input.fkBrandId ?? existing.fkBrandId,
       beadStats: input.beadStats ?? existing.beadStats,
       updatedAt: new Date().toISOString(),
     }
-    patternQueries.update(meta)
+    await getDb()
+      .update(patterns)
+      .set(meta)
+      .where(eq(patterns.id, id))
     return meta
   },
 
   async remove(id: string): Promise<void> {
-    patternQueries.remove(id)
+    await getDb().delete(patterns).where(eq(patterns.id, id))
     await rm(patternDir(id), { recursive: true, force: true })
   },
 }

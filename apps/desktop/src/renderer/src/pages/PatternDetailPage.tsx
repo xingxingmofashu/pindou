@@ -169,6 +169,9 @@ export default function PatternDetailPage({ patternId, brands, isDark, onEdit, o
             onClose={() => setExportOpen(false)}
             onGetCellsData={onGetCellsData}
             palette={palette}
+            onSaveBlob={async (blob, defaultName) => {
+              await window.pindou.savePng(new Uint8Array(await blob.arrayBuffer()), defaultName)
+            }}
           />
         )}
       </div>
