@@ -468,7 +468,7 @@ export function ImportDialog({ open, onClose, onApply, palette: pinnedPalette, c
           className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed px-4 py-8 text-center outline-none hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <Upload data-icon="inline-start" className="text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground truncate max-w-full">
             {file ? file.name : t("editor.dropHint")}
           </p>
           <input
