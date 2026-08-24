@@ -272,6 +272,7 @@ export default function EditorPage({ patternId, brands, isDark }: EditorPageProp
           onClose={() => setImportOpen(false)}
           onApply={onLoadGrid}
           createWorker={createWorker}
+          palette={activePalette}
         />
       )}
       {exportOpen && (
