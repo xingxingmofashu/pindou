@@ -64,6 +64,8 @@ export interface PindouApi {
     create: (input: CreatePatternInput) => Promise<PatternMeta>
     update: (id: string, input: UpdatePatternInput) => Promise<PatternMeta>
     remove: (id: string) => Promise<void>
+    /** Read a pattern's thumbnail as a data URL, or null when missing. */
+    thumbnail: (id: string) => Promise<string | null>
   }
   saveDialog: (options: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) => Promise<string | null>
   /** Show the system save dialog and write a PNG file. Resolves the written

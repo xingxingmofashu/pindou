@@ -23,6 +23,7 @@
     "lucide-react": "^1.27.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "sharp": "^0.34.5",
     "zustand": "^5.0.14"
   },
   "devDependencies": {

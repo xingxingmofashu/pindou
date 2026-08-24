@@ -1,10 +1,11 @@
-import { app } from "electron"
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
-import { join } from "node:path"
-import { randomUUID } from "node:crypto"
 import { eq, desc } from "drizzle-orm"
-import { db } from "../db"
-import { patterns } from "../db/schema"
+import { randomUUID } from "node:crypto"
+import { db } from "./db"
+import { patterns } from "./db/schema"
+import { GridStorage } from "./storage/grid-storage"
+import { ThumbnailStorage } from "./storage/thumbnail-storage"
+import { PALETTES } from "@pindou/shared/palettes"
+import type { Palette } from "@pindou/shared/types"
 import type {
   CreatePatternInput,
   PatternMeta,
@@ -12,32 +13,22 @@ import type {
   UpdatePatternInput,
 } from "../shared/types"
 
-/** Root dir holding each pattern's grid + thumbnail files. */
-function patternsDir(): string {
-  return join(app.getPath("userData"), "patterns")
-}
-
-function patternDir(id: string): string {
-  return join(patternsDir(), id)
-}
-
-const GRID_FILE = "grid.json"
-
-/** Persist a pattern's grid JSON to disk under its id directory. */
-async function writeGrid(id: string, grid: string[][]): Promise<void> {
-  await mkdir(patternDir(id), { recursive: true })
-  await writeFile(join(patternDir(id), GRID_FILE), JSON.stringify(grid), "utf8")
-}
-
-/** Read a pattern's grid JSON back from disk. */
-async function readGrid(id: string): Promise<string[][]> {
-  return JSON.parse(await readFile(join(patternDir(id), GRID_FILE), "utf8")) as string[][]
+/** Resolve the bundled brand palette for a fk_brand_id (uuid). */
+function paletteOf(fkBrandId: string): Palette {
+  const brand = PALETTES.find((b) => b.id === fkBrandId)
+  if (!brand) throw new Error(`unknown brand ${fkBrandId}`)
+  return brand
 }
 
 /**
- * Pattern store: metadata lives in SQLite (via Drizzle), the grid JSON on the
- * filesystem. better-sqlite3 queries are synchronous, so no `await` on them.
+ * Pattern store: metadata lives in SQLite (via Drizzle), grid JSON + thumbnail
+ * PNG on disk via {@link GridStorage}/{@link ThumbnailStorage} — the same
+ * split as the web app (DB row + R2 objects). better-sqlite3 queries are
+ * synchronous, so no `await` on them.
  */
+const grids = new GridStorage()
+const thumbs = new ThumbnailStorage()
+
 export const store = {
   list(): PatternMeta[] {
     return db.select().from(patterns).orderBy(desc(patterns.updatedAt)).all()
@@ -46,7 +37,16 @@ export const store = {
   async get(id: string): Promise<PatternRecord | null> {
     const row = db.select().from(patterns).where(eq(patterns.id, id)).get()
     if (!row) return null
-    return { ...row, grid: await readGrid(id) }
+    const grid = await grids.get(row.gridKey)
+    if (!grid) return null
+    return { ...row, grid }
+  },
+
+  /** Read a pattern's thumbnail as a data URL, or null when missing. */
+  async thumbnail(id: string): Promise<string | null> {
+    const row = db.select().from(patterns).where(eq(patterns.id, id)).get()
+    if (!row?.thumbUrl) return null
+    return thumbs.readDataUrl(row.thumbUrl)
   },
 
   async create(input: CreatePatternInput): Promise<PatternMeta> {
@@ -56,13 +56,22 @@ export const store = {
       title: input.title ?? "",
       description: input.description ?? "",
       fkBrandId: input.fkBrandId,
-      gridKey: GRID_FILE,
+      gridKey: "",
       beadStats: input.beadStats ?? "{}",
       thumbUrl: "",
       createdAt: now,
       updatedAt: now,
     }
-    await writeGrid(row.id, input.grid)
+    // Write the grid first; only insert the DB row if the file landed.
+    row.gridKey = await grids.upload(row.id, input.grid)
+    // The thumbnail is best-effort (mirrors the web publish flow): a render
+    // failure must not lose the pattern, but a thrown upload should.
+    try {
+      const png = await thumbs.generate(input.grid, await paletteOf(input.fkBrandId))
+      if (png) row.thumbUrl = await thumbs.upload(png, row.id)
+    } catch {
+      // keep thumbUrl ""
+    }
     db.insert(patterns).values(row).run()
     return row
   },
@@ -70,21 +79,48 @@ export const store = {
   async update(id: string, input: UpdatePatternInput): Promise<PatternMeta> {
     const existing = db.select().from(patterns).where(eq(patterns.id, id)).get()
     if (!existing) throw new Error(`pattern ${id} not found`)
-    if (input.grid) await writeGrid(id, input.grid)
+
+    // Upload the new grid to a fresh key before touching the DB, then
+    // garbage-collect the superseded objects after a successful update.
+    let newGridKey = existing.gridKey
+    let newThumbUrl = existing.thumbUrl
+    if (input.grid) {
+      newGridKey = await grids.upload(id, input.grid)
+      try {
+        const png = await thumbs.generate(input.grid, await paletteOf(existing.fkBrandId))
+        if (png) newThumbUrl = await thumbs.upload(png, id)
+      } catch {
+        newThumbUrl = ""
+      }
+    }
     const row: PatternMeta = {
       ...existing,
       title: input.title ?? existing.title,
       description: input.description ?? existing.description,
       fkBrandId: input.fkBrandId ?? existing.fkBrandId,
       beadStats: input.beadStats ?? existing.beadStats,
+      gridKey: newGridKey,
+      thumbUrl: newThumbUrl,
       updatedAt: new Date().toISOString(),
     }
     db.update(patterns).set(row).where(eq(patterns.id, id)).run()
+    if (input.grid) {
+      await Promise.allSettled([
+        existing.gridKey ? grids.delete(existing.gridKey) : Promise.resolve(),
+        existing.thumbUrl ? thumbs.delete(existing.thumbUrl) : Promise.resolve(),
+      ])
+    }
     return row
   },
 
   async remove(id: string): Promise<void> {
+    const row = db.select().from(patterns).where(eq(patterns.id, id)).get()
     db.delete(patterns).where(eq(patterns.id, id)).run()
-    await rm(patternDir(id), { recursive: true, force: true })
+    await Promise.allSettled([
+      row?.gridKey ? grids.delete(row.gridKey) : Promise.resolve(),
+      row?.thumbUrl ? thumbs.delete(row.thumbUrl) : Promise.resolve(),
+    ])
+    // Remove the now-empty pattern directories.
+    await Promise.allSettled([grids.removePatternDir(id), thumbs.removePatternDir(id)])
   },
 }

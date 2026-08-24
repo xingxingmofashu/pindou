@@ -24,10 +24,12 @@ function copyMigrations(): Plugin {
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin(), copyMigrations()],
+    // Bundle @pindou/shared so its JSON import (palettes.json) is resolved by
+    // Vite — the raw ESM source needs an import attribute Node won't add.
+    plugins: [externalizeDepsPlugin({ exclude: ["@pindou/shared"] }), copyMigrations()],
   },
   preload: {
-    plugins: [externalizeDepsPlugin()],
+    plugins: [externalizeDepsPlugin({ exclude: ["@pindou/shared"] })],
   },
   renderer: {
     plugins: [react(), tailwindcss()],
