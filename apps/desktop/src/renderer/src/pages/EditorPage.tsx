@@ -18,7 +18,6 @@ import { PixiCanvas, type PixiCanvasApi } from "@pindou/ui/components/pixi-canva
 import { BeadStatsPanel } from "@pindou/ui/components/bead-stats"
 import { ZoomControls } from "@pindou/ui/components/zoom-controls"
 import { Button } from "@pindou/ui/components/ui/button"
-import { Input } from "@pindou/ui/components/ui/input"
 import { Separator } from "@pindou/ui/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@pindou/ui/components/ui/tooltip"
 import { toast } from "@pindou/ui/components/ui/toast"
@@ -41,6 +40,7 @@ import { useI18n } from "@pindou/core/i18n/client"
 import type { ToolKind, CellsData } from "@pindou/core/editor"
 import type { Palette } from "@pindou/shared/types"
 import { ColorPalette } from "../components/ColorPalette"
+import { SaveDialog } from "../components/SaveDialog"
 
 const TOOLS: { value: ToolKind; icon: typeof Pencil; shortcut: string }[] = [
   { value: "pen", icon: Pencil, shortcut: "B" },
@@ -69,6 +69,7 @@ export default function EditorPage({ patternId, brands, isDark }: EditorPageProp
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [saved, setSaved] = useState(false)
+  const [saveOpen, setSaveOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [activePalette, setActivePalette] = useState<Palette>(() => brands[0])
@@ -140,37 +141,53 @@ export default function EditorPage({ patternId, brands, isDark }: EditorPageProp
     [setActiveColorIndex, setActiveTool],
   )
 
-  // Save: serialize the canvas grid and write it to the local store.
-  const handleSave = useCallback(async () => {
-    const data = canvasApiRef.current?.getCellsData()
-    if (!data) {
+  // Save: open the dialog to collect title + description, then persist.
+  const handleSave = useCallback(() => {
+    if (!canvasApiRef.current?.getCellsData()) {
       toast.add({ id: "save-empty", type: "error", title: t("editor.canvasEmpty") })
       return
     }
-    try {
-      if (patternId) {
-        await window.pindou.patterns.update(patternId, {
-          title,
-          description,
-          fkBrandId: activePalette.id,
-          beadStats: data.beadStats,
-          grid: data.grid,
-        })
-      } else {
-        await window.pindou.patterns.create({
-          title,
-          description,
-          fkBrandId: activePalette.id,
-          beadStats: data.beadStats,
-          grid: data.grid,
-        })
+    setSaveOpen(true)
+  }, [t])
+
+  // Persist the canvas grid with the dialog's title/description.
+  const handleSaveConfirm = useCallback(
+    async (dialogTitle: string, dialogDescription: string) => {
+      const data = canvasApiRef.current?.getCellsData()
+      if (!data) {
+        toast.add({ id: "save-empty", type: "error", title: t("editor.canvasEmpty") })
+        setSaveOpen(false)
+        return
       }
-      setSaved(true)
-      toast.add({ id: "save-ok", type: "success", title: t("desktop.saved") })
-    } catch {
-      toast.add({ id: "save-fail", type: "error", title: t("desktop.saveFailed") })
-    }
-  }, [patternId, title, description, activePalette, t])
+      try {
+        if (patternId) {
+          await window.pindou.patterns.update(patternId, {
+            title: dialogTitle,
+            description: dialogDescription,
+            fkBrandId: activePalette.id,
+            beadStats: data.beadStats,
+            grid: data.grid,
+          })
+        } else {
+          await window.pindou.patterns.create({
+            title: dialogTitle,
+            description: dialogDescription,
+            fkBrandId: activePalette.id,
+            beadStats: data.beadStats,
+            grid: data.grid,
+          })
+        }
+        setTitle(dialogTitle)
+        setDescription(dialogDescription)
+        setSaved(true)
+        setSaveOpen(false)
+        toast.add({ id: "save-ok", type: "success", title: t("desktop.saved") })
+      } catch {
+        toast.add({ id: "save-fail", type: "error", title: t("desktop.saveFailed") })
+      }
+    },
+    [patternId, activePalette, t],
+  )
 
   // Brand switch: swap the canvas palette and reset to the first colour.
   // usePixiCanvas clears the canvas on brand change.
@@ -215,21 +232,12 @@ export default function EditorPage({ patternId, brands, isDark }: EditorPageProp
         onSetZoom={(z) => api?.setZoom(z)}
         onFit={() => api?.fitToCanvas()}
       />
-      <div className="flex items-center gap-2 border px-3 py-1.5">
-        <Input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder={t("desktop.titlePlaceholder")}
-          aria-label={t("desktop.title")}
-          className="h-7 w-48"
-        />
-        <Input
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder={t("desktop.descriptionPlaceholder")}
-          aria-label={t("desktop.descriptionPlaceholder")}
-          className="h-7 min-w-0 flex-1"
-        />
+      {/* Status bar: pattern title + save state (title/description are
+          collected in the save dialog, like the web publish flow). */}
+      <div className="flex items-center justify-between gap-2 border px-3 py-1.5">
+        <span className="truncate text-xs font-medium">
+          {title || t("desktop.untitled")}
+        </span>
         <span className="shrink-0 text-[10px] text-muted-foreground">
           {saved ? t("desktop.saved") : beadStats !== null ? t("desktop.unsavedWarning") : " "}
         </span>
@@ -266,6 +274,15 @@ export default function EditorPage({ patternId, brands, isDark }: EditorPageProp
           </div>
         )}
       </div>
+      {saveOpen && (
+        <SaveDialog
+          open={saveOpen}
+          onClose={() => setSaveOpen(false)}
+          initialTitle={title}
+          initialDescription={description}
+          onSave={handleSaveConfirm}
+        />
+      )}
       {importOpen && (
         <ImportDialog
           open={importOpen}
