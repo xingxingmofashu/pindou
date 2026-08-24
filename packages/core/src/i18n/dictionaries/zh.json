@@ -212,13 +212,43 @@
     "deletePatternTitle": "删除图案？",
     "deletePatternDescription": "该图案将从设备上永久删除。",
     "backToList": "返回图案列表",
+    "backToHome": "首页",
     "save": "保存",
     "saved": "图案已保存",
     "saveFailed": "保存图案失败",
     "title": "标题",
     "titlePlaceholder": "我的图案",
     "descriptionPlaceholder": "关于这个图案的备注…",
-    "unsavedWarning": "你有未保存的更改。"
+    "unsavedWarning": "你有未保存的更改。",
+    "nav": {
+      "home": "首页",
+      "patterns": "图案",
+      "editor": "编辑器"
+    },
+    "home": {
+      "features": {
+        "import": {
+          "title": "导入任意图片",
+          "description": "上传照片并自动转换为拼豆网格，无需手动描图。"
+        },
+        "palette": {
+          "title": "真实拼豆色板",
+          "description": "MARD、PERLER、ARTKAL 与 HAMA — 560+ 种与实物匹配的颜色。"
+        },
+        "export": {
+          "title": "可打印图纸",
+          "description": "导出带网格线和颜色代码的高分辨率 PNG。"
+        },
+        "local": {
+          "title": "本地保存",
+          "description": "所有数据都保存在你的设备上 — 无需账号，无需云端。"
+        }
+      }
+    },
+    "detail": {
+      "edit": "编辑",
+      "export": "导出"
+    }
   },
   "footer": {
     "tagline": "拼豆图案编辑器与社区",
