@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useShallow } from "zustand/react/shallow"
 import {
-  ArrowLeft,
   Pencil,
   Eraser,
   PaintBucket,
@@ -56,8 +55,8 @@ interface EditorPageProps {
   patternId: string | null
   /** Full local catalog (loaded once by App). */
   brands: Palette[]
-  /** Return to the pattern list. */
-  onBack: () => void
+  /** Dark-mode flag for the canvas (theme is owned by the App shell). */
+  isDark: boolean
 }
 
 /**
@@ -65,7 +64,7 @@ interface EditorPageProps {
  * (PixiCanvas, dialogs, stores), but publishes to the local SQLite store
  * instead of the community API, and has no auth.
  */
-export default function EditorPage({ patternId, brands, onBack }: EditorPageProps) {
+export default function EditorPage({ patternId, brands, isDark }: EditorPageProps) {
   const { t } = useI18n()
   const canvasApiRef = useRef<PixiCanvasApi>(null)
   const [title, setTitle] = useState("")
@@ -74,7 +73,6 @@ export default function EditorPage({ patternId, brands, onBack }: EditorPageProp
   const [importOpen, setImportOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [activePalette, setActivePalette] = useState<Palette>(() => brands[0])
-  const [isDark, setIsDark] = useState(false)
 
   const setApi = useEditorStore((s) => s.setApi)
   const setZoom = useEditorStore((s) => s.setZoom)
@@ -191,16 +189,11 @@ export default function EditorPage({ patternId, brands, onBack }: EditorPageProp
   )
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex h-full flex-col gap-2 overflow-hidden">
       <EditorToolbar
-        title={title}
-        onTitleChange={setTitle}
-        description={description}
-        onDescriptionChange={setDescription}
         saved={saved}
         dirty={beadStats !== null}
         onSave={handleSave}
-        onBack={onBack}
         onToggleLabels={toggleLabels}
         showLabels={showLabels}
         onToggleBeadStats={toggleBeadStats}
@@ -219,10 +212,27 @@ export default function EditorPage({ patternId, brands, onBack }: EditorPageProp
         zoom={zoom}
         onSetZoom={(z) => api?.setZoom(z)}
         onFit={() => api?.fitToCanvas()}
-        onToggleDark={() => setIsDark((d) => !d)}
-        isDark={isDark}
       />
-      <div className="flex min-h-0 flex-1 gap-2 p-2">
+      <div className="flex items-center gap-2 border px-3 py-1.5">
+        <Input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder={t("desktop.titlePlaceholder")}
+          aria-label={t("desktop.title")}
+          className="h-7 w-48"
+        />
+        <Input
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder={t("desktop.descriptionPlaceholder")}
+          aria-label={t("desktop.descriptionPlaceholder")}
+          className="h-7 min-w-0 flex-1"
+        />
+        <span className="shrink-0 text-[10px] text-muted-foreground">
+          {saved ? t("desktop.saved") : beadStats !== null ? t("desktop.unsavedWarning") : " "}
+        </span>
+      </div>
+      <div className="flex min-h-0 flex-1 gap-2">
         {showColorPalette && (
           <div className="w-56 shrink-0 overflow-hidden">
             <ColorPalette
@@ -235,7 +245,7 @@ export default function EditorPage({ patternId, brands, onBack }: EditorPageProp
           </div>
         )}
         <PixiCanvas
-          className="min-w-0 flex-1 border"
+          className="min-h-0 min-w-0 flex-1 border p-2"
           activeTool={activeTool}
           activeColorIndex={activeColorIndex}
           label={showLabels}
@@ -273,14 +283,9 @@ export default function EditorPage({ patternId, brands, onBack }: EditorPageProp
 }
 
 interface EditorToolbarProps {
-  title: string
-  onTitleChange: (v: string) => void
-  description: string
-  onDescriptionChange: (v: string) => void
   saved: boolean
   dirty: boolean
   onSave: () => void
-  onBack: () => void
   onToggleLabels: () => void
   showLabels: boolean
   onToggleBeadStats: () => void
@@ -299,168 +304,143 @@ interface EditorToolbarProps {
   zoom: number
   onSetZoom: (z: number | ((prev: number) => number)) => void
   onFit: () => void
-  onToggleDark: () => void
-  isDark: boolean
 }
 
-/** Top bar: navigation, title, tools, save + import/export. */
+/** Top bar: drawing tools, save button, and zoom controls — mirrors the web
+ *  editor's toolbar, with "Save" in place of the web's "Publish". */
 function EditorToolbar(props: EditorToolbarProps) {
   const { t } = useI18n()
   const [clearOpen, setClearOpen] = useState(false)
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button variant="ghost" size="icon-sm" aria-label={t("desktop.backToList")} onClick={props.onBack}>
-              <ArrowLeft data-icon="inline-start" />
-            </Button>
-          }
-        />
-        <TooltipContent side="bottom">{t("desktop.backToList")}</TooltipContent>
-      </Tooltip>
-
-      <div className="flex min-w-0 flex-col">
-        <Input
-          value={props.title}
-          onChange={(e) => props.onTitleChange(e.target.value)}
-          placeholder={t("desktop.titlePlaceholder")}
-          className="h-7 w-48 border-0 bg-transparent px-0 text-sm font-semibold focus-visible:ring-0"
-        />
-        <span className="text-[10px] text-muted-foreground">
-          {props.saved ? t("desktop.saved") : props.dirty ? t("desktop.unsavedWarning") : " "}
-        </span>
-      </div>
-
-      <Separator orientation="vertical" className="mx-1 h-6" />
-
-      <div className="flex items-center gap-0.5">
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button variant="outline" size="icon-xs" disabled={!props.canUndo} aria-label={t("editor.undo")} onClick={props.onUndo}>
-                <Undo2 data-icon="inline-start" />
-              </Button>
-            }
-          />
-          <TooltipContent side="bottom">{t("editor.undo")} (⌘Z)</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button variant="outline" size="icon-xs" disabled={!props.canRedo} aria-label={t("editor.redo")} onClick={props.onRedo}>
-                <Redo2 data-icon="inline-start" />
-              </Button>
-            }
-          />
-          <TooltipContent side="bottom">{t("editor.redo")} (⇧⌘Z)</TooltipContent>
-        </Tooltip>
-        <Separator orientation="vertical" className="mx-1 h-5" />
-        {TOOLS.map(({ value, icon: Icon, shortcut }) => {
-          const label = t(`editor.${value}`)
-          return (
-            <Tooltip key={value}>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant={props.activeTool === value ? "secondary" : "outline"}
-                    size="icon-xs"
-                    aria-label={label}
-                    onClick={() => props.onSetTool(value)}
-                  >
-                    <Icon data-icon="inline-start" />
-                  </Button>
-                }
-              />
-              <TooltipContent side="bottom">
-                {label} ({shortcut})
-              </TooltipContent>
-            </Tooltip>
-          )
-        })}
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant={props.showLabels ? "secondary" : "outline"}
-                size="icon-xs"
-                aria-label={t("editor.showLabels")}
-                onClick={props.onToggleLabels}
-              >
-                <CaseSensitive data-icon="inline-start" />
-              </Button>
-            }
-          />
-          <TooltipContent side="bottom">{t("editor.labels")}</TooltipContent>
-        </Tooltip>
-        <Separator orientation="vertical" className="mx-1 h-5" />
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant={props.showColorPalette ? "secondary" : "outline"}
-                size="icon-xs"
-                aria-label={t("editor.showColorPaletteToggle")}
-                onClick={props.onToggleColorPalette}
-              >
-                <PaletteIcon data-icon="inline-start" />
-              </Button>
-            }
-          />
-          <TooltipContent side="bottom">{t("editor.colorPalette")}</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant={props.showBeadStats ? "secondary" : "outline"}
-                size="icon-xs"
-                aria-label={t("editor.showBeadStatsToggle")}
-                onClick={props.onToggleBeadStats}
-              >
-                <List data-icon="inline-start" />
-              </Button>
-            }
-          />
-          <TooltipContent side="bottom">{t("editor.beadStats")}</TooltipContent>
-        </Tooltip>
-        <AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
+    <div className="flex items-center justify-between border px-3 py-2">
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-0.5">
           <Tooltip>
             <TooltipTrigger
               render={
-                <AlertDialogTrigger
+                <Button variant="outline" size="icon-xs" disabled={!props.canUndo} aria-label={t("editor.undo")} onClick={props.onUndo}>
+                  <Undo2 data-icon="inline-start" />
+                </Button>
+              }
+            />
+            <TooltipContent side="bottom">{t("editor.undo")} (⌘Z)</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button variant="outline" size="icon-xs" disabled={!props.canRedo} aria-label={t("editor.redo")} onClick={props.onRedo}>
+                  <Redo2 data-icon="inline-start" />
+                </Button>
+              }
+            />
+            <TooltipContent side="bottom">{t("editor.redo")} (⇧⌘Z)</TooltipContent>
+          </Tooltip>
+          {TOOLS.map(({ value, icon: Icon, shortcut }) => {
+            const label = t(`editor.${value}`)
+            return (
+              <Tooltip key={value}>
+                <TooltipTrigger
                   render={
-                    <Button variant="outline" size="icon-xs" aria-label={t("editor.clearCanvasAria")}>
-                      <Trash2 data-icon="inline-start" />
+                    <Button
+                      variant={props.activeTool === value ? "secondary" : "outline"}
+                      size="icon-xs"
+                      aria-label={label}
+                      onClick={() => props.onSetTool(value)}
+                    >
+                      <Icon data-icon="inline-start" />
                     </Button>
                   }
                 />
+                <TooltipContent side="bottom">
+                  {label} ({shortcut})
+                </TooltipContent>
+              </Tooltip>
+            )
+          })}
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant={props.showLabels ? "secondary" : "outline"}
+                  size="icon-xs"
+                  aria-label={t("editor.showLabels")}
+                  onClick={props.onToggleLabels}
+                >
+                  <CaseSensitive data-icon="inline-start" />
+                </Button>
               }
             />
-            <TooltipContent side="bottom">{t("editor.clearCanvas")}</TooltipContent>
+            <TooltipContent side="bottom">{t("editor.labels")}</TooltipContent>
           </Tooltip>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{t("editor.clearCanvas")}</AlertDialogTitle>
-              <AlertDialogDescription>{t("editor.clearCanvasDescription")}</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  props.onClear()
-                  setClearOpen(false)
-                }}
-              >
-                {t("editor.clear")}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+          <Separator orientation="vertical" className="mx-1 h-5" />
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant={props.showColorPalette ? "secondary" : "outline"}
+                  size="icon-xs"
+                  aria-label={t("editor.showColorPaletteToggle")}
+                  onClick={props.onToggleColorPalette}
+                >
+                  <PaletteIcon data-icon="inline-start" />
+                </Button>
+              }
+            />
+            <TooltipContent side="bottom">{t("editor.colorPalette")}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant={props.showBeadStats ? "secondary" : "outline"}
+                  size="icon-xs"
+                  aria-label={t("editor.showBeadStatsToggle")}
+                  onClick={props.onToggleBeadStats}
+                >
+                  <List data-icon="inline-start" />
+                </Button>
+              }
+            />
+            <TooltipContent side="bottom">{t("editor.beadStats")}</TooltipContent>
+          </Tooltip>
+          <Separator orientation="vertical" className="mx-1 h-5" />
+          <AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <AlertDialogTrigger
+                    render={
+                      <Button variant="outline" size="icon-xs" aria-label={t("editor.clearCanvasAria")}>
+                        <Trash2 data-icon="inline-start" />
+                      </Button>
+                    }
+                  />
+                }
+              />
+              <TooltipContent side="bottom">{t("editor.clearCanvas")}</TooltipContent>
+            </Tooltip>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t("editor.clearCanvas")}</AlertDialogTitle>
+                <AlertDialogDescription>{t("editor.clearCanvasDescription")}</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    props.onClear()
+                    setClearOpen(false)
+                  }}
+                >
+                  {t("editor.clear")}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
-
-      <div className="ml-auto flex items-center gap-2">
+      <div className="flex items-center gap-2">
         <Tooltip>
           <TooltipTrigger
             render={

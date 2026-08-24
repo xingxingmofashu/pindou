@@ -212,13 +212,43 @@
     "deletePatternTitle": "Delete pattern?",
     "deletePatternDescription": "This will permanently remove the pattern from your device.",
     "backToList": "Back to patterns",
+    "backToHome": "Home",
     "save": "Save",
     "saved": "Pattern saved",
     "saveFailed": "Could not save the pattern",
     "title": "Title",
     "titlePlaceholder": "My pattern",
     "descriptionPlaceholder": "Notes about this pattern…",
-    "unsavedWarning": "You have unsaved changes."
+    "unsavedWarning": "You have unsaved changes.",
+    "nav": {
+      "home": "Home",
+      "patterns": "Patterns",
+      "editor": "Editor"
+    },
+    "home": {
+      "features": {
+        "import": {
+          "title": "Import any image",
+          "description": "Upload a photo and auto-convert it into a bead grid — no hand tracing."
+        },
+        "palette": {
+          "title": "Real bead palettes",
+          "description": "MARD, PERLER, ARTKAL & HAMA — 560+ colours matched to the beads you own."
+        },
+        "export": {
+          "title": "Printable chart",
+          "description": "Export a high-resolution PNG with grid lines and colour codes."
+        },
+        "local": {
+          "title": "Saved locally",
+          "description": "Everything stays on your device in SQLite — no account, no cloud."
+        }
+      }
+    },
+    "detail": {
+      "edit": "Edit",
+      "export": "Export"
+    }
   },
   "footer": {
     "tagline": "Fuse bead pattern editor & community",
