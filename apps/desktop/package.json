@@ -9,7 +9,7 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "start": "electron-vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "dist": "electron-vite build && electron-builder"
