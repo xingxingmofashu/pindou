@@ -31,12 +31,15 @@ export function DesktopHeader({
   const { t } = useI18n()
 
   return (
-    <header
-      className="drag flex items-center justify-between border px-3 py-2"
-      onDoubleClick={() => window.pindou.window.toggleMaximize()}
-    >
+    <header className="drag flex items-center border px-3 py-2">
       <div className="no-drag flex items-center gap-4">
-        <button type="button" className="flex items-center" aria-label={t("header.homeAria")} onClick={onHome}>
+        <button
+          type="button"
+          className="flex items-center"
+          aria-label={t("header.homeAria")}
+          onClick={onHome}
+          onDoubleClick={() => window.pindou.window.toggleMaximize()}
+        >
           <Logo className="h-5 w-24" />
         </button>
         <Separator orientation="vertical" className="mx-1 h-8" />
@@ -57,6 +60,9 @@ export function DesktopHeader({
           </Button>
         </nav>
       </div>
+
+      {/* Spacer that fills the bar and gives the window a large drag area. */}
+      <div className="min-h-8 flex-1" />
 
       <div className="no-drag flex items-center gap-2">
         <Button
