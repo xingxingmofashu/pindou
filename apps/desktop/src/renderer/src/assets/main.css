@@ -26,3 +26,12 @@ body {
 .no-drag {
   -webkit-app-region: no-drag;
 }
+
+/* Desktop-only: the shared import dialog's sm:max-w-sm is tight once the
+   image preview renders, so the content overflows and the dialog gains a
+   horizontal scrollbar. Widen just that dialog (it is the only one with a
+   file input) and clip any remaining horizontal overflow. */
+[data-slot="dialog-content"]:has(input[type="file"]) {
+  max-width: 32rem;
+  overflow-x: hidden;
+}
