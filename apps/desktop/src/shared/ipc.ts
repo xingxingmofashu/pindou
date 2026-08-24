@@ -6,6 +6,7 @@ export const IPC = {
     create: "patterns:create",
     update: "patterns:update",
     remove: "patterns:remove",
+    thumbnail: "patterns:thumbnail",
   },
   dialog: {
     save: "dialog:save",

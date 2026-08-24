@@ -1,7 +1,7 @@
 import { app, BrowserWindow, shell } from "electron"
 import { join } from "node:path"
 import { registerIpc } from "./ipc"
-import { initDb } from "../db"
+import { initDb } from "./db"
 
 // WebGL needs a GPU or SwiftShader fallback. Chromium now blocks the software
 // rasterizer by default, so without this switch PixiJS's canvas init throws

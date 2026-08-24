@@ -14,6 +14,7 @@ export function registerIpc(): void {
     store.update(id, input),
   )
   ipcMain.handle(IPC.patterns.remove, (_e, id: string) => store.remove(id))
+  ipcMain.handle(IPC.patterns.thumbnail, (_e, id: string) => store.thumbnail(id))
 
   ipcMain.handle(
     IPC.dialog.save,
