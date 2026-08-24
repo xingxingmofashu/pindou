@@ -2,6 +2,7 @@ import { app, BrowserWindow, shell } from "electron"
 import { join } from "node:path"
 import { registerIpc } from "./ipc"
 import { initDb } from "./db"
+import { IPC } from "../shared/ipc"
 
 // WebGL needs a GPU or SwiftShader fallback. Chromium now blocks the software
 // rasterizer by default, so without this switch PixiJS's canvas init throws
@@ -32,6 +33,8 @@ function createWindow(): void {
     minHeight: 620,
     title: "Pindou",
     backgroundColor: "#fafafa",
+    // Frameless: the header provides the drag region and window controls.
+    frame: false,
     webPreferences: {
       preload: join(__dirname, "../preload/index.mjs"),
       sandbox: false,
@@ -45,6 +48,12 @@ function createWindow(): void {
     shell.openExternal(url)
     return { action: "deny" }
   })
+
+  // Keep the renderer's maximize button in sync with the window state.
+  const sendMaximized = () =>
+    win.webContents.send(IPC.window.maximized, win.isMaximized())
+  win.on("maximize", sendMaximized)
+  win.on("unmaximize", sendMaximized)
 
   // electron-vite: dev server URL in dev, built file in prod.
   if (process.env["ELECTRON_RENDERER_URL"]) {

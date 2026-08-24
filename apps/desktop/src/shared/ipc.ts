@@ -8,6 +8,13 @@ export const IPC = {
     remove: "patterns:remove",
     thumbnail: "patterns:thumbnail",
   },
+  window: {
+    minimize: "window:minimize",
+    toggleMaximize: "window:toggleMaximize",
+    close: "window:close",
+    /** main → renderer: the window's maximized state changed. */
+    maximized: "window:maximized",
+  },
   file: {
     savePng: "file:savePng",
   },

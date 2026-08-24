@@ -12,6 +12,16 @@ const api: PindouApi = {
     thumbnail: (id: string) => ipcRenderer.invoke(IPC.patterns.thumbnail, id),
   },
   savePng: (data, defaultName) => ipcRenderer.invoke(IPC.file.savePng, data, defaultName),
+  window: {
+    minimize: () => ipcRenderer.send(IPC.window.minimize),
+    toggleMaximize: () => ipcRenderer.send(IPC.window.toggleMaximize),
+    close: () => ipcRenderer.send(IPC.window.close),
+    onMaximized: (cb) => {
+      const listener = (_e: Electron.IpcRendererEvent, maximized: boolean) => cb(maximized)
+      ipcRenderer.on(IPC.window.maximized, listener)
+      return () => ipcRenderer.removeListener(IPC.window.maximized, listener)
+    },
+  },
 }
 
 contextBridge.exposeInMainWorld("pindou", api)

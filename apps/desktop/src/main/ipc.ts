@@ -20,4 +20,13 @@ export function registerIpc(): void {
     if (!win) return null
     return savePngFile(win, data, defaultName)
   })
+
+  // Frameless-window controls, driven from the custom title bar.
+  ipcMain.on(IPC.window.minimize, (e) => BrowserWindow.fromWebContents(e.sender)?.minimize())
+  ipcMain.on(IPC.window.toggleMaximize, (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    if (!win) return
+    win.isMaximized() ? win.unmaximize() : win.maximize()
+  })
+  ipcMain.on(IPC.window.close, (e) => BrowserWindow.fromWebContents(e.sender)?.close())
 }
