@@ -27,8 +27,8 @@ if (!gotLock) {
 
 function createWindow(): void {
   const win = new BrowserWindow({
-    width: 1280,
-    height: 840,
+    width: 1080,
+    height: 720,
     minWidth: 940,
     minHeight: 620,
     title: "Pindou",
