@@ -6,7 +6,7 @@ import { DesktopHeader } from "./components/DesktopHeader"
 import { DesktopFooter } from "./components/DesktopFooter"
 import { ThemeContext } from "./theme"
 import HomePage from "./pages/HomePage"
-import PatternsContentClient from "./pages/PatternsPage"
+import PatternsPage from "./pages/PatternsPage"
 import PatternDetailPage from "./pages/PatternDetailPage"
 import EditorPage from "./pages/EditorPage"
 
@@ -48,7 +48,7 @@ export default function App() {
                   {/* Content routes: header + footer. */}
                   <Route element={<ContentLayout />}>
                     <Route index element={<HomePage />} />
-                    <Route path="/patterns" element={<PatternsContentClient />} />
+                    <Route path="/patterns" element={<PatternsPage />} />
                     <Route path="/patterns/:id" element={<PatternDetailPage />} />
                   </Route>
 
