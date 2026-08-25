@@ -17,7 +17,12 @@ const KEY_PREFIX = "thumbnails"
 
 /** Root directory holding every pattern's thumbnail files (under userData). */
 function storageRoot(): string {
-  return join(app.getPath("userData"), KEY_PREFIX)
+  return app.getPath("userData")
+}
+
+/** Absolute path for a relative storage key (`thumbnails/{id}/{uuid}.png`). */
+function resolveKey(key: string): string {
+  return join(storageRoot(), key)
 }
 
 /**
@@ -108,7 +113,7 @@ export class ThumbnailStorage {
   async upload(png: Buffer, patternId: string): Promise<string> {
     const name = `${randomUUID()}.png`
     const key = `${KEY_PREFIX}/${patternId}/${name}`
-    const abs = join(storageRoot(), patternId, name)
+    const abs = resolveKey(key)
     await mkdir(dirname(abs), { recursive: true })
     await writeFile(abs, png)
     return key
@@ -122,7 +127,7 @@ export class ThumbnailStorage {
   async readDataUrl(key: string): Promise<string | null> {
     if (!key) return null
     try {
-      const buf = await readFile(join(storageRoot(), key))
+      const buf = await readFile(resolveKey(key))
       return `data:image/png;base64,${buf.toString("base64")}`
     } catch {
       return null
@@ -137,7 +142,7 @@ export class ThumbnailStorage {
    */
   async delete(key: string): Promise<void> {
     if (!key) return
-    await rm(join(storageRoot(), key), { force: true })
+    await rm(resolveKey(key), { force: true })
   }
 
   /**
@@ -147,6 +152,6 @@ export class ThumbnailStorage {
    * @param id - The pattern's uuid.
    */
   async removePatternDir(id: string): Promise<void> {
-    await rm(join(storageRoot(), id), { recursive: true, force: true })
+    await rm(resolveKey(`${KEY_PREFIX}/${id}`), { recursive: true, force: true })
   }
 }
