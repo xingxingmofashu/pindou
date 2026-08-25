@@ -10,7 +10,8 @@
     "github": "GitHub",
     "githubAria": "在 GitHub 查看源码",
     "signIn": "登录",
-    "toggleTheme": "切换主题"
+    "toggleTheme": "切换主题",
+    "language": "切换语言"
   },
   "auth": {
     "signOut": "退出登录",

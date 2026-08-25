@@ -1,10 +1,12 @@
 import { useState } from "react"
 import { HashRouter, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom"
 import { I18nProvider, dictionaries } from "@pindou/core"
+import type { Locale } from "@pindou/core/i18n/config"
 import { Toaster } from "@pindou/ui/components/ui/toast"
-import { DesktopHeader } from "./components/DesktopHeader"
-import { DesktopFooter } from "./components/DesktopFooter"
+import { Header } from "./components/Header"
+import { Footer } from "./components/Footer"
 import { ThemeContext } from "./theme"
+import { LocaleContext } from "./locale"
 import HomePage from "./pages/HomePage"
 import PatternsPage from "./pages/PatternsPage"
 import PatternDetailPage from "./pages/PatternDetailPage"
@@ -20,11 +22,17 @@ import EditorPage from "./pages/EditorPage"
  */
 export default function App() {
   const [isDark, setIsDark] = useState(false)
+  const [locale, setLocale] = useState<Locale>("en")
   const theme = { isDark, toggleDark: () => setIsDark((d) => !d) }
+  const localeValue = {
+    locale,
+    toggleLocale: () => setLocale((l) => (l === "en" ? "zh" : "en")),
+  }
 
   return (
-    <I18nProvider locale="en" messages={dictionaries.en}>
-      <ThemeContext.Provider value={theme}>
+    <I18nProvider locale={locale} messages={dictionaries[locale]}>
+      <LocaleContext.Provider value={localeValue}>
+        <ThemeContext.Provider value={theme}>
         <HashRouter>
           <div className={`flex h-full flex-col overflow-hidden bg-background text-foreground ${isDark ? "dark" : ""}`}>
             <div className="h-full p-2">
@@ -34,7 +42,7 @@ export default function App() {
                   <Route
                     element={
                       <>
-                        <DesktopHeader />
+                        <Header />
                         <div className="flex min-h-0 flex-1 flex-col">
                           <Outlet />
                         </div>
@@ -59,7 +67,8 @@ export default function App() {
             <Toaster />
           </div>
         </HashRouter>
-      </ThemeContext.Provider>
+        </ThemeContext.Provider>
+        </LocaleContext.Provider>
     </I18nProvider>
   )
 }
@@ -70,11 +79,11 @@ function ContentLayout() {
 
   return (
     <>
-      <DesktopHeader activeSection={pathname.startsWith("/patterns") ? "list" : "home"} />
+      <Header activeSection={pathname.startsWith("/patterns") ? "list" : "home"} />
       <div className="flex min-h-0 flex-1 flex-col">
         <Outlet />
       </div>
-      <DesktopFooter />
+      <Footer />
     </>
   )
 }
