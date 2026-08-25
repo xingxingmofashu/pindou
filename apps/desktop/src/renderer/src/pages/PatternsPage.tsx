@@ -7,13 +7,16 @@ import { formatRelativeDate } from "@pindou/core/date"
 import { Button } from "@pindou/ui/components/ui/button"
 import { Card, CardHeader, CardTitle } from "@pindou/ui/components/ui/card"
 import { Input } from "@pindou/ui/components/ui/input"
-import { PatternThumb } from "../components/PatternThumb"
 import type { PatternMeta } from "../../../shared/types"
+
+/** 1×1 transparent GIF — placeholder `src` for a failed/empty thumbnail. */
+const TRANSPARENT_PIXEL =
+  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
 
 /** Local pattern gallery — the desktop analogue of the web catalog page
  *  (apps/web/src/app/[lang]/(site)/(content)/patterns/client.tsx): same card
  *  layout, search box, and empty states, backed by the SQLite store. */
-export default function PatternsContentClient() {
+export default function PatternsPage() {
   const { locale, t } = useI18n()
   const navigate = useNavigate()
   const [patterns, setPatterns] = useState<PatternMeta[]>([])
@@ -131,13 +134,24 @@ function PatternCard({
   const navigate = useNavigate()
   const totalBeads = totalBeadCount(parseBeadStats(pattern.beadStats))
   const relativeDate = formatRelativeDate(pattern.updatedAt, locale)
+  const [thumbSrc, setThumbSrc] = useState<string | null>(null)
+  const [thumbFailed, setThumbFailed] = useState(false)
+
+  useEffect(() => {
+    window.pindou.patterns.thumbnail(pattern.id).then(setThumbSrc)
+  }, [pattern.id])
 
   return (
     <Card
       className="group cursor-pointer overflow-hidden transition-shadow hover:shadow-md"
       onClick={() => navigate(`/patterns/${pattern.id}`)}
     >
-      <PatternThumb patternId={pattern.id} />
+      <img
+        src={thumbSrc && !thumbFailed ? thumbSrc : TRANSPARENT_PIXEL}
+        alt=""
+        className="block aspect-square w-full bg-muted object-cover [image-rendering:pixelated]"
+        onError={() => setThumbFailed(true)}
+      />
       <CardHeader>
         <CardTitle className="truncate">{pattern.title || t("desktop.untitled")}</CardTitle>
         <p className="truncate text-xs text-muted-foreground">
