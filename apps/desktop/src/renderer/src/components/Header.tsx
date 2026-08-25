@@ -5,7 +5,7 @@ import { Button } from "@pindou/ui/components/ui/button"
 import { Separator } from "@pindou/ui/components/ui/separator"
 import { Logo } from "@pindou/ui/components/logo"
 import { useI18n } from "@pindou/core/i18n/client"
-import { useTheme } from "../theme"
+import { useTheme } from "@pindou/core"
 import { WindowControls } from "./WindowControls"
 
 interface HeaderProps {

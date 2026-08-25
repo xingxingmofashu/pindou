@@ -39,7 +39,6 @@ import { useShortcuts } from "@pindou/core/hooks/use-shortcuts"
 import { useEditorStore } from "@pindou/core/hooks/use-editor"
 import { useI18n } from "@pindou/core/i18n/client"
 import { PALETTES } from "@pindou/shared/palettes"
-import { useTheme } from "../theme"
 import type { ToolKind, CellsData } from "@pindou/core/editor"
 import type { Palette } from "@pindou/shared/types"
 import { ColorPalette } from "../components/ColorPalette"
@@ -62,7 +61,6 @@ export default function EditorPage() {
   const { t } = useI18n()
   const { id } = useParams()
   const patternId = id ?? null
-  const { isDark } = useTheme()
   const canvasApiRef = useRef<PixiCanvasApi>(null)
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -257,7 +255,6 @@ export default function EditorPage() {
           activeTool={activeTool}
           activeColorIndex={activeColorIndex}
           label={showLabels}
-          isDark={isDark}
           palette={activePalette}
           grid={loadedGrid}
           apiRef={canvasApiRef}

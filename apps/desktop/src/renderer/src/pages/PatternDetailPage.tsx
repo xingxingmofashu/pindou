@@ -12,7 +12,6 @@ import { ExportDialog } from "@pindou/ui/components/dialogs/export-dialog"
 import { Button } from "@pindou/ui/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@pindou/ui/components/ui/tooltip"
 import { PALETTES } from "@pindou/shared/palettes"
-import { useTheme } from "../theme"
 import type { PatternRecord } from "../../../shared/types"
 
 /**
@@ -24,7 +23,6 @@ export default function PatternDetailPage() {
   const { locale, t } = useI18n()
   const { id = "" } = useParams()
   const navigate = useNavigate()
-  const { isDark } = useTheme()
   const canvasApiRef = useRef<PixiCanvasApi>(null)
   const [pattern, setPattern] = useState<PatternRecord | null>(null)
   const [exportOpen, setExportOpen] = useState(false)
@@ -204,7 +202,6 @@ export default function PatternDetailPage() {
           grid={grid}
           palette={palette}
           readonly
-          isDark={isDark}
           apiRef={canvasApiRef}
           onZoomChange={setZoom}
           className="min-h-0 min-w-0 flex-1 border"

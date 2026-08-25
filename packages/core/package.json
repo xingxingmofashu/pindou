@@ -17,6 +17,7 @@
     "./i18n/client": "./src/i18n/client.tsx",
     "./i18n/types": "./src/i18n/types.ts",
     "./hooks/*": "./src/hooks/*.ts",
+    "./use-theme": "./src/use-theme.tsx",
     "./server/*": "./src/server/*.ts"
   },
   "scripts": {
