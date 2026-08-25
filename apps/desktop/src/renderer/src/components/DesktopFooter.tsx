@@ -1,14 +1,10 @@
+import { Link } from "react-router-dom"
 import { GITHUB_URL } from "@pindou/shared/constants"
 import { Logo } from "@pindou/ui/components/logo"
 import { useI18n } from "@pindou/core/i18n/client"
 
-interface DesktopFooterProps {
-  onPatterns: () => void
-  onEditor: () => void
-}
-
 /** Footer — mirrors the web footer (logo + tagline, nav, copyright). */
-export function DesktopFooter({ onPatterns, onEditor }: DesktopFooterProps) {
+export function DesktopFooter() {
   const { t } = useI18n()
   const year = new Date().getFullYear()
 
@@ -21,12 +17,12 @@ export function DesktopFooter({ onPatterns, onEditor }: DesktopFooterProps) {
         </div>
 
         <nav className="flex items-center gap-4 text-xs text-muted-foreground" aria-label="Footer">
-          <button type="button" className="hover:text-foreground" onClick={onPatterns}>
+          <Link to="/patterns" className="hover:text-foreground">
             {t("header.patterns")}
-          </button>
-          <button type="button" className="hover:text-foreground" onClick={onEditor}>
+          </Link>
+          <Link to="/editor" className="hover:text-foreground">
             {t("header.editor")}
-          </button>
+          </Link>
           <a
             href={GITHUB_URL}
             target="_blank"

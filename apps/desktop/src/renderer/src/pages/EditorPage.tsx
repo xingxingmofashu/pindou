@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import { useParams } from "react-router-dom"
 import {
   Pencil,
   Eraser,
@@ -37,6 +38,8 @@ import { ExportDialog } from "@pindou/ui/components/dialogs/export-dialog"
 import { useShortcuts } from "@pindou/core/hooks/use-shortcuts"
 import { useEditorStore } from "@pindou/core/hooks/use-editor"
 import { useI18n } from "@pindou/core/i18n/client"
+import { PALETTES } from "@pindou/shared/palettes"
+import { useTheme } from "../theme"
 import type { ToolKind, CellsData } from "@pindou/core/editor"
 import type { Palette } from "@pindou/shared/types"
 import { ColorPalette } from "../components/ColorPalette"
@@ -49,22 +52,17 @@ const TOOLS: { value: ToolKind; icon: typeof Pencil; shortcut: string }[] = [
   { value: "eyedropper", icon: Pipette, shortcut: "I" },
 ]
 
-interface EditorPageProps {
-  /** Pattern being edited, or null for a new pattern. */
-  patternId: string | null
-  /** Full local catalog (loaded once by App). */
-  brands: Palette[]
-  /** Dark-mode flag for the canvas (theme is owned by the App shell). */
-  isDark: boolean
-}
-
 /**
  * Desktop editor page. Composes the same shared components as the web editor
  * (PixiCanvas, dialogs, stores), but publishes to the local SQLite store
- * instead of the community API, and has no auth.
+ * instead of the community API, and has no auth. A `:id` route param opens the
+ * pattern for editing; no param starts a fresh canvas.
  */
-export default function EditorPage({ patternId, brands, isDark }: EditorPageProps) {
+export default function EditorPage() {
   const { t } = useI18n()
+  const { id } = useParams()
+  const patternId = id ?? null
+  const { isDark } = useTheme()
   const canvasApiRef = useRef<PixiCanvasApi>(null)
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -72,7 +70,7 @@ export default function EditorPage({ patternId, brands, isDark }: EditorPageProp
   const [saveOpen, setSaveOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
-  const [activePalette, setActivePalette] = useState<Palette>(() => brands[0])
+  const [activePalette, setActivePalette] = useState<Palette>(() => PALETTES[0])
   const [loadedGrid, setLoadedGrid] = useState<string[][] | undefined>(undefined)
 
   const setApi = useEditorStore((s) => s.setApi)
@@ -103,14 +101,14 @@ export default function EditorPage({ patternId, brands, isDark }: EditorPageProp
       if (cancelled || !record) return
       setTitle(record.title)
       setDescription(record.description)
-      const brand = brands.find((b) => b.id === record.fkBrandId)
+      const brand = PALETTES.find((b) => b.id === record.fkBrandId)
       if (brand) setActivePalette(brand)
       setLoadedGrid(record.grid)
     })
     return () => {
       cancelled = true
     }
-  }, [patternId, brands])
+  }, [patternId])
 
   // Registers the canvas's imperative API into the shared store so the toolbar
   // and dialogs can drive it. Re-register on palette change — the canvas
@@ -193,13 +191,13 @@ export default function EditorPage({ patternId, brands, isDark }: EditorPageProp
   // usePixiCanvas clears the canvas on brand change.
   const handleBrandChange = useCallback(
     (code: string) => {
-      const brand = brands.find((b) => b.code === code)
+      const brand = PALETTES.find((b) => b.code === code)
       if (brand) {
         setActivePalette(brand)
         setActiveColorIndex(1)
       }
     },
-    [brands, setActiveColorIndex],
+    [setActiveColorIndex],
   )
 
   const createWorker = useCallback(
@@ -248,7 +246,7 @@ export default function EditorPage({ patternId, brands, isDark }: EditorPageProp
             <ColorPalette
               activeColorIndex={activeColorIndex}
               onColorPick={setActiveColorIndex}
-              brands={brands}
+              brands={PALETTES}
               palette={activePalette}
               onBrandChange={handleBrandChange}
             />

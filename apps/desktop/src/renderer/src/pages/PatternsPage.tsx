@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Plus, Search, Trash2 } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 import { useI18n } from "@pindou/core/i18n/client"
 import { parseBeadStats, totalBeadCount } from "@pindou/core/utils"
 import { formatRelativeDate } from "@pindou/core/date"
@@ -7,18 +8,14 @@ import { Button } from "@pindou/ui/components/ui/button"
 import { Card, CardHeader, CardTitle } from "@pindou/ui/components/ui/card"
 import { Input } from "@pindou/ui/components/ui/input"
 import { PatternThumb } from "../components/PatternThumb"
-import type { Palette } from "@pindou/shared/types"
 import type { PatternMeta } from "../../../shared/types"
 
-interface PatternListProps {
-  brands: Palette[]
-  onOpen: (id: string) => void
-  onNew: () => void
-}
-
-/** Local pattern gallery: rows from SQLite, new/delete actions, search. */
-export default function PatternList({ brands, onOpen, onNew }: PatternListProps) {
+/** Local pattern gallery — the desktop analogue of the web catalog page
+ *  (apps/web/src/app/[lang]/(site)/(content)/patterns/client.tsx): same card
+ *  layout, search box, and empty states, backed by the SQLite store. */
+export default function PatternsContentClient() {
   const { locale, t } = useI18n()
+  const navigate = useNavigate()
   const [patterns, setPatterns] = useState<PatternMeta[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState("")
@@ -78,7 +75,7 @@ export default function PatternList({ brands, onOpen, onNew }: PatternListProps)
                 </Button>
               </div>
             </form>
-            <Button size="sm" onClick={onNew}>
+            <Button size="sm" onClick={() => navigate("/editor")}>
               <Plus data-icon="inline-start" />
               {t("desktop.newPattern")}
             </Button>
@@ -98,7 +95,7 @@ export default function PatternList({ brands, onOpen, onNew }: PatternListProps)
                   {t("patterns.clearSearch")}
                 </Button>
               ) : (
-                <Button variant="outline" size="sm" onClick={onNew}>
+                <Button variant="outline" size="sm" onClick={() => navigate("/editor")}>
                   <Plus data-icon="inline-start" />
                   {t("desktop.newPattern")}
                 </Button>
@@ -106,45 +103,61 @@ export default function PatternList({ brands, onOpen, onNew }: PatternListProps)
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-              {filtered.map((p) => {
-                const brand = brands.find((b) => b.id === p.fkBrandId)
-                const colors = brand?.colors ?? []
-                const totalBeads = totalBeadCount(parseBeadStats(p.beadStats))
-                const relativeDate = formatRelativeDate(p.updatedAt, locale)
-                return (
-                  <Card
-                    key={p.id}
-                    className="group cursor-pointer overflow-hidden transition-shadow hover:shadow-md"
-                    onClick={() => onOpen(p.id)}
-                  >
-                    <PatternThumb patternId={p.id} colors={colors} />
-                    <CardHeader>
-                      <CardTitle className="truncate">{p.title || t("desktop.untitled")}</CardTitle>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {t("patternCard.beads", { count: totalBeads.toLocaleString() })}
-                        <span aria-hidden="true"> · </span>
-                        {relativeDate}
-                      </p>
-                    </CardHeader>
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100"
-                      aria-label={t("desktop.deletePattern")}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        void handleDelete(p.id)
-                      }}
-                    >
-                      <Trash2 data-icon="inline-start" />
-                    </Button>
-                  </Card>
-                )
-              })}
+              {filtered.map((p) => (
+                <PatternCard key={p.id} pattern={p} locale={locale} t={t} onDelete={() => handleDelete(p.id)} />
+              ))}
             </div>
           )}
         </div>
       </div>
     </div>
+  )
+}
+
+/** One gallery entry — mirrors the web PatternCard: flush thumbnail, title,
+ *  bead count, and relative date. Desktop additions: the card opens the
+ *  pattern directly and a hover-revealed delete button removes it locally. */
+function PatternCard({
+  pattern,
+  locale,
+  t,
+  onDelete,
+}: {
+  pattern: PatternMeta
+  locale: string
+  t: (path: string, vars?: Record<string, string | number>) => string
+  onDelete: () => void
+}) {
+  const navigate = useNavigate()
+  const totalBeads = totalBeadCount(parseBeadStats(pattern.beadStats))
+  const relativeDate = formatRelativeDate(pattern.updatedAt, locale)
+
+  return (
+    <Card
+      className="group cursor-pointer overflow-hidden transition-shadow hover:shadow-md"
+      onClick={() => navigate(`/patterns/${pattern.id}`)}
+    >
+      <PatternThumb patternId={pattern.id} />
+      <CardHeader>
+        <CardTitle className="truncate">{pattern.title || t("desktop.untitled")}</CardTitle>
+        <p className="truncate text-xs text-muted-foreground">
+          {t("patternCard.beads", { count: totalBeads.toLocaleString() })}
+          <span aria-hidden="true"> · </span>
+          {relativeDate}
+        </p>
+      </CardHeader>
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100"
+        aria-label={t("desktop.deletePattern")}
+        onClick={(e) => {
+          e.stopPropagation()
+          onDelete()
+        }}
+      >
+        <Trash2 data-icon="inline-start" />
+      </Button>
+    </Card>
   )
 }
