@@ -10,6 +10,7 @@ import HomePage from "./pages/HomePage"
 import PatternsPage from "./pages/PatternsPage"
 import PatternDetailPage from "./pages/PatternDetailPage"
 import EditorPage from "./pages/EditorPage"
+import PatternEditPage from "./pages/PatternEditPage"
 
 /**
  * Desktop app shell. Mirrors the web site layout: a header (logo + nav +
@@ -36,19 +37,10 @@ export default function App() {
             <div className="h-full p-2">
               <div className="flex h-full min-h-0 flex-col gap-2 border p-2">
                 <Routes>
-                  {/* Workspace route (editor): header only, no footer. */}
-                  <Route
-                    element={
-                      <>
-                        <Header />
-                        <div className="flex min-h-0 flex-1 flex-col">
-                          <Outlet />
-                        </div>
-                      </>
-                    }
-                  >
+                  {/* Workspace routes (editor): header only, no footer. */}
+                  <Route element={<WorkspaceLayout />}>
                     <Route path="/editor" element={<EditorPage />} />
-                    <Route path="/editor/:id" element={<EditorPage />} />
+                    <Route path="/editor/:id" element={<PatternEditPage />} />
                   </Route>
 
                   {/* Content routes: header + footer. */}
@@ -67,6 +59,18 @@ export default function App() {
         </HashRouter>
       </ThemeContext.Provider>
     </I18nContext.Provider>
+  )
+}
+
+/** Workspace pages (editor / edit) share the header, no footer. */
+function WorkspaceLayout() {
+  return (
+    <>
+      <Header activeSection="editor" />
+      <div className="flex min-h-0 flex-1 flex-col">
+        <Outlet />
+      </div>
+    </>
   )
 }
 
