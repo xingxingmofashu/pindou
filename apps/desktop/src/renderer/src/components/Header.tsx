@@ -6,7 +6,6 @@ import { Separator } from "@pindou/ui/components/ui/separator"
 import { Logo } from "@pindou/ui/components/logo"
 import { useI18n } from "@pindou/core/i18n/client"
 import { useTheme } from "../theme"
-import { useLocale } from "../locale"
 import { WindowControls } from "./WindowControls"
 
 interface HeaderProps {
@@ -19,9 +18,8 @@ interface HeaderProps {
  *  the frameless window's drag region, so interactive children opt out with
  *  `no-drag` and the window controls live at the far right. */
 export function Header({ activeSection = "home" }: HeaderProps) {
-  const { t } = useI18n()
+  const { t, locale, setLocale } = useI18n()
   const { isDark, toggleDark } = useTheme()
-  const { locale, toggleLocale } = useLocale()
 
   return (
     <header className="drag flex items-center border px-3 py-2">
@@ -74,7 +72,7 @@ export function Header({ activeSection = "home" }: HeaderProps) {
           variant="ghost"
           size="sm"
           aria-label={t("header.language")}
-          onClick={toggleLocale}
+          onClick={() => setLocale(locale === "en" ? "zh" : "en")}
           className="font-medium uppercase"
         >
           {locale === "en" ? "中文" : "EN"}
