@@ -34,7 +34,7 @@ const DEFAULT_WIDTH = 128
 const DEBOUNCE_MS = 300
 
 /** Default merge strength (OKLab distance) when the option is enabled. */
-const DEFAULT_MERGE_SIMILARITY = 0.15
+const DEFAULT_MERGE_SIMILARITY = 0.05
 
 interface ImportDialogProps {
   open: boolean
@@ -275,7 +275,7 @@ export function ImportDialog({ open, onClose, onApply, palette: pinnedPalette, c
   // Advanced conversion options, hidden by default.
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [mode, setMode] = useState<TransformMode>("average")
-  const [mergeOn, setMergeOn] = useState(false)
+  const [mergeOn, setMergeOn] = useState(true)
   const [mergeSimilarity, setMergeSimilarity] = useState(DEFAULT_MERGE_SIMILARITY)
   const [removeBg, setRemoveBg] = useState(false)
   const [excludedCodes, setExcludedCodes] = useState<string[]>([])
