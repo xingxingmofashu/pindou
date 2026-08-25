@@ -1,42 +1,59 @@
 "use client"
 
-import { createContext, useContext, useMemo, type ReactNode } from "react"
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react"
 import type { Locale } from "./config"
 import type { Messages } from "./types"
+import en from "./dictionaries/en.json"
+import zh from "./dictionaries/zh.json"
+
+const dictionaries = { en, zh } as const
 
 export interface I18n {
   locale: Locale
   /** Translate a dotted message key, interpolating `{var}` placeholders. */
   t: (path: string, vars?: Record<string, string | number>) => string
+  /** Switch the active locale. */
+  setLocale: (locale: Locale) => void
 }
 
-const I18nContext = createContext<I18n | null>(null)
+/** Shared i18n context. Apps render `<I18nContext.Provider value={...}>`
+ *  directly with their own locale state and dictionary. */
+export const I18nContext = createContext<I18n | null>(null)
 
 interface I18nProviderProps {
   locale: Locale
-  messages: Messages
+  messages?: Messages
   children: ReactNode
 }
 
 /**
- * Client i18n context. The server root layout passes the resolved locale and
- * its message dictionary down; client components read both via {@link useI18n}.
+ * Convenience wrapper around {@link I18nContext}: owns the locale state and
+ * resolves the dictionary itself. Apps that need to hook locale changes into
+ * navigation/persistence should render `I18nContext.Provider` directly.
  */
-export function I18nProvider({ locale, messages, children }: I18nProviderProps) {
+export function I18nProvider({ locale: initialLocale, messages, children }: I18nProviderProps) {
+  const [locale, setLocale] = useState<Locale>(initialLocale)
+  const dictionary = messages ?? dictionaries[locale]
   const value = useMemo<I18n>(
-    () => ({ locale, t: (path, vars) => translate(messages, path, vars) }),
-    [locale, messages],
+    () => ({
+      locale,
+      t: (path, vars) => translate(dictionary, path, vars),
+      setLocale,
+    }),
+    [locale, dictionary],
   )
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
 }
 
 export function useI18n(): I18n {
   const ctx = useContext(I18nContext)
-  if (!ctx) throw new Error("useI18n must be used within I18nProvider")
+  if (!ctx) throw new Error("useI18n must be used within I18nContext.Provider")
   return ctx
 }
 
-function translate(
+/** Translate a dotted message key against a dictionary, interpolating
+ *  `{var}` placeholders. Returns the raw path when the key is missing. */
+export function translate(
   messages: Messages,
   path: string,
   vars?: Record<string, string | number>,

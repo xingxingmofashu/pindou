@@ -1,12 +1,12 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { HashRouter, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom"
-import { I18nProvider, dictionaries } from "@pindou/core"
+import { dictionaries } from "@pindou/core"
+import { I18nContext, translate, type I18n } from "@pindou/core/i18n/client"
 import type { Locale } from "@pindou/core/i18n/config"
 import { Toaster } from "@pindou/ui/components/ui/toast"
 import { Header } from "./components/Header"
 import { Footer } from "./components/Footer"
 import { ThemeContext } from "./theme"
-import { LocaleContext } from "./locale"
 import HomePage from "./pages/HomePage"
 import PatternsPage from "./pages/PatternsPage"
 import PatternDetailPage from "./pages/PatternDetailPage"
@@ -17,22 +17,21 @@ import EditorPage from "./pages/EditorPage"
  * theme toggle) around every page, and a footer on content pages (home,
  * patterns, pattern detail) — the editor is a full-screen workspace like the
  * web's `/editor` route group. Routing is hash-based so it works from the
- * `file://`-ish renderer URL with no server. Pages read their route params and
- * shared context themselves; the shell owns only the theme state.
+ * `file://`-ish renderer URL with no server. The shell owns the theme state
+ * and the active locale (default 中文), provided via the shared i18n context.
  */
 export default function App() {
   const [isDark, setIsDark] = useState(false)
   const [locale, setLocale] = useState<Locale>("zh")
   const theme = { isDark, toggleDark: () => setIsDark((d) => !d) }
-  const localeValue = {
-    locale,
-    toggleLocale: () => setLocale((l) => (l === "en" ? "zh" : "en")),
-  }
+  const i18n = useMemo<I18n>(
+    () => ({ locale, setLocale, t: (path, vars) => translate(dictionaries[locale], path, vars) }),
+    [locale],
+  )
 
   return (
-    <I18nProvider locale={locale} messages={dictionaries[locale]}>
-      <LocaleContext.Provider value={localeValue}>
-        <ThemeContext.Provider value={theme}>
+    <I18nContext.Provider value={i18n}>
+      <ThemeContext.Provider value={theme}>
         <HashRouter>
           <div className={`flex h-full flex-col overflow-hidden bg-background text-foreground ${isDark ? "dark" : ""}`}>
             <div className="h-full p-2">
@@ -67,9 +66,8 @@ export default function App() {
             <Toaster />
           </div>
         </HashRouter>
-        </ThemeContext.Provider>
-        </LocaleContext.Provider>
-    </I18nProvider>
+      </ThemeContext.Provider>
+    </I18nContext.Provider>
   )
 }
 
