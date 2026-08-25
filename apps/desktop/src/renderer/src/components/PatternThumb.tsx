@@ -1,15 +1,20 @@
 import { useEffect, useState } from "react"
 
-/** Card preview: the pattern's rendered thumbnail, or a brand colour-strip
- *  fallback while loading / when the thumbnail is missing. */
+/** 1×1 transparent GIF — placeholder `src` for a failed/empty thumbnail. */
+const TRANSPARENT_PIXEL =
+  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+
+/** Card preview: the pattern's rendered thumbnail, loaded from disk via IPC.
+ *  Mirrors the web catalog card — the image element is always rendered (so the
+ *  card keeps its flush-top rounded corners) and swaps in a transparent
+ *  placeholder when missing, instead of flashing a colour-strip fallback. */
 export function PatternThumb({
   patternId,
-  colors,
 }: {
   patternId: string
-  colors: { code: string; hex: string }[]
 }) {
   const [src, setSrc] = useState<string | null>(null)
+  const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -21,22 +26,12 @@ export function PatternThumb({
     }
   }, [patternId])
 
-  if (src) {
-    return (
-      <img
-        src={src}
-        alt=""
-        className="block aspect-square w-full bg-muted object-cover [image-rendering:pixelated]"
-        onError={() => setSrc(null)}
-      />
-    )
-  }
-
   return (
-    <div className="flex aspect-square w-full items-stretch overflow-hidden">
-      {colors.slice(0, 8).map((c) => (
-        <div key={c.code} className="flex-1" style={{ backgroundColor: c.hex }} />
-      ))}
-    </div>
+    <img
+      src={src && !failed ? src : TRANSPARENT_PIXEL}
+      alt=""
+      className="block aspect-square w-full bg-muted object-cover [image-rendering:pixelated]"
+      onError={() => setFailed(true)}
+    />
   )
 }
