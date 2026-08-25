@@ -5,6 +5,7 @@ import { EDITOR_BG, EDITOR_BG_DARK } from "@pindou/shared/constants"
 import { usePixiApp, type PixiAppError } from "@pindou/core/hooks/use-pixi-app"
 import { usePixiCanvas } from "@pindou/core/hooks/use-pixi-canvas"
 import { usePalette } from "@pindou/core/hooks/use-palette"
+import { useTheme } from "@pindou/core/use-theme"
 import { Tooltip, TooltipTrigger, TooltipContent } from "./ui/tooltip"
 import { toast } from "./ui/toast"
 import { useI18n } from "@pindou/core/i18n/client"
@@ -120,6 +121,10 @@ function PixiCanvasInner({
 
 export function PixiCanvas({ className, palette, readonly, activeTool, isDark, ...props }: PixiCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const { isDark: themeIsDark } = useTheme()
+  // Explicit prop wins; otherwise fall back to the shared theme context so
+  // host apps don't have to thread isDark through every page.
+  const resolvedIsDark = isDark ?? themeIsDark
   // Colour under the cursor while the eyedropper is active, driving the
   // cursor-following hover preview tooltip. Reset when the tool or read-only
   // state changes (adjusted during render — the React-recommended way to reset
@@ -161,9 +166,9 @@ export function PixiCanvas({ className, palette, readonly, activeTool, isDark, .
         )}
       </Tooltip>
       {palette ? (
-        <PixiCanvasInner canvasRef={canvasRef} palette={palette} readonly={readonly} activeTool={activeTool} isDark={isDark} onHoverCell={setHovered} {...props} />
+        <PixiCanvasInner canvasRef={canvasRef} palette={palette} readonly={readonly} activeTool={activeTool} isDark={resolvedIsDark} onHoverCell={setHovered} {...props} />
       ) : (
-        <EditablePaletteBridge canvasRef={canvasRef} readonly={readonly ?? false} activeTool={activeTool} isDark={isDark} onHoverCell={setHovered} {...props} />
+        <EditablePaletteBridge canvasRef={canvasRef} readonly={readonly ?? false} activeTool={activeTool} isDark={resolvedIsDark} onHoverCell={setHovered} {...props} />
       )}
     </div>
   )
