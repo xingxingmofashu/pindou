@@ -1,4 +1,5 @@
 import { ImageUp, Palette, Download, HardDrive } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 import { useI18n } from "@pindou/core/i18n/client"
 import { Button } from "@pindou/ui/components/ui/button"
 import {
@@ -19,17 +20,13 @@ const FEATURES = [
   { key: "local", icon: HardDrive },
 ] as const
 
-interface HomePageProps {
-  onOpenEditor: () => void
-  onBrowsePatterns: () => void
-}
-
 /**
  * Desktop home page — mirrors the web landing page's structure (top bar, hero,
- * feature cards) but navigates via local callbacks instead of routes.
+ * feature cards) and navigates through the hash router.
  */
-export default function HomePage({ onOpenEditor, onBrowsePatterns }: HomePageProps) {
+export default function HomePage() {
   const { t } = useI18n()
+  const navigate = useNavigate()
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -45,10 +42,10 @@ export default function HomePage({ onOpenEditor, onBrowsePatterns }: HomePagePro
             <h2 className="mt-6 text-3xl font-semibold tracking-tight">{t("home.heroTitle")}</h2>
             <p className="mt-3 max-w-xl text-sm text-muted-foreground">{t("home.heroDescription")}</p>
             <div className="mt-6 flex items-center gap-3">
-              <Button size="lg" onClick={onOpenEditor}>
+              <Button size="lg" onClick={() => navigate("/editor")}>
                 {t("home.openEditor")}
               </Button>
-              <Button variant="outline" size="lg" onClick={onBrowsePatterns}>
+              <Button variant="outline" size="lg" onClick={() => navigate("/patterns")}>
                 {t("home.browsePatterns")}
               </Button>
             </div>

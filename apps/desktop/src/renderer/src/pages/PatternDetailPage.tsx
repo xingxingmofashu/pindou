@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ArrowLeft, Download, Info, List } from "lucide-react"
+import { useNavigate, useParams } from "react-router-dom"
 import { useI18n } from "@pindou/core/i18n/client"
 import { gridSize } from "@pindou/core/editor"
 import { parseBeadStats, totalBeadCount } from "@pindou/core/utils"
@@ -10,25 +11,20 @@ import { ZoomControls } from "@pindou/ui/components/zoom-controls"
 import { ExportDialog } from "@pindou/ui/components/dialogs/export-dialog"
 import { Button } from "@pindou/ui/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@pindou/ui/components/ui/tooltip"
-import type { Palette } from "@pindou/shared/types"
+import { PALETTES } from "@pindou/shared/palettes"
+import { useTheme } from "../theme"
 import type { PatternRecord } from "../../../shared/types"
-
-interface PatternDetailPageProps {
-  patternId: string
-  brands: Palette[]
-  /** Dark-mode flag for the canvas (theme is owned by the App shell). */
-  isDark: boolean
-  onEdit: (id: string) => void
-  onBack: () => void
-}
 
 /**
  * Read-only pattern viewer — mirrors the web pattern detail page (toolbar,
  * info panel, canvas, bead-usage panel) but loads the record from local
  * SQLite and has no author/community fields.
  */
-export default function PatternDetailPage({ patternId, brands, isDark, onEdit, onBack }: PatternDetailPageProps) {
+export default function PatternDetailPage() {
   const { locale, t } = useI18n()
+  const { id = "" } = useParams()
+  const navigate = useNavigate()
+  const { isDark } = useTheme()
   const canvasApiRef = useRef<PixiCanvasApi>(null)
   const [pattern, setPattern] = useState<PatternRecord | null>(null)
   const [exportOpen, setExportOpen] = useState(false)
@@ -44,13 +40,13 @@ export default function PatternDetailPage({ patternId, brands, isDark, onEdit, o
 
   useEffect(() => {
     let cancelled = false
-    window.pindou.patterns.get(patternId).then((record) => {
+    window.pindou.patterns.get(id).then((record) => {
       if (!cancelled) setPattern(record ?? null)
     })
     return () => {
       cancelled = true
     }
-  }, [patternId])
+  }, [id])
 
   // Registers the canvas's imperative API into the shared store so the
   // toolbar's zoom controls can drive it.
@@ -60,8 +56,8 @@ export default function PatternDetailPage({ patternId, brands, isDark, onEdit, o
   }, [setApi])
 
   const palette = useMemo(
-    () => brands.find((b) => b.id === pattern?.fkBrandId),
-    [brands, pattern?.fkBrandId],
+    () => PALETTES.find((b) => b.id === pattern?.fkBrandId),
+    [pattern?.fkBrandId],
   )
 
   const grid = pattern?.grid
@@ -100,7 +96,7 @@ export default function PatternDetailPage({ patternId, brands, isDark, onEdit, o
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 border p-6 text-center">
         <p className="text-sm text-muted-foreground">{t("patternDetail.loadFailedTitle")}</p>
-        <Button variant="outline" size="sm" onClick={onBack}>
+        <Button variant="outline" size="sm" onClick={() => navigate("/patterns")}>
           {t("desktop.backToList")}
         </Button>
       </div>
@@ -114,7 +110,7 @@ export default function PatternDetailPage({ patternId, brands, isDark, onEdit, o
     <div className="flex h-full flex-col gap-2 overflow-hidden">
       <div className="flex items-center justify-between gap-2 border px-3 py-2">
         <div className="flex min-w-0 items-center gap-2">
-          <Button variant="ghost" size="icon-sm" aria-label={t("desktop.backToList")} onClick={onBack}>
+          <Button variant="ghost" size="icon-sm" aria-label={t("desktop.backToList")} onClick={() => navigate("/patterns")}>
             <ArrowLeft data-icon="inline-start" />
           </Button>
           <h1 className="min-w-0 truncate text-sm font-semibold">{pattern.title || t("desktop.untitled")}</h1>
@@ -154,7 +150,7 @@ export default function PatternDetailPage({ patternId, brands, isDark, onEdit, o
             <Download data-icon="inline-start" />
             {t("editor.export")}
           </Button>
-          <Button size="sm" onClick={() => onEdit(pattern.id)}>
+          <Button size="sm" onClick={() => navigate(`/editor/${pattern.id}`)}>
             {t("patternDetail.edit")}
           </Button>
           <ZoomControls
