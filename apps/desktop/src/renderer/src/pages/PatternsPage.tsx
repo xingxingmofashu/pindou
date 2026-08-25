@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Plus, Search, Trash2 } from "lucide-react"
+import { Search } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { useI18n } from "@pindou/core/i18n/client"
 import { parseBeadStats, totalBeadCount } from "@pindou/core/utils"
@@ -28,11 +28,6 @@ export default function PatternsPage() {
   }, [])
 
   useEffect(reload, [reload])
-
-  const handleDelete = async (id: string) => {
-    await window.pindou.patterns.remove(id)
-    reload()
-  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -78,10 +73,6 @@ export default function PatternsPage() {
                 </Button>
               </div>
             </form>
-            <Button size="sm" onClick={() => navigate("/editor")}>
-              <Plus data-icon="inline-start" />
-              {t("desktop.newPattern")}
-            </Button>
           </div>
         </div>
 
@@ -93,21 +84,16 @@ export default function PatternsPage() {
               <p className="text-sm text-muted-foreground">
                 {query ? t("patterns.noResults") : t("desktop.emptyState")}
               </p>
-              {query ? (
+              {query && (
                 <Button variant="outline" size="sm" onClick={() => setQuery("")}>
                   {t("patterns.clearSearch")}
-                </Button>
-              ) : (
-                <Button variant="outline" size="sm" onClick={() => navigate("/editor")}>
-                  <Plus data-icon="inline-start" />
-                  {t("desktop.newPattern")}
                 </Button>
               )}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
               {filtered.map((p) => (
-                <PatternCard key={p.id} pattern={p} locale={locale} t={t} onDelete={() => handleDelete(p.id)} />
+                <PatternCard key={p.id} pattern={p} locale={locale} t={t} />
               ))}
             </div>
           )}
@@ -118,18 +104,15 @@ export default function PatternsPage() {
 }
 
 /** One gallery entry — mirrors the web PatternCard: flush thumbnail, title,
- *  bead count, and relative date. Desktop additions: the card opens the
- *  pattern directly and a hover-revealed delete button removes it locally. */
+ *  bead count, and relative date. Clicking the card opens the pattern. */
 function PatternCard({
   pattern,
   locale,
   t,
-  onDelete,
 }: {
   pattern: PatternMeta
   locale: string
   t: (path: string, vars?: Record<string, string | number>) => string
-  onDelete: () => void
 }) {
   const navigate = useNavigate()
   const totalBeads = totalBeadCount(parseBeadStats(pattern.beadStats))
@@ -160,18 +143,6 @@ function PatternCard({
           {relativeDate}
         </p>
       </CardHeader>
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100"
-        aria-label={t("desktop.deletePattern")}
-        onClick={(e) => {
-          e.stopPropagation()
-          onDelete()
-        }}
-      >
-        <Trash2 data-icon="inline-start" />
-      </Button>
     </Card>
   )
 }

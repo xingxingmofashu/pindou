@@ -47,11 +47,13 @@ export default function PatternDetailPage() {
   }, [id])
 
   // Registers the canvas's imperative API into the shared store so the
-  // toolbar's zoom controls can drive it.
+  // toolbar's zoom controls can drive it. The canvas only mounts once the
+  // pattern loads, so re-register on `pattern` — otherwise the store keeps a
+  // null `api` from the first (pre-load) mount.
   useEffect(() => {
     setApi(canvasApiRef.current)
     return () => setApi(null)
-  }, [setApi])
+  }, [setApi, pattern])
 
   const palette = useMemo(
     () => PALETTES.find((b) => b.id === pattern?.fkBrandId),

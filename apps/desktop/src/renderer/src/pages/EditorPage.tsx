@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { useParams } from "react-router-dom"
 import {
   Pencil,
   Eraser,
   PaintBucket,
   Pipette,
   Trash2,
-  CaseSensitive,
   ImagePlus,
   Download,
   List,
@@ -39,7 +37,7 @@ import { useShortcuts } from "@pindou/core/hooks/use-shortcuts"
 import { useEditorStore } from "@pindou/core/hooks/use-editor"
 import { useI18n } from "@pindou/core/i18n/client"
 import { PALETTES } from "@pindou/shared/palettes"
-import type { ToolKind, CellsData } from "@pindou/core/editor"
+import type { ToolKind } from "@pindou/core/editor"
 import type { Palette } from "@pindou/shared/types"
 import { ColorPalette } from "../components/ColorPalette"
 import { SaveDialog } from "../components/SaveDialog"
@@ -52,24 +50,18 @@ const TOOLS: { value: ToolKind; icon: typeof Pencil; shortcut: string }[] = [
 ]
 
 /**
- * Desktop editor page. Composes the same shared components as the web editor
- * (PixiCanvas, dialogs, stores), but publishes to the local SQLite store
- * instead of the community API, and has no auth. A `:id` route param opens the
- * pattern for editing; no param starts a fresh canvas.
+ * Desktop new-pattern editor. Composes the same shared components as the web
+ * editor (PixiCanvas, dialogs, stores), but saves to the local SQLite store
+ * instead of the community API, and has no auth. Existing patterns are edited
+ * on the separate PatternEditPage route instead.
  */
 export default function EditorPage() {
   const { t } = useI18n()
-  const { id } = useParams()
-  const patternId = id ?? null
   const canvasApiRef = useRef<PixiCanvasApi>(null)
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
-  const [saved, setSaved] = useState(false)
   const [saveOpen, setSaveOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [activePalette, setActivePalette] = useState<Palette>(() => PALETTES[0])
-  const [loadedGrid, setLoadedGrid] = useState<string[][] | undefined>(undefined)
 
   const setApi = useEditorStore((s) => s.setApi)
   const setZoom = useEditorStore((s) => s.setZoom)
@@ -77,36 +69,15 @@ export default function EditorPage() {
   const activeTool = useEditorStore((s) => s.activeTool)
   const activeColorIndex = useEditorStore((s) => s.activeColorIndex)
   const setActiveColorIndex = useEditorStore((s) => s.setActiveColorIndex)
-  const showLabels = useEditorStore((s) => s.showLabels)
-  const showColorPalette = useEditorStore((s) => s.showColorPalette)
   const showBeadStats = useEditorStore((s) => s.showBeadStats)
+  const showColorPalette = useEditorStore((s) => s.showColorPalette)
   const beadStats = useEditorStore((s) => s.beadStats)
   const zoom = useEditorStore((s) => s.zoom)
   const canUndo = useEditorStore((s) => s.canUndo)
   const canRedo = useEditorStore((s) => s.canRedo)
   const api = useEditorStore((s) => s.api)
-  const toggleLabels = useEditorStore((s) => s.toggleLabels)
   const toggleBeadStats = useEditorStore((s) => s.toggleBeadStats)
   const toggleColorPalette = useEditorStore((s) => s.toggleColorPalette)
-
-  // Load an existing pattern's grid + meta when editing. The grid is handed to
-  // PixiCanvas as a prop so its pinned-grid effect loads it once the canvas
-  // initializes (calling api.loadGrid here races the canvas mount).
-  useEffect(() => {
-    if (!patternId) return
-    let cancelled = false
-    window.pindou.patterns.get(patternId).then((record) => {
-      if (cancelled || !record) return
-      setTitle(record.title)
-      setDescription(record.description)
-      const brand = PALETTES.find((b) => b.id === record.fkBrandId)
-      if (brand) setActivePalette(brand)
-      setLoadedGrid(record.grid)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [patternId])
 
   // Registers the canvas's imperative API into the shared store so the toolbar
   // and dialogs can drive it. Re-register on palette change — the canvas
@@ -121,7 +92,6 @@ export default function EditorPage() {
   const onLoadGrid = useCallback((grid: string[][]) => canvasApiRef.current?.loadGrid(grid), [])
   const onGridChange = useCallback(() => {
     useEditorStore.getState().setBeadStats(canvasApiRef.current?.getBeadStats() ?? null)
-    setSaved(false)
   }, [])
   const onHistoryChange = useCallback((u: boolean, r: boolean) => {
     useEditorStore.getState().setHistory(u, r)
@@ -146,7 +116,7 @@ export default function EditorPage() {
     setSaveOpen(true)
   }, [t])
 
-  // Persist the canvas grid with the dialog's title/description.
+  // Persist the canvas grid with the dialog's title/description as a new pattern.
   const handleSaveConfirm = useCallback(
     async (dialogTitle: string, dialogDescription: string) => {
       const data = canvasApiRef.current?.getCellsData()
@@ -156,33 +126,20 @@ export default function EditorPage() {
         return
       }
       try {
-        if (patternId) {
-          await window.pindou.patterns.update(patternId, {
-            title: dialogTitle,
-            description: dialogDescription,
-            fkBrandId: activePalette.id,
-            beadStats: data.beadStats,
-            grid: data.grid,
-          })
-        } else {
-          await window.pindou.patterns.create({
-            title: dialogTitle,
-            description: dialogDescription,
-            fkBrandId: activePalette.id,
-            beadStats: data.beadStats,
-            grid: data.grid,
-          })
-        }
-        setTitle(dialogTitle)
-        setDescription(dialogDescription)
-        setSaved(true)
+        await window.pindou.patterns.create({
+          title: dialogTitle,
+          description: dialogDescription,
+          fkBrandId: activePalette.id,
+          beadStats: data.beadStats,
+          grid: data.grid,
+        })
         setSaveOpen(false)
         toast.add({ id: "save-ok", type: "success", title: t("desktop.saved") })
       } catch {
         toast.add({ id: "save-fail", type: "error", title: t("desktop.saveFailed") })
       }
     },
-    [patternId, activePalette, t],
+    [activePalette, t],
   )
 
   // Brand switch: swap the canvas palette and reset to the first colour.
@@ -206,11 +163,8 @@ export default function EditorPage() {
   return (
     <div className="flex h-full flex-col gap-2 overflow-hidden">
       <EditorToolbar
-        saved={saved}
         dirty={beadStats !== null}
         onSave={handleSave}
-        onToggleLabels={toggleLabels}
-        showLabels={showLabels}
         onToggleBeadStats={toggleBeadStats}
         showBeadStats={showBeadStats}
         onToggleColorPalette={toggleColorPalette}
@@ -228,16 +182,6 @@ export default function EditorPage() {
         onSetZoom={(z) => api?.setZoom(z)}
         onFit={() => api?.fitToCanvas()}
       />
-      {/* Status bar: pattern title + save state (title/description are
-          collected in the save dialog, like the web publish flow). */}
-      <div className="flex items-center justify-between gap-2 border px-3 py-1.5">
-        <span className="truncate text-xs font-medium">
-          {title || t("desktop.untitled")}
-        </span>
-        <span className="shrink-0 text-[10px] text-muted-foreground">
-          {saved ? t("desktop.saved") : beadStats !== null ? t("desktop.unsavedWarning") : " "}
-        </span>
-      </div>
       <div className="flex min-h-0 flex-1 gap-2">
         {showColorPalette && (
           <div className="w-56 shrink-0 overflow-hidden">
@@ -254,9 +198,7 @@ export default function EditorPage() {
           className="min-h-0 min-w-0 flex-1 border p-2"
           activeTool={activeTool}
           activeColorIndex={activeColorIndex}
-          label={showLabels}
           palette={activePalette}
-          grid={loadedGrid}
           apiRef={canvasApiRef}
           onZoomChange={setZoom}
           onGridChange={onGridChange}
@@ -273,8 +215,6 @@ export default function EditorPage() {
         <SaveDialog
           open={saveOpen}
           onClose={() => setSaveOpen(false)}
-          initialTitle={title}
-          initialDescription={description}
           onSave={handleSaveConfirm}
         />
       )}
@@ -303,11 +243,8 @@ export default function EditorPage() {
 }
 
 interface EditorToolbarProps {
-  saved: boolean
   dirty: boolean
   onSave: () => void
-  onToggleLabels: () => void
-  showLabels: boolean
   onToggleBeadStats: () => void
   showBeadStats: boolean
   onToggleColorPalette: () => void
@@ -378,21 +315,6 @@ function EditorToolbar(props: EditorToolbarProps) {
               </Tooltip>
             )
           })}
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant={props.showLabels ? "secondary" : "outline"}
-                  size="icon-xs"
-                  aria-label={t("editor.showLabels")}
-                  onClick={props.onToggleLabels}
-                >
-                  <CaseSensitive data-icon="inline-start" />
-                </Button>
-              }
-            />
-            <TooltipContent side="bottom">{t("editor.labels")}</TooltipContent>
-          </Tooltip>
           <Separator orientation="vertical" className="mx-1 h-5" />
           <Tooltip>
             <TooltipTrigger
