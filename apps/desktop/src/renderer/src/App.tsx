@@ -22,7 +22,7 @@ import EditorPage from "./pages/EditorPage"
  */
 export default function App() {
   const [isDark, setIsDark] = useState(false)
-  const [locale, setLocale] = useState<Locale>("en")
+  const [locale, setLocale] = useState<Locale>("zh")
   const theme = { isDark, toggleDark: () => setIsDark((d) => !d) }
   const localeValue = {
     locale,
