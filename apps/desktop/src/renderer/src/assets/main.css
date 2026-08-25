@@ -17,6 +17,18 @@ body,
 body {
   overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
+  /* Desktop app feel: text is not selectable except inside editable fields
+     and other controls where selection is meaningful. */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Keep text selectable in editable / copyable contexts. */
+input,
+textarea,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* Frameless-window drag region: `drag` marks the title bar as draggable,
