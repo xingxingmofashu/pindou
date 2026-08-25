@@ -33,7 +33,7 @@ export function PatternThumb({
   }
 
   return (
-    <div className="flex h-24 items-stretch overflow-hidden">
+    <div className="flex aspect-square w-full items-stretch overflow-hidden">
       {colors.slice(0, 8).map((c) => (
         <div key={c.code} className="flex-1" style={{ backgroundColor: c.hex }} />
       ))}

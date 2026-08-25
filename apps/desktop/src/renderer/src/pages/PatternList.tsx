@@ -4,7 +4,7 @@ import { useI18n } from "@pindou/core/i18n/client"
 import { parseBeadStats, totalBeadCount } from "@pindou/core/utils"
 import { formatRelativeDate } from "@pindou/core/date"
 import { Button } from "@pindou/ui/components/ui/button"
-import { Card, CardContent } from "@pindou/ui/components/ui/card"
+import { Card, CardHeader, CardTitle } from "@pindou/ui/components/ui/card"
 import { Input } from "@pindou/ui/components/ui/input"
 import { PatternThumb } from "../components/PatternThumb"
 import type { Palette } from "@pindou/shared/types"
@@ -117,17 +117,15 @@ export default function PatternList({ brands, onOpen, onNew }: PatternListProps)
                     className="group cursor-pointer overflow-hidden transition-shadow hover:shadow-md"
                     onClick={() => onOpen(p.id)}
                   >
-                    <CardContent className="p-0">
-                      <PatternThumb patternId={p.id} colors={colors} />
-                      <div className="p-3">
-                        <p className="truncate text-sm font-medium">{p.title || t("desktop.untitled")}</p>
-                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                          {t("patternCard.beads", { count: totalBeads.toLocaleString() })}
-                          <span aria-hidden="true"> · </span>
-                          {relativeDate}
-                        </p>
-                      </div>
-                    </CardContent>
+                    <PatternThumb patternId={p.id} colors={colors} />
+                    <CardHeader>
+                      <CardTitle className="truncate">{p.title || t("desktop.untitled")}</CardTitle>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {t("patternCard.beads", { count: totalBeads.toLocaleString() })}
+                        <span aria-hidden="true"> · </span>
+                        {relativeDate}
+                      </p>
+                    </CardHeader>
                     <Button
                       variant="ghost"
                       size="icon-xs"
