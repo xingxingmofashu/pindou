@@ -29,7 +29,7 @@ import type { Palette } from "@pindou/shared/types"
 /** Preview canvas is drawn at most this many pixels per side. */
 const PREVIEW_MAX = 320
 /** Initial grid width in beads. */
-const DEFAULT_WIDTH = 128
+const DEFAULT_WIDTH = 104
 /** Debounce width edits before re-converting. */
 const DEBOUNCE_MS = 300
 
