@@ -6,9 +6,10 @@ import { Separator } from "@pindou/ui/components/ui/separator"
 import { Logo } from "@pindou/ui/components/logo"
 import { useI18n } from "@pindou/core/i18n/client"
 import { useTheme } from "../theme"
+import { useLocale } from "../locale"
 import { WindowControls } from "./WindowControls"
 
-interface DesktopHeaderProps {
+interface HeaderProps {
   /** Which nav section is active ("detail" maps to "list"). */
   activeSection?: "home" | "list" | "editor"
 }
@@ -17,9 +18,10 @@ interface DesktopHeaderProps {
  *  minus the auth area (the desktop app has no sign-in). The bar doubles as
  *  the frameless window's drag region, so interactive children opt out with
  *  `no-drag` and the window controls live at the far right. */
-export function DesktopHeader({ activeSection = "home" }: DesktopHeaderProps) {
+export function Header({ activeSection = "home" }: HeaderProps) {
   const { t } = useI18n()
   const { isDark, toggleDark } = useTheme()
+  const { locale, toggleLocale } = useLocale()
 
   return (
     <header className="drag flex items-center border px-3 py-2">
@@ -67,6 +69,15 @@ export function DesktopHeader({ activeSection = "home" }: DesktopHeaderProps) {
         <Button variant="ghost" size="icon-sm" aria-label={t("header.toggleTheme")} onClick={toggleDark}>
           <Sun className={isDark ? "hidden" : undefined} />
           <Moon className={isDark ? undefined : "hidden"} />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={t("header.language")}
+          onClick={toggleLocale}
+          className="font-medium uppercase"
+        >
+          {locale === "en" ? "中文" : "EN"}
         </Button>
         <WindowControls />
       </div>
