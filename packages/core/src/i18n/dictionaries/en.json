@@ -10,7 +10,8 @@
     "github": "GitHub",
     "githubAria": "View source on GitHub",
     "signIn": "Sign in",
-    "toggleTheme": "Toggle theme"
+    "toggleTheme": "Toggle theme",
+    "language": "Switch language"
   },
   "auth": {
     "signOut": "Sign out",
