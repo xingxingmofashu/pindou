@@ -4,7 +4,7 @@ import { Logo } from "@pindou/ui/components/logo"
 import { useI18n } from "@pindou/core/i18n/client"
 
 /** Footer — mirrors the web footer (logo + tagline, nav, copyright). */
-export function DesktopFooter() {
+export function Footer() {
   const { t } = useI18n()
   const year = new Date().getFullYear()
 
