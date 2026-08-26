@@ -22,7 +22,7 @@ build/
 
 # electron desktop (vite output)
 .vite/
-apps/desktop/src/renderer/dist/
+dist/
 
 # misc
 .DS_Store
