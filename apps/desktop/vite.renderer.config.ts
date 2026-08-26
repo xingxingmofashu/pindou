@@ -22,5 +22,14 @@ export default defineConfig({
   root: resolve(__dirname, "src/renderer"),
   plugins: [react(), tailwindcss()],
   // Relative asset URLs so the file://-loaded index.html finds them.
-  base: "./"
+  base: "./",
+  // Forge's plugin-vite sets `resolve.preserveSymlinks: true`, which makes
+  // Vite treat every symlink path as a distinct module — the workspace
+  // packages (@pindou/ui → @pindou/core) then resolve to duplicate instances
+  // (two I18nContexts), and Vite's automatic dep discovery misses the CJS
+  // deps that esbuild pre-bundling must interop. Re-enable realpath
+  // resolution so modules dedupe and auto-discovery works like plain `vite`.
+  resolve: {
+    preserveSymlinks: false,
+  },
 })
