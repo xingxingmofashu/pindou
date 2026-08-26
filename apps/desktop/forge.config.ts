@@ -1,6 +1,6 @@
 import type { ForgeConfig } from "@electron-forge/shared-types"
-import { cp, mkdir, readFile, realpath, stat } from "node:fs/promises"
-import { dirname, join, resolve } from "node:path"
+import { cp, mkdir, readFile, realpath, rename, stat } from "node:fs/promises"
+import { basename, dirname, join, resolve } from "node:path"
 
 /**
  * Electron Forge configuration.
@@ -169,6 +169,31 @@ const config: ForgeConfig = {
         console.error("forge packageAfterCopy failed:", err)
         throw err
       }
+    },
+    /**
+     * maker-zip hardcodes the archive name as `<dir>-<version>.zip` with no
+     * way to customise it. Rename it to the version-less
+     * `pindou-desktop-mac-<arch>.zip` so every published asset follows the
+     * same convention as the dmg/exe.
+     */
+    postMake: async (_config, results) => {
+      const renamed: typeof results = []
+      for (const result of results) {
+        const artifacts: string[] = []
+        for (const artifact of result.artifacts) {
+          const name = basename(artifact)
+          const zipMatch = name.match(/^(.+)-[0-9]+\.[0-9]+\.[0-9]+[^/]*\.zip$/)
+          if (zipMatch) {
+            const newPath = join(dirname(artifact), `pindou-desktop-mac-${process.arch}.zip`)
+            await rename(artifact, newPath)
+            artifacts.push(newPath)
+          } else {
+            artifacts.push(artifact)
+          }
+        }
+        renamed.push({ ...result, artifacts })
+      }
+      return renamed
     },
   },
 }
