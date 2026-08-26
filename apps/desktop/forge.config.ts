@@ -93,7 +93,12 @@ const config: ForgeConfig = {
   makers: [
     {
       name: "@electron-forge/maker-squirrel",
-      config: {},
+      config: {
+        // The package name is scoped (@pindou/desktop); squirrel would write
+        // the nuspec into a `@pindou\desktop.nuspec` path and fail with ENOENT.
+        // Give it an explicit unscoped app name.
+        name: "pindou-desktop",
+      },
     },
     {
       name: "@electron-forge/maker-zip",
