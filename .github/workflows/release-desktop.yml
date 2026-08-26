@@ -41,6 +41,9 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
+    # Creating the release + generating release notes requires contents: write.
+    permissions:
+      contents: write
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
