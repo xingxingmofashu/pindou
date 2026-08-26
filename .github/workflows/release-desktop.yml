@@ -4,15 +4,30 @@ on:
   push:
     tags: ["v*"]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest]
+        include:
+          - os: macos-latest
+            target: arm64
+            platform: mac
+          - os: macos-13
+            target: x64
+            platform: mac
+          - os: windows-latest
+            target: x64
+            platform: win
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-tags: true
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -32,16 +47,20 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: desktop-${{ matrix.os }}
+          name: desktop-${{ matrix.platform }}-${{ matrix.target }}
           path: |
             apps/desktop/out/make/**/*.dmg
-            apps/desktop/out/make/**/*.exe
             apps/desktop/out/make/**/*.zip
+            apps/desktop/out/make/**/*.exe
+            # Squirrel update metadata + packages (Windows auto-update needs
+            # RELEASES and the full nupkg, not just the setup exe).
+            apps/desktop/out/make/**/RELEASES
+            apps/desktop/out/make/**/*.nupkg
 
   release:
     needs: build
     runs-on: ubuntu-latest
-    # Creating the release + generating release notes requires contents: write.
+    # Creating the release + uploading assets requires contents: write.
     permissions:
       contents: write
     steps:
@@ -56,9 +75,14 @@ jobs:
         with:
           files: |
             **/*.dmg
-            **/*.exe
             **/*.zip
+            **/*.exe
+            **/RELEASES
+            **/*.nupkg
           prerelease: true
           generate_release_notes: true
+          # Version-less asset names: allow overwriting assets already on the
+          # release (e.g. when re-running the workflow for the same version).
+          fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -100,6 +100,8 @@ const config: ForgeConfig = {
         name: "pindou-desktop",
         // NuGet rejects a nuspec without an authors field.
         authors: "xingxingmofashu",
+        // Version-less asset name, matching the mac dmg convention.
+        setupExe: "pindou-desktop-win-x64.exe",
       },
     },
     {
@@ -120,6 +122,9 @@ const config: ForgeConfig = {
       config: {
         // DMG volume icon (same icns as the app bundle).
         icon: resolve(__dirname, "resources/icon.icns"),
+        // Version-less asset name, e.g. pindou-desktop-mac-arm64.dmg.
+        // This also becomes the DMG volume name.
+        name: `pindou-desktop-mac-${process.arch}`,
       },
     },
   ],
