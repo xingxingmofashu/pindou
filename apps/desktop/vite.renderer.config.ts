@@ -1,0 +1,26 @@
+import { resolve } from "node:path"
+import { defineConfig } from "vite"
+import react from "@vitejs/plugin-react"
+import tailwindcss from "@tailwindcss/vite"
+
+/**
+ * Vite config for the renderer process (Forge `renderer` target).
+ *
+ * Forge sets the Vite root to the project dir by default; we pin it to
+ * `src/renderer` so the existing index.html stays where it is. The shared
+ * workspace packages resolve through pnpm's hoisted node_modules.
+ *
+ * `optimizeDeps.include` forces the Base UI packages (and their CJS
+ * dependency `use-sync-external-store`) through Vite's dep pre-bundling.
+ * Without this, `@base-ui/utils/store/useStore.mjs` does a named ESM import
+ * (`useSyncExternalStore`) straight from the CJS `shim/index.js`, which Vite
+ * cannot analyse when serving source files — the named export is reported
+ * missing and the app white-screens. esbuild's pre-bundling performs the
+ * CJS→ESM interop correctly.
+ */
+export default defineConfig({
+  root: resolve(__dirname, "src/renderer"),
+  plugins: [react(), tailwindcss()],
+  // Relative asset URLs so the file://-loaded index.html finds them.
+  base: "./"
+})

@@ -20,6 +20,10 @@ out/
 # production
 build/
 
+# electron desktop (Forge vite output)
+apps/desktop/.vite/
+apps/desktop/src/renderer/dist/
+
 # misc
 .DS_Store
 *.pem

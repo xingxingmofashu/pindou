@@ -3,16 +3,16 @@
   "version": "0.1.0",
   "description": "Pindou desktop editor — offline fuse bead pattern editor (Electron)",
   "private": true,
-  "type": "module",
-  "main": "./out/main/index.js",
+  "main": "./.vite/build/main.js",
   "scripts": {
-    "dev": "electron-vite dev",
-    "build": "electron-vite build",
-    "start": "electron-vite preview",
+    "dev": "electron-forge start",
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "publish": "electron-forge publish",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "dist": "electron-vite build && electron-builder",
     "postinstall": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
@@ -29,6 +29,14 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@electron-forge/cli": "^7.11.2",
+    "@electron-forge/maker-deb": "^7.11.2",
+    "@electron-forge/maker-dmg": "^7.11.2",
+    "@electron-forge/maker-rpm": "^7.11.2",
+    "@electron-forge/maker-squirrel": "^7.11.2",
+    "@electron-forge/maker-zip": "^7.11.2",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.11.2",
+    "@electron-forge/plugin-vite": "^7.11.2",
     "@electron/rebuild": "^4.2.0",
     "@tailwindcss/vite": "^4",
     "@types/better-sqlite3": "^7.6.13",
@@ -38,38 +46,8 @@
     "@vitejs/plugin-react": "^4.3.4",
     "drizzle-kit": "^0.31.10",
     "electron": "^37.2.0",
-    "electron-builder": "^26.0.12",
-    "electron-vite": "^4.0.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vite": "^7.0.0"
-  },
-  "build": {
-    "appId": "com.pindou.desktop",
-    "productName": "Pindou",
-    "asarUnpack": [
-      "node_modules/better-sqlite3/**"
-    ],
-    "files": [
-      "out/**",
-      "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": "drizzle",
-        "to": "drizzle"
-      }
-    ],
-    "mac": {
-      "target": "dmg",
-      "category": "public.app-category.graphics-design"
-    },
-    "win": {
-      "target": "nsis"
-    },
-    "linux": {
-      "target": "AppImage",
-      "category": "Graphics"
-    }
   }
 }

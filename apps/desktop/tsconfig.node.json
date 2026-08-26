@@ -7,5 +7,5 @@
     "moduleResolution": "bundler",
     "noEmit": true
   },
-  "include": ["src/main", "src/preload", "src/shared", "electron.vite.config.ts"]
+  "include": ["src/main", "src/preload", "src/shared", "forge.config.ts", "vite.main.config.ts", "vite.renderer.config.ts"]
 }
