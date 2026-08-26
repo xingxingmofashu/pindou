@@ -98,6 +98,8 @@ const config: ForgeConfig = {
         // the nuspec into a `@pindou\desktop.nuspec` path and fail with ENOENT.
         // Give it an explicit unscoped app name.
         name: "pindou-desktop",
+        // NuGet rejects a nuspec without an authors field.
+        authors: "xingxingmofashu",
       },
     },
     {
