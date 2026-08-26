@@ -8,7 +8,8 @@ import { detectLocale } from "@pindou/core/i18n/config"
  * The installed app name follows the visitor's language (`Accept-Language`,
  * same detection as the locale proxy): `zh` → 拼豆, `en` → Pindou.
  * `start_url: "/"` is locale-agnostic — the proxy redirects to `/en`/`/zh`
- * on launch. Icons are committed PNGs derived from `public/icon@32x32.svg`.
+ * on launch. Icons are committed PNGs derived from the rounded desktop app
+ * icon (`apps/desktop/resources/icon-source.png`).
  */
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const locale = detectLocale((await headers()).get("accept-language"))

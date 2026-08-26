@@ -26,6 +26,10 @@ const config: ForgeConfig = {
     },
     name: "Pindou",
     appBundleId: "com.pindou.desktop",
+    // App icon (icns generated from apps/web/public/icon-512.png). Electron
+    // picks up the .icns for mac; Windows falls back to the default icon
+    // unless a .ico is provided alongside.
+    icon: resolve(__dirname, "resources/icon.icns"),
     // pnpm hoisted: apps/desktop/node_modules holds only symlinks; prune would
     // resolve them against the store and produce a broken tree in the app.
     prune: false,
@@ -106,7 +110,10 @@ const config: ForgeConfig = {
     },
     {
       name: "@electron-forge/maker-dmg",
-      config: {},
+      config: {
+        // DMG volume icon (same icns as the app bundle).
+        icon: resolve(__dirname, "resources/icon.icns"),
+      },
     },
   ],
   hooks: {
