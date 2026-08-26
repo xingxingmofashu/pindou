@@ -20,8 +20,8 @@ out/
 # production
 build/
 
-# electron desktop (Forge vite output)
-apps/desktop/.vite/
+# electron desktop (vite output)
+.vite/
 apps/desktop/src/renderer/dist/
 
 # misc
