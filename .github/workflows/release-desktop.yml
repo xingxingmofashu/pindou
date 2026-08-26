@@ -16,9 +16,6 @@ jobs:
           - os: macos-latest
             target: arm64
             platform: mac
-          - os: macos-13
-            target: x64
-            platform: mac
           - os: windows-latest
             target: x64
             platform: win
