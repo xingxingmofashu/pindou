@@ -23,6 +23,14 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   // Relative asset URLs so the file://-loaded index.html finds them.
   base: "./",
+  // Forge's plugin-vite resolves its outDir (`.vite/renderer/main_window`)
+  // against the Vite root, which we pin to src/renderer — the production
+  // bundle would land in src/renderer/.vite/... and the packaged main process
+  // (loading .vite/renderer/main_window/index.html) would find nothing.
+  // Pin the output to the project dir with an absolute path.
+  build: {
+    outDir: resolve(__dirname, ".vite/renderer/main_window"),
+  },
   // Forge's plugin-vite sets `resolve.preserveSymlinks: true`, which makes
   // Vite treat every symlink path as a distinct module — the workspace
   // packages (@pindou/ui → @pindou/core) then resolve to duplicate instances

@@ -10,11 +10,11 @@ import * as schema from "./schema"
 export let db!: BetterSQLite3Database<typeof schema>
 
 /** Directory holding the Drizzle migration SQL files (copied into the bundle
- *  by the `copyMigrations` build plugin; in dev they live in the repo). */
+ *  by the Forge `packageAfterCopy` hook; in dev they live in the repo). The
+ *  files end up inside the asar, so both dev and packaged resolve from the
+ *  app path (Electron's fs can read SQL files from the asar). */
 function migrationsDir(): string {
-  return app.isPackaged
-    ? join(process.resourcesPath, "drizzle")
-    : join(app.getAppPath(), "drizzle")
+  return join(app.getAppPath(), "drizzle")
 }
 
 /**
