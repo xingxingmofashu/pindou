@@ -1,5 +1,6 @@
 import { app, BrowserWindow, shell } from "electron"
 import { join } from "node:path"
+import { updateElectronApp } from "update-electron-app"
 import { registerIpc } from "./ipc"
 import { initDb } from "./db"
 import { IPC } from "../shared/ipc"
@@ -69,6 +70,16 @@ app.whenReady().then(() => {
   initDb()
   registerIpc()
   createWindow()
+
+  // Check for new releases on GitHub at every launch (production only).
+  // update-electron-app reads the `repository` field from package.json and
+  // compares against the latest GitHub release; it downloads and prompts to
+  // restart when a newer version is published.
+  if (app.isPackaged) {
+    updateElectronApp({
+      updateInterval: "1 hour",
+    })
+  }
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

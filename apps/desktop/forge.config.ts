@@ -116,6 +116,21 @@ const config: ForgeConfig = {
       },
     },
   ],
+  // GitHub Releases publisher — `pnpm --filter @pindou/desktop publish`
+  // uploads the make artifacts as a prerelease draft. Requires GITHUB_TOKEN.
+  publishers: [
+    {
+      name: "@electron-forge/publisher-github",
+      config: {
+        repository: {
+          owner: "xingxingmofashu",
+          name: "pindou",
+        },
+        prerelease: true,
+        draft: true,
+      },
+    },
+  ],
   hooks: {
     /**
      * Copy the Drizzle migration SQL files and the native modules into the
