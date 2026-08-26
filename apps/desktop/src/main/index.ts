@@ -36,7 +36,7 @@ function createWindow(): void {
     // Frameless: the header provides the drag region and window controls.
     frame: false,
     webPreferences: {
-      preload: join(__dirname, "../preload/index.mjs"),
+      preload: join(__dirname, "preload.js"),
       sandbox: false,
       contextIsolation: true,
       nodeIntegration: false,
@@ -55,11 +55,13 @@ function createWindow(): void {
   win.on("maximize", sendMaximized)
   win.on("unmaximize", sendMaximized)
 
-  // electron-vite: dev server URL in dev, built file in prod.
-  if (process.env["ELECTRON_RENDERER_URL"]) {
-    win.loadURL(process.env["ELECTRON_RENDERER_URL"])
+  // Electron Forge plugin-vite: `MAIN_WINDOW_VITE_DEV_SERVER_URL` is a
+  // compile-time define (injected by the plugin), not a process env var.
+  // Main bundle lives in .vite/build, renderer in .vite/renderer/main_window.
+  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+    win.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL)
   } else {
-    win.loadFile(join(__dirname, "../renderer/index.html"))
+    win.loadFile(join(__dirname, "../renderer/main_window/index.html"))
   }
 }
 

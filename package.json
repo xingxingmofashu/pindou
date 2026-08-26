@@ -12,8 +12,8 @@
     "db:generate": "pnpm --filter @pindou/web db:generate",
     "db:migrate": "pnpm --filter @pindou/web db:migrate",
     "desktop:dev": "pnpm --filter @pindou/desktop dev",
-    "desktop:build": "pnpm --filter @pindou/desktop build",
-    "desktop:dist": "pnpm --filter @pindou/desktop dist",
+    "desktop:package": "pnpm --filter @pindou/desktop package",
+    "desktop:make": "pnpm --filter @pindou/desktop make",
     "prepare": "husky"
   },
   "devDependencies": {
