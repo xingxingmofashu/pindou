@@ -16,6 +16,7 @@ nodeLinker: hoisted
 
 supportedArchitectures:
   os:
+    - win32
     - darwin
     - linux
   cpu:
