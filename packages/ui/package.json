@@ -11,6 +11,7 @@
     ".": "./src/index.ts",
     "./utils": "./src/utils.ts",
     "./components/*": "./src/components/*.tsx",
+    "./pages/*": "./src/pages/*.tsx",
     "./index.css": "./src/index.css"
   },
   "scripts": {
