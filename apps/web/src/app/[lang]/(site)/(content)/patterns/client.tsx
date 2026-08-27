@@ -1,28 +1,10 @@
 "use client"
 
-import { useState } from "react"
-import Link from "next/link"
-import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { Search } from "lucide-react"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationNext,
-  PaginationPrevious,
-} from "@pindou/ui/components/ui/pagination"
-import { Button } from "@pindou/ui/components/ui/button"
-import { Card, CardHeader, CardTitle } from "@pindou/ui/components/ui/card"
-import { Input } from "@pindou/ui/components/ui/input"
+import { PatternsPage, type PatternItem } from "@pindou/ui/pages/patterns-page"
 import { totalBeadCount } from "@/lib/utils"
-import { formatRelativeDate } from "@pindou/core/date"
 import { localizedPath } from "@pindou/core/i18n/config"
 import { useI18n } from "@pindou/core/i18n/client"
-
-/** 1×1 transparent GIF — placeholder `src` for a failed/empty thumbnail. */
-const TRANSPARENT_PIXEL =
-  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
 
 export interface PatternListItem {
   id: string
@@ -34,9 +16,9 @@ export interface PatternListItem {
 }
 
 /**
- * Client render of the catalog grid + search + pagination. Receives
- * server-fetched data as props; search and pagination navigate via soft client
- * transitions (`router.push` / plain links), which re-render the server page.
+ * Thin web wrapper around the shared {@link PatternsPage}: normalizes the
+ * server-fetched rows into {@link PatternItem}s, wires the Next.js router for
+ * search/clear/navigation, and renders the server-side pagination control.
  */
 export function PatternsContentClient({
   q,
@@ -52,213 +34,39 @@ export function PatternsContentClient({
   list: PatternListItem[]
 }) {
   const { locale, t } = useI18n()
-  // Query-string suffix appended to pagination links so the search term
-  // survives page navigation.
-  const searchSuffix = q ? `&q=${encodeURIComponent(q)}` : ""
-
-  return (
-    <div className="flex h-full flex-col overflow-hidden">
-      <div className="flex-1 min-h-0 flex flex-col border">
-        <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
-          <h1 className="text-sm font-semibold">{t("patterns.title")}</h1>
-          <div className="flex items-center gap-2">
-            <p className="text-[10px] text-muted-foreground">
-              {t("patterns.publishedCount", { count: total.toLocaleString() })}
-            </p>
-            <PatternSearch
-              locale={locale}
-              initialQuery={q}
-              placeholder={t("patterns.searchPlaceholder")}
-              ariaLabel={t("patterns.searchAria")}
-            />
-          </div>
-        </div>
-
-        <div className="flex-1 min-h-0 overflow-y-auto p-3">
-          {list.length > 0 ? (
-            <>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                {list.map((p) => (
-                  <PatternCard
-                    key={p.id}
-                    id={p.id}
-                    title={p.title}
-                    authorName={p.authorName}
-                    beadStats={p.beadStats}
-                    createdAt={p.createdAt}
-                    thumbUrl={p.thumbUrl}
-                    locale={locale}
-                    t={t}
-                  />
-                ))}
-              </div>
-
-              {totalPages > 1 && (
-                <Pagination className="mt-4">
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        href={page > 1 ? `?page=${page - 1}${searchSuffix}` : undefined}
-                        aria-disabled={page <= 1}
-                        className={page <= 1 ? "pointer-events-none opacity-50" : undefined}
-                      />
-                    </PaginationItem>
-
-                    <PaginationItem>
-                      <span className="px-3 text-sm text-muted-foreground">
-                        {t("patterns.pageOf", {
-                          page: String(page),
-                          total: String(totalPages),
-                        })}
-                      </span>
-                    </PaginationItem>
-
-                    <PaginationItem>
-                      <PaginationNext
-                        href={page < totalPages ? `?page=${page + 1}${searchSuffix}` : undefined}
-                        aria-disabled={page >= totalPages}
-                        className={page >= totalPages ? "pointer-events-none opacity-50" : undefined}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              )}
-            </>
-          ) : (
-            <div className="flex h-full items-center justify-center text-center">
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  {q ? t("patterns.noResults") : t("patterns.empty")}
-                </p>
-                {q ? (
-                  <Link
-                    href={localizedPath(locale, "/patterns")}
-                    className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
-                  >
-                    {t("patterns.clearSearch")}
-                  </Link>
-                ) : (
-                  <Link
-                    href={localizedPath(locale, "/editor")}
-                    className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
-                  >
-                    {t("patterns.createFirst")}
-                  </Link>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/** Search box for the patterns catalog. Submits via `router.push` so the page
- *  soft-navigates to the new `?q=` URL without a full browser reload. */
-function PatternSearch({
-  locale,
-  initialQuery,
-  placeholder,
-  ariaLabel,
-}: {
-  locale: Parameters<typeof localizedPath>[0]
-  initialQuery: string
-  placeholder: string
-  ariaLabel: string
-}) {
   const router = useRouter()
 
+  const items: PatternItem[] = list.map((p) => ({
+    id: p.id,
+    title: p.title,
+    thumbUrl: p.thumbUrl || undefined,
+    authorName: p.authorName,
+    date: p.createdAt,
+    beads: totalBeadCount(p.beadStats),
+  }))
+
   return (
-    <form
-      role="search"
-      onSubmit={(e) => {
-        e.preventDefault()
-        const input = new FormData(e.currentTarget).get("q")
-        const q = typeof input === "string" ? input.trim() : ""
-        router.push(localizedPath(locale, q ? `/patterns?q=${encodeURIComponent(q)}` : "/patterns"))
+    <PatternsPage
+      title={t("patterns.title")}
+      countLabel={t("patterns.publishedCount", { count: total.toLocaleString() })}
+      items={items}
+      query={q}
+      searchPlaceholder={t("patterns.searchPlaceholder")}
+      searchAriaLabel={t("patterns.searchAria")}
+      onSearch={(query) =>
+        router.push(localizedPath(locale, query ? `/patterns?q=${encodeURIComponent(query)}` : "/patterns"))
+      }
+      onClearSearch={() => router.push(localizedPath(locale, "/patterns"))}
+      onOpen={(id) => router.push(localizedPath(locale, `/patterns/${id}`))}
+      emptyTitle={q ? t("patterns.noResults") : t("patterns.empty")}
+      emptyActionLabel={q ? undefined : t("patterns.createFirst")}
+      onEmptyAction={() => router.push(localizedPath(locale, "/editor"))}
+      page={page}
+      totalPages={totalPages}
+      onPageChange={(target) => {
+        const searchSuffix = q ? `&q=${encodeURIComponent(q)}` : ""
+        router.push(localizedPath(locale, `/patterns?page=${target}${searchSuffix}`))
       }}
-    >
-      <div className="relative">
-        <Input
-          key={initialQuery}
-          name="q"
-          defaultValue={initialQuery}
-          placeholder={placeholder}
-          aria-label={ariaLabel}
-          className="h-8 w-40 pr-8 sm:w-48"
-        />
-        <Button
-          type="submit"
-          variant="ghost"
-          size="icon"
-          aria-label={ariaLabel}
-          className="absolute right-0 top-0 text-muted-foreground hover:text-foreground"
-        >
-          <Search />
-        </Button>
-      </div>
-    </form>
-  )
-}
-
-/** One catalog entry: thumbnail, title, author, bead count, and publish date. */
-function PatternCard({
-  id,
-  title,
-  authorName,
-  beadStats,
-  createdAt,
-  thumbUrl,
-  locale,
-  t,
-}: {
-  id: string
-  title: string
-  authorName: string | null
-  beadStats: Record<string, number>
-  createdAt: string
-  thumbUrl: string
-  locale: Parameters<typeof localizedPath>[0]
-  t: (path: string, vars?: Record<string, string | number>) => string
-}) {
-  const totalBeads = totalBeadCount(beadStats)
-  const relativeDate = formatRelativeDate(createdAt, locale)
-  // If the thumbnail fails to load (e.g. a network/proxy blocks the R2 host),
-  // fall back to the muted placeholder instead of rendering a broken image.
-  const [imageFailed, setImageFailed] = useState(false)
-
-  return (
-    <Link href={localizedPath(locale, `/patterns/${id}`)} className="block">
-      <Card>
-        {/* Always render an image element so it stays the Card's `:first-child`,
-            keeping the flush-top + rounded-top styles even in the failed branch.
-            The failed/empty branch swaps in a 1×1 transparent GIF (data: URI, so
-            the Next image optimizer leaves it untouched). */}
-        <Image
-          src={thumbUrl && !imageFailed ? thumbUrl : TRANSPARENT_PIXEL}
-          alt={title}
-          width={128}
-          height={128}
-          sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
-          unoptimized
-          className="block aspect-square w-full bg-muted object-cover [image-rendering:pixelated]"
-          onError={() => setImageFailed(true)}
-        />
-        <CardHeader>
-          <CardTitle className="truncate">
-            {title}
-            {authorName && (
-              <span className="ml-2 text-xs font-normal text-muted-foreground">{authorName}</span>
-            )}
-          </CardTitle>
-          <p className="text-xs text-muted-foreground truncate">
-            {t("patternCard.beads", { count: totalBeads.toLocaleString() })}
-            <span aria-hidden="true"> · </span>
-            {relativeDate}
-          </p>
-        </CardHeader>
-      </Card>
-    </Link>
+    />
   )
 }
