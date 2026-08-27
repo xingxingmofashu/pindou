@@ -44,7 +44,7 @@ export default function PatternDetailPageWrapper() {
       updatedAt={pattern.updatedAt}
       onBack={() => navigate("/patterns")}
       onEdit={() => navigate(`/editor/${pattern.id}`)}
-      onExportBlob={async (blob, defaultName) => {
+      onExport={async (blob, defaultName) => {
         await window.pindou.savePng(new Uint8Array(await blob.arrayBuffer()), defaultName)
       }}
     />

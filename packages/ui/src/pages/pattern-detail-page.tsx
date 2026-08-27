@@ -18,7 +18,7 @@ import type { Palette } from "@pindou/shared/types"
  * Shared read-only pattern detail page (web `/patterns/[id]` + desktop
  * `/patterns/:id`). Receives the full pattern as props and stays framework-
  * agnostic: navigation is injected via `onBack`/`onEdit` callbacks, and the
- * export dialog's save target via `onExportBlob` (desktop saves via IPC; web
+ * export dialog's save target via `onExport` (desktop saves via IPC; web
  * falls back to the browser download).
  */
 export interface PatternDetailPageProps {
@@ -45,7 +45,7 @@ export interface PatternDetailPageProps {
   /** Navigate to the edit page (renders the edit button when set + canEdit). */
   onEdit?: () => void
   /** Custom export save target; defaults to a browser download. */
-  onExportBlob?: (blob: Blob, defaultName: string) => Promise<void> | void
+  onExport?: (blob: Blob, defaultName: string) => Promise<void> | void
 }
 
 export function PatternDetailPage({
@@ -62,7 +62,7 @@ export function PatternDetailPage({
   isDark,
   onBack,
   onEdit,
-  onExportBlob,
+  onExport,
 }: PatternDetailPageProps) {
   const { locale, t } = useI18n()
   const canvasApiRef = useRef<PixiCanvasApi>(null)
@@ -237,7 +237,7 @@ export function PatternDetailPage({
           onClose={() => setExportOpen(false)}
           onGetCellsData={onGetCellsData}
           palette={palette}
-          onSaveBlob={onExportBlob}
+          onSaveBlob={onExport}
         />
       )}
     </div>
