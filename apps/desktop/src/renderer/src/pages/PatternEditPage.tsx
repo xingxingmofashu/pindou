@@ -1,94 +1,26 @@
-import { useCallback, useEffect, useRef, useState } from "react"
-import {
-  ArrowLeft,
-  Download,
-  Eraser,
-  List,
-  PaintBucket,
-  Palette as PaletteIcon,
-  Pencil,
-  Pipette,
-  Redo2,
-  Trash2,
-  Undo2,
-} from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { PixiCanvas, type PixiCanvasApi } from "@pindou/ui/components/pixi-canvas"
-import { BeadStatsPanel } from "@pindou/ui/components/bead-stats"
-import { ZoomControls } from "@pindou/ui/components/zoom-controls"
-import { ExportDialog } from "@pindou/ui/components/dialogs/export-dialog"
-import { Button } from "@pindou/ui/components/ui/button"
-import { Input } from "@pindou/ui/components/ui/input"
-import { Label } from "@pindou/ui/components/ui/label"
-import { Separator } from "@pindou/ui/components/ui/separator"
-import { Spinner } from "@pindou/ui/components/ui/spinner"
-import { Textarea } from "@pindou/ui/components/ui/textarea"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@pindou/ui/components/ui/tooltip"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@pindou/ui/components/ui/alert-dialog"
-import { toast } from "@pindou/ui/components/ui/toast"
-import { useShortcuts } from "@pindou/core/hooks/use-shortcuts"
+import { PatternEditPage } from "@pindou/ui/pages/pattern-edit-page"
 import { useEditStore } from "@pindou/core/hooks/use-edit"
+import { toast } from "@pindou/ui/components/ui/toast"
 import { useI18n } from "@pindou/core/i18n/client"
 import { PALETTES } from "@pindou/shared/palettes"
-import type { ToolKind } from "@pindou/core/editor"
 import type { Palette } from "@pindou/shared/types"
-import { ColorPalette } from "../components/ColorPalette"
-
-const TOOLS: { value: ToolKind; icon: typeof Pencil; shortcut: string }[] = [
-  { value: "pen", icon: Pencil, shortcut: "B" },
-  { value: "eraser", icon: Eraser, shortcut: "E" },
-  { value: "fill", icon: PaintBucket, shortcut: "G" },
-  { value: "eyedropper", icon: Pipette, shortcut: "I" },
-]
 
 /**
- * Edit page for an existing local pattern — mirrors the web pattern-edit form:
- * a collapsible left panel with title/description fields + drawing tools + the
- * colour palette, a canvas seeded with the saved grid, and a save button that
- * PATCHes the record back to SQLite. Unlike the new-pattern editor, the fields
- * are edited inline (no save dialog) and saving returns to the detail page.
+ * Desktop pattern-edit page — thin wrapper around the shared
+ * {@link PatternEditPage}: loads the record from SQLite, holds the (switchable)
+ * palette state, and wires react-router navigation + the IPC save call.
  */
-export default function PatternEditPage() {
-  const { t } = useI18n()
+export default function PatternEditPageWrapper() {
   const { id = "" } = useParams()
   const navigate = useNavigate()
-  const canvasApiRef = useRef<PixiCanvasApi>(null)
+  const { t } = useI18n()
   const [palette, setPalette] = useState<Palette>(() => PALETTES[0])
   const [loadedGrid, setLoadedGrid] = useState<string[][] | undefined>(undefined)
   const [patternFound, setPatternFound] = useState(false)
 
-  const setApi = useEditStore((s) => s.setApi)
-  const setZoom = useEditStore((s) => s.setZoom)
-  const setActiveTool = useEditStore((s) => s.setActiveTool)
-  const activeTool = useEditStore((s) => s.activeTool)
-  const activeColorIndex = useEditStore((s) => s.activeColorIndex)
-  const setActiveColorIndex = useEditStore((s) => s.setActiveColorIndex)
-  const showLeftPanel = useEditStore((s) => s.showLeftPanel)
-  const showBeadStats = useEditStore((s) => s.showBeadStats)
-  const beadStats = useEditStore((s) => s.beadStats)
-  const exportOpen = useEditStore((s) => s.exportOpen)
-  const closeExport = useEditStore((s) => s.closeExport)
-  const title = useEditStore((s) => s.title)
-  const setTitle = useEditStore((s) => s.setTitle)
-  const description = useEditStore((s) => s.description)
-  const setDescription = useEditStore((s) => s.setDescription)
-  const saving = useEditStore((s) => s.saving)
-  const toggleLeftPanel = useEditStore((s) => s.toggleLeftPanel)
-  const toggleBeadStats = useEditStore((s) => s.toggleBeadStats)
-
   // Load the pattern once per id: seed the draft fields and the canvas grid.
-  // The grid is handed to PixiCanvas as a prop so its pinned-grid effect loads
-  // it once the canvas initializes (calling api.loadGrid here races the mount).
   useEffect(() => {
     let cancelled = false
     window.pindou.patterns.get(id).then((record) => {
@@ -105,79 +37,22 @@ export default function PatternEditPage() {
     }
   }, [id])
 
-  // Registers the canvas's imperative API into the shared store so the
-  // toolbar and panel controls can drive it. The canvas only mounts once the
-  // pattern loads, so re-register on `patternFound` — otherwise the store
-  // keeps a null `api` from the first (pre-load) mount.
-  useEffect(() => {
-    setApi(canvasApiRef.current)
-    return () => setApi(null)
-  }, [setApi, patternFound])
-
-  // Stable so the export dialog's memoized grid snapshot stays valid.
-  const onGetCellsData = useCallback(() => canvasApiRef.current?.getCellsData() ?? null, [])
-
-  // Recomputed by the canvas whenever the grid changes so the bead panel stays live.
-  const onGridChange = useCallback(() => {
-    useEditStore.getState().setBeadStats(canvasApiRef.current?.getBeadStats() ?? null)
-  }, [])
-
-  // Keeps the toolbar's undo/redo buttons in sync with the canvas history.
-  const onHistoryChange = useCallback((canUndo: boolean, canRedo: boolean) => {
-    useEditStore.getState().setHistory(canUndo, canRedo)
-  }, [])
-
-  useShortcuts(setActiveTool)
-
-  const handleColorPick = useCallback(
-    (index: number) => {
-      setActiveColorIndex(index)
-      setActiveTool("pen")
-    },
-    [setActiveColorIndex, setActiveTool],
-  )
-
-  // Brand switch: swap the canvas palette and reset to the first colour.
-  const handleBrandChange = useCallback(
-    (code: string) => {
-      const brand = PALETTES.find((b) => b.code === code)
-      if (brand) {
-        setPalette(brand)
-        setActiveColorIndex(1)
-      }
-    },
-    [setActiveColorIndex],
-  )
-
-  const handleSave = useCallback(async () => {
-    if (!title.trim()) {
-      toast.add({ type: "error", title: t("editor.titleRequired") })
-      return
-    }
-    const cells = canvasApiRef.current?.getCellsData()
-    if (!cells) {
-      toast.add({ type: "error", title: t("editor.canvasEmpty") })
-      return
-    }
-    useEditStore.getState().setSaving(true)
-    try {
+  const handleSave = useCallback(
+    async (input: { title: string; description: string; beadStats: string; grid: string[][] }) => {
       await window.pindou.patterns.update(id, {
-        title: title.trim(),
-        description: description.trim(),
+        title: input.title,
+        description: input.description,
         fkBrandId: palette.id,
-        beadStats: cells.beadStats,
-        grid: cells.grid,
+        beadStats: input.beadStats,
+        grid: input.grid,
       })
       toast.add({ type: "success", title: t("desktop.saved") })
       navigate(`/patterns/${id}`)
-    } catch {
-      toast.add({ type: "error", title: t("desktop.saveFailed") })
-    } finally {
-      useEditStore.getState().setSaving(false)
-    }
-  }, [id, title, description, palette, navigate, t])
+    },
+    [id, palette.id, navigate, t],
+  )
 
-  if (!patternFound) {
+  if (!patternFound || !loadedGrid) {
     return (
       <div className="flex h-full items-center justify-center">
         <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
@@ -186,266 +61,13 @@ export default function PatternEditPage() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-2 overflow-hidden">
-      <EditToolbar id={id} onSave={handleSave} />
-      <div className="flex min-h-0 flex-1 gap-2">
-        {showLeftPanel && (
-          <EditFieldsPanel
-            palette={palette}
-            onBrandChange={handleBrandChange}
-            activeColorIndex={activeColorIndex}
-            onColorPick={handleColorPick}
-          />
-        )}
-        <PixiCanvas
-          className="min-h-0 min-w-0 flex-1 border p-2"
-          palette={palette}
-          grid={loadedGrid}
-          activeTool={activeTool}
-          activeColorIndex={activeColorIndex}
-          apiRef={canvasApiRef}
-          onZoomChange={setZoom}
-          onGridChange={onGridChange}
-          onHistoryChange={onHistoryChange}
-          onColorPick={handleColorPick}
-        />
-        {showBeadStats && (
-          <div className="w-56 shrink-0 overflow-hidden">
-            <BeadStatsPanel stats={beadStats} palette={palette} />
-          </div>
-        )}
-      </div>
-      <ExportDialog
-        open={exportOpen}
-        onClose={closeExport}
-        onGetCellsData={onGetCellsData}
-        palette={palette}
-      />
-    </div>
-  )
-}
-
-/** Top bar: back + title on the left, view toggles and actions on the right. */
-function EditToolbar({ id, onSave }: { id: string; onSave: () => void }) {
-  const { t } = useI18n()
-  const navigate = useNavigate()
-  const showLeftPanel = useEditStore((s) => s.showLeftPanel)
-  const toggleLeftPanel = useEditStore((s) => s.toggleLeftPanel)
-  const showBeadStats = useEditStore((s) => s.showBeadStats)
-  const toggleBeadStats = useEditStore((s) => s.toggleBeadStats)
-  const zoom = useEditStore((s) => s.zoom)
-  const api = useEditStore((s) => s.api)
-  const saving = useEditStore((s) => s.saving)
-  const openExport = useEditStore((s) => s.openExport)
-
-  return (
-    <div className="flex items-center justify-between gap-2 border px-3 py-2">
-      <div className="flex min-w-0 items-center gap-2">
-        <Button variant="outline" size="sm" onClick={() => navigate(`/patterns/${id}`)}>
-          <ArrowLeft data-icon="inline-start" />
-          {t("patternDetail.backToPattern")}
-        </Button>
-        <h1 className="truncate text-sm font-semibold">{t("patternDetail.editTitle")}</h1>
-      </div>
-      <div className="flex items-center gap-2">
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant={showLeftPanel ? "secondary" : "outline"}
-                size="icon-sm"
-                aria-label={t("editor.showColorPaletteToggle")}
-              >
-                <PaletteIcon data-icon="inline-start" />
-              </Button>
-            }
-            onClick={toggleLeftPanel}
-          />
-          <TooltipContent side="bottom">{t("editor.colorPalette")}</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant={showBeadStats ? "secondary" : "outline"}
-                size="icon-sm"
-                aria-label={t("editor.showBeadStatsToggle")}
-              >
-                <List data-icon="inline-start" />
-              </Button>
-            }
-            onClick={toggleBeadStats}
-          />
-          <TooltipContent side="bottom">{t("editor.beadStats")}</TooltipContent>
-        </Tooltip>
-        <Separator orientation="vertical" className="mx-1 h-5" />
-        <ZoomControls
-          zoom={zoom}
-          onSetZoom={(z) => api?.setZoom(z)}
-          onReset={() => api?.fitToCanvas()}
-        />
-        <Button variant="outline" size="sm" onClick={openExport}>
-          <Download data-icon="inline-start" />
-          {t("editor.export")}
-        </Button>
-        <Button size="sm" onClick={onSave} disabled={saving}>
-          {saving && <Spinner data-icon="inline-start" />}
-          {t("desktop.save")}
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-interface EditFieldsPanelProps {
-  palette: Palette
-  onBrandChange: (code: string) => void
-  activeColorIndex: number
-  onColorPick: (index: number) => void
-}
-
-/** Collapsible left panel: drawing tools, title/description fields, palette. */
-function EditFieldsPanel({ palette, onBrandChange, activeColorIndex, onColorPick }: EditFieldsPanelProps) {
-  const { t } = useI18n()
-  const [clearOpen, setClearOpen] = useState(false)
-  const activeTool = useEditStore((s) => s.activeTool)
-  const setActiveTool = useEditStore((s) => s.setActiveTool)
-  const canUndo = useEditStore((s) => s.canUndo)
-  const canRedo = useEditStore((s) => s.canRedo)
-  const api = useEditStore((s) => s.api)
-  const title = useEditStore((s) => s.title)
-  const setTitle = useEditStore((s) => s.setTitle)
-  const description = useEditStore((s) => s.description)
-  const setDescription = useEditStore((s) => s.setDescription)
-
-  return (
-    <div className="flex w-56 shrink-0 flex-col gap-3 overflow-hidden">
-      <div className="space-y-1.5 border p-3">
-        <div className="grid gap-1.5">
-          <Label htmlFor="edit-title">
-            {t("desktop.title")} <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="edit-title"
-            type="text"
-            maxLength={200}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="edit-description">{t("desktop.description")}</Label>
-          <Textarea
-            id="edit-description"
-            maxLength={2000}
-            rows={2}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="resize-none"
-          />
-        </div>
-        <p className="text-xs text-muted-foreground">{t("patternDetail.editHint")}</p>
-      </div>
-      <div className="flex items-center gap-0.5 border px-2 py-1.5">
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="outline"
-                size="icon-xs"
-                disabled={!canUndo}
-                aria-label={t("editor.undo")}
-              >
-                <Undo2 data-icon="inline-start" />
-              </Button>
-            }
-            onClick={() => api?.undo()}
-          />
-          <TooltipContent side="bottom">{t("editor.undo")} (⌘Z)</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="outline"
-                size="icon-xs"
-                disabled={!canRedo}
-                aria-label={t("editor.redo")}
-              >
-                <Redo2 data-icon="inline-start" />
-              </Button>
-            }
-            onClick={() => api?.redo()}
-          />
-          <TooltipContent side="bottom">{t("editor.redo")} (⇧⌘Z)</TooltipContent>
-        </Tooltip>
-        <Separator orientation="vertical" className="mx-1 h-5" />
-        {TOOLS.map(({ value, icon: Icon, shortcut }) => {
-          const label = t(`editor.${value}`)
-          return (
-            <Tooltip key={value}>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant={activeTool === value ? "secondary" : "outline"}
-                    size="icon-xs"
-                    aria-label={label}
-                  >
-                    <Icon data-icon="inline-start" />
-                  </Button>
-                }
-                onClick={() => setActiveTool(value)}
-              />
-              <TooltipContent side="bottom">
-                {label} ({shortcut})
-              </TooltipContent>
-            </Tooltip>
-          )
-        })}
-        <Separator orientation="vertical" className="mx-1 h-5" />
-        <AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <AlertDialogTrigger
-                  render={
-                    <Button variant="outline" size="icon-xs" aria-label={t("editor.clearCanvasAria")}>
-                      <Trash2 data-icon="inline-start" />
-                    </Button>
-                  }
-                />
-              }
-            />
-            <TooltipContent side="bottom">{t("editor.clearCanvas")}</TooltipContent>
-          </Tooltip>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{t("editor.clearCanvas")}</AlertDialogTitle>
-              <AlertDialogDescription>{t("editor.clearCanvasDescription")}</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  api?.clearCanvas()
-                  setClearOpen(false)
-                }}
-              >
-                {t("editor.clear")}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
-      <div className="min-h-0 flex-1">
-        <ColorPalette
-          brands={PALETTES}
-          palette={palette}
-          activeColorIndex={activeColorIndex}
-          onColorPick={onColorPick}
-          onBrandChange={onBrandChange}
-        />
-      </div>
-    </div>
+    <PatternEditPage
+      palette={palette}
+      grid={loadedGrid}
+      brands={PALETTES}
+      onPaletteChange={setPalette}
+      onBack={() => navigate(`/patterns/${id}`)}
+      onSave={handleSave}
+    />
   )
 }
