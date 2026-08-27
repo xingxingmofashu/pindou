@@ -1,8 +1,11 @@
 import { Skeleton } from "@pindou/ui/components/ui/skeleton"
+import { RouteProgress } from "@/components/route-progress"
 
 export default function Loading() {
   return (
-    <div className="flex h-full flex-col gap-2 overflow-hidden">
+    <>
+      <RouteProgress />
+      <div className="flex h-full flex-col gap-2 overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2 border">
         <Skeleton className="h-4 w-40" />
         <Skeleton className="h-8 w-24" />
@@ -20,5 +23,6 @@ export default function Loading() {
         <Skeleton className="flex-1 min-w-0 rounded-none border" />
       </div>
     </div>
+    </>
   )
 }
