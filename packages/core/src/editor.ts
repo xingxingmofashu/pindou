@@ -14,7 +14,6 @@ export interface PixiContext {
   world: Container
   beadsGfx: Graphics
   gridGfx: Graphics
-  labels: Container
 }
 
 /** Axis-aligned viewport rectangle in world space. */

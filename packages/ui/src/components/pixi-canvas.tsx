@@ -16,7 +16,6 @@ import type { Palette } from "@pindou/shared/types"
 export interface PixiCanvasProps {
   activeTool?: ToolKind
   activeColorIndex?: number
-  label?: boolean
   readonly?: boolean
   palette?: Palette
   /** Dark-mode flag for theme-dependent grid/label/background colours.
@@ -54,7 +53,6 @@ function PixiCanvasInner({
   palette,
   activeTool = "pen",
   activeColorIndex = 1,
-  label = false,
   readonly = false,
   isDark = false,
   grid,
@@ -84,7 +82,7 @@ function PixiCanvasInner({
     onError: handlePixiError,
   })
   const { zoom, setZoom, fitToCanvas, clearCanvas, undo, redo, getCellsData, getBeadStats, loadGrid } =
-    usePixiCanvas(ctx, palette, { activeTool, activeColorIndex, showLabels: label, readonly, isDark, onGridChange, onHistoryChange, onColorPick, onHoverCell })
+    usePixiCanvas(ctx, palette, { activeTool, activeColorIndex, readonly, isDark, onGridChange, onHistoryChange, onColorPick, onHoverCell })
 
   useEffect(() => {
     onZoomChange?.(zoom)

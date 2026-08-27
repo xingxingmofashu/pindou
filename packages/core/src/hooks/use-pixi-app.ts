@@ -98,15 +98,12 @@ export function usePixiApp(
       beadsGfx.label = "beads"
       const gridGfx = new Graphics()
       gridGfx.label = "grid"
-      const labels = new Container()
-      labels.label = "labels"
 
       world.addChild(beadsGfx)
       world.addChild(gridGfx)
-      world.addChild(labels)
       app.stage.addChild(world)
 
-      setCtx({ app, world, beadsGfx, gridGfx, labels })
+      setCtx({ app, world, beadsGfx, gridGfx })
     })
 
     return () => {

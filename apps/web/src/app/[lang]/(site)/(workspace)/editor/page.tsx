@@ -5,7 +5,7 @@ import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 import { useShallow } from "zustand/react/shallow"
-import { Pencil, Eraser, PaintBucket, Pipette, Trash2, CaseSensitive, ImagePlus, Download, List, Palette as PaletteIcon, Undo2, Redo2 } from "lucide-react"
+import { Pencil, Eraser, PaintBucket, Pipette, Trash2, ImagePlus, Download, List, Palette as PaletteIcon, Undo2, Redo2 } from "lucide-react"
 import { PixiCanvas, type PixiCanvasApi } from "@pindou/ui/components/pixi-canvas"
 import { ColorPalette } from "@/components/color-palette"
 import { BeadStatsPanel } from "@pindou/ui/components/bead-stats"
@@ -71,7 +71,6 @@ export default function EditorContent() {
   const activeTool = useEditorStore((s) => s.activeTool)
   const activeColorIndex = useEditorStore((s) => s.activeColorIndex)
   const setActiveColorIndex = useEditorStore((s) => s.setActiveColorIndex)
-  const showLabels = useEditorStore((s) => s.showLabels)
   const showColorPalette = useEditorStore((s) => s.showColorPalette)
   const showBeadStats = useEditorStore((s) => s.showBeadStats)
   const beadStats = useEditorStore((s) => s.beadStats)
@@ -127,7 +126,6 @@ export default function EditorContent() {
           className="flex-1 min-w-0 border p-2"
           activeTool={activeTool}
           activeColorIndex={activeColorIndex}
-          label={showLabels}
           isDark={resolvedTheme === "dark"}
           apiRef={canvasApiRef}
           onZoomChange={setZoom}
@@ -150,8 +148,6 @@ function EditorToolbar() {
   const {
     activeTool,
     setActiveTool,
-    showLabels,
-    toggleLabels,
     showBeadStats,
     toggleBeadStats,
     showColorPalette,
@@ -167,8 +163,6 @@ function EditorToolbar() {
     useShallow((s) => ({
       activeTool: s.activeTool,
       setActiveTool: s.setActiveTool,
-      showLabels: s.showLabels,
-      toggleLabels: s.toggleLabels,
       showBeadStats: s.showBeadStats,
       toggleBeadStats: s.toggleBeadStats,
       showColorPalette: s.showColorPalette,
@@ -245,21 +239,6 @@ function EditorToolbar() {
               </Tooltip>
             )
           })}
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant={showLabels ? "secondary" : "outline"}
-                  size="icon-xs"
-                  aria-label={t("editor.showLabels")}
-                >
-                  <CaseSensitive data-icon="inline-start" />
-                </Button>
-              }
-              onClick={toggleLabels}
-            />
-            <TooltipContent side="bottom">{t("editor.labels")}</TooltipContent>
-          </Tooltip>
           <Separator orientation="vertical" className="mx-1 h-5" />
           <Tooltip>
             <TooltipTrigger
