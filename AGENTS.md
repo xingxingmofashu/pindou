@@ -14,9 +14,12 @@ pnpm build        # Production build (also runs the TypeScript typecheck — the
 pnpm lint         # ESLint
 pnpm db:generate  # Generate a drizzle migration from schema.ts (drizzle-kit)
 pnpm db:migrate   # Apply pending migrations to Neon — schema + palette data
+pnpm desktop:dev  # Run the Electron app in dev mode (electron-forge start)
+pnpm desktop:make # Build installers (dmg / exe / zip in apps/desktop/out/make)
 ```
 
 - There is **no test suite**. Verification is `pnpm lint` + `pnpm build`.
+- The desktop app has its own typecheck: `pnpm --filter @pindou/desktop typecheck` (tsc for src + tsconfig.node.json).
 - A husky `pre-commit` hook runs `pnpm lint` on every commit (commits are lint-gated; `--no-verify` to bypass if truly needed).
 - DB-backed commands (`db:migrate`, and any code path that touches the pool in `src/db/index.ts`) need `DATABASE_URL` in `.env` (gitignored, Neon Postgres). `drizzle.config.ts` reads it via `process.env.DATABASE_URL!`.
 - Env is per-platform and gitignored: `.env` (local), `.env.preview`, `.env.vercel.production`, `.env.netlify.production` (each carries its own `BETTER_AUTH_URL`/OAuth creds). `.env.example` is the committed template — copy it, don't invent vars.
@@ -35,6 +38,7 @@ Repo-pinned skills live in `.claude/skills/` and `.agents/skills/` (managed via 
 - **SWR** for client-side data fetching (`useSWR` GETs, `useSWRMutation` POSTs; shared `fetcher` in `lib/utils.ts`)
 - **culori** for color-space conversions
 - **Upstash Redis** (`@upstash/ratelimit` + `@upstash/redis`) for distributed rate limiting
+- **Electron 37 + Electron Forge 7** (Vite plugin) for the desktop app (`apps/desktop`)
 - pnpm package manager
 
 ## Base UI (shadcn) differences from Radix
@@ -237,6 +241,42 @@ src/db/                                Drizzle schema + Neon Postgres Pool (@neo
 - **Route caching**: `/api/patterns` GET and `/api/patterns/[id]` GET serve their data through `unstable_cache` (30s revalidate, tags `patterns`/`pattern`) in `lib/server/patterns.ts` and set `Cache-Control`; publish (POST) and edit (PATCH) invalidate via `revalidateTag`. The `[id]` route is `force-dynamic` + `private, no-store` because the response includes the session-derived `canEdit`. The client's persisted SWR cache is invalidated across deployments by `next.config.ts` inlining a fresh `NEXT_PUBLIC_BUILD_TIME` epoch into the bundle each `next build`.
 - **Deploy**: dual-platform (Vercel + Netlify). Both `vercel.json` and `netlify.toml` run `db:migrate` before the build **only on production** (`VERCEL_ENV = production` / Netlify `$CONTEXT = production`); preview builds skip migrations. Production `pnpm build` therefore needs `DATABASE_URL` (also set in the CI workflow). Since both hosts share the same Neon DB, migration is idempotent via drizzle's tracking table.
 - Database is PostgreSQL on Neon (not the earlier better‑sqlite3/SQLite setup) — don't reintroduce SQLite.
+
+### Desktop app (`apps/desktop`)
+
+Offline Electron editor sharing the PixiJS canvas + editor logic with the web app via `@pindou/*` packages. Built with **Electron Forge 7 + Vite** (`plugin-vite`), packaged by `@electron-forge/package` / `@electron-forge/make`.
+
+```
+apps/desktop/
+  forge.config.ts        Forge config — packager, makers, plugins, hooks
+  vite.main.config.ts    Main + preload build (Vite)
+  vite.renderer.config.ts Renderer build (Vite)
+  src/
+    main/                Main process
+      index.ts           Window creation, single-instance lock, SwiftShader switch, whenReady bootstrap
+      ipc.ts             IPC handlers (patterns CRUD, file save, window controls)
+      store.ts           Local SQLite store (better-sqlite3 + Drizzle) — patterns saved locally
+      save-service.ts    Grid save/thumbnail pipeline
+      storage/           Local file/blob storage helpers
+      db/                SQLite Drizzle schema + migrations
+      auto-update.ts     Update check → prompt (zh/en by system locale) → open GitHub Releases
+    preload/             contextBridge API surface (window.api)
+    renderer/            React UI (Vite) — editor page + local pattern list
+    shared/              IPC channel names shared across processes
+  drizzle/               SQLite schema + migrations
+  resources/             App icon (icon.icns) + source png
+```
+
+Key architecture facts:
+
+- **Process split**: main (Node) + preload (contextBridge, `contextIsolation: true`, `sandbox: false`) + renderer (React via Vite). The renderer never touches Node directly — it calls `window.api.*` (preload) which `ipcRenderer.invoke`s the main process.
+- **Local persistence**: patterns are saved to a local SQLite DB (`better-sqlite3` + Drizzle) in `store.ts`, not to the Neon Postgres. The desktop app is offline-first.
+- **Native module packaging (fragile!)**: under pnpm's hoisted layout, `better-sqlite3` + `sharp` live in the workspace-root `node_modules`, not `apps/desktop/node_modules`. `forge.config.ts` has a `packageAfterCopy` hook (`copyClosure`) that copies them with their transitive + platform-optional dependency closure (sharp → `@img/sharp-darwin-arm64` → `@img/sharp-libvips-darwin-arm64`). `prune: false` is required (symlinked node_modules would break), and `asar.unpack: "**/*.{node,dylib}"` unpacks native binaries + dylibs so dlopen works. Any new native dependency must be added to both the `copyClosure` list and `rebuildConfig.onlyModules`.
+- **Build output paths**: `vite.renderer.config.ts` sets `build.outDir` to an absolute path (`resolve(__dirname, ".vite/renderer/main_window")`) — the production renderer is loaded from `.vite/renderer/main_window/index.html` via `win.loadFile`. Don't change it to a relative path or packaged builds break.
+- **Drizzle migrations in asar**: production reads migrations from `join(app.getAppPath(), "drizzle")` (inside the asar), NOT `process.resourcesPath`. The `packageAfterCopy` hook copies `drizzle/` into the packaged app.
+- **Releases**: tagging `v*` triggers `.github/workflows/release-desktop.yml` — builds macOS (arm64, `macos-latest`) + Windows (x64, `windows-latest`), uploads dmg/zip/exe + squirrel `RELEASES`/`*.nupkg`, creates a non-prerelease GitHub Release with install instructions. Asset names are version-less: `pindou-desktop-mac-arm64.dmg` / `pindou-desktop-win-x64.exe`. (macos-13 was dropped — GitHub retired the Intel runners.)
+- **Auto-update is prompt-only**: the app is **not code-signed** (beta), so Electron's autoUpdater / Squirrel.Mac cannot download updates (it rejects the adhoc signature with "did not pass validation"). `auto-update.ts` instead queries `update.electronjs.org`'s JSON feed on launch, shows a localized (zh/en by `app.getLocale()`) dialog, and opens the GitHub Releases page on accept. Users install the new version manually (and must `xattr -cr /Applications/Pindou.app` if macOS reports the app as damaged — Gatekeeper quarantine on unsigned apps).
+- **Window**: frameless (`frame: false`) with in-app window controls via IPC. `app.commandLine.appendSwitch("enable-unsafe-swiftshader")` so PixiJS WebGL works on machines without GPU acceleration.
 
 ### shadcn/ui components
 

@@ -34,6 +34,7 @@ Create pixel-art patterns, sign in with GitHub, and share them with the world.
 - **GitHub sign-in** — publish patterns with your GitHub identity (Better Auth), no separate account or username needed
 - **Pattern gallery** — browse recently published patterns with thumbnail previews
 - **Detail view** — interactive read-only canvas on each pattern page, editable by the author
+- **Desktop app** — an offline Electron editor (macOS + Windows) with the same canvas, SQLite storage, and update prompts via GitHub Releases
 
 ## Tech Stack
 
@@ -49,6 +50,7 @@ Create pixel-art patterns, sign in with GitHub, and share them with the world.
 | Color math | culori |
 | Rate limiting | Upstash Redis (@upstash/ratelimit) |
 | Language | TypeScript (strict) |
+| Desktop | Electron 37 + Electron Forge 7 (Vite) |
 
 ## Getting Started
 
@@ -88,6 +90,14 @@ apps/
       i18n/             # Server-side dictionary loading (getDictionary)
       lib/              # Web-only helpers: auth, server/{palettes,patterns,meta}, escapeLike
       workers/          # In-browser image decode + pre-scale (transform.worker.ts)
+  desktop/              # @pindou/desktop — Electron app (offline editor)
+    src/
+      main/             # Main process: window, IPC, SQLite store, auto-update
+      preload/          # contextBridge API surface
+      renderer/         # React UI (Vite)
+      shared/           # IPC channel names
+    drizzle/            # SQLite schema + migrations
+    resources/          # App icon (icns) + icon source
   vercel.json           # Vercel deployment config (Root Directory: apps/web)
   netlify.toml          # Netlify deployment config (Base: apps/web)
 
@@ -142,6 +152,39 @@ The editor at `/editor` provides:
 | `GET` | `/api/brands/[id]` | Get a single brand with its colors |
 
 Image-to-pattern conversion happens entirely in the browser (no `/api/transform`); the uploaded image never leaves the client. Publish/edit JSON bodies are capped at 20 MB; grids are bounded to 4096 per side and 1,000,000 total cells. Publish and edit are rate-limited per user (20 requests / 60 s) via Upstash Redis.
+
+## Desktop App
+
+The desktop app (`apps/desktop`) is an offline Electron editor built with Electron Forge + Vite. It shares the PixiJS canvas and editor logic with the web app via the `@pindou/*` packages, and stores patterns locally in SQLite (Drizzle).
+
+### Development
+
+```bash
+pnpm desktop:dev        # Run the Electron app in dev mode
+pnpm desktop:package    # Package the app (out/Pindou-darwin-arm64/…)
+pnpm desktop:make       # Build installers (dmg / exe / zip in out/make)
+```
+
+### Releases
+
+Tagging `v*` triggers the `Release Desktop` workflow, which builds macOS (arm64) and Windows (x64) and publishes a GitHub Release:
+
+| Platform | Asset |
+|---|---|
+| macOS | `pindou-desktop-mac-arm64.dmg` / `.zip` |
+| Windows | `pindou-desktop-win-x64.exe` |
+
+The release is not code-signed (beta). If macOS reports the app as damaged after download, run:
+
+```bash
+xattr -cr /Applications/Pindou.app
+```
+
+On Windows, SmartScreen may warn — click **More info** → **Run anyway**.
+
+### Auto-update
+
+On launch the packaged app checks update.electronjs.org for a newer release and prompts the user (localized zh/en). Accepting opens the GitHub Releases page for a manual download — auto-download is intentionally not used because Squirrel.Mac rejects the unsigned build's adhoc signature.
 
 ## License
 

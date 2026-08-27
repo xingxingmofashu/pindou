@@ -34,6 +34,7 @@
 - **GitHub 登录** — 使用 GitHub 身份发布图纸（Better Auth），无需单独注册账号或填写用户名
 - **图纸画廊** — 浏览最新发布的图纸，带缩略图预览
 - **详情页** — 每张图纸都有只读交互式画布，作者可进入编辑
+- **桌面应用** — 离线 Electron 编辑器（macOS + Windows），与网页版共用画布，本地 SQLite 存储，通过 GitHub Releases 提示更新
 
 ## 技术栈
 
@@ -49,6 +50,7 @@
 | 色彩计算 | culori |
 | 限流 | Upstash Redis (@upstash/ratelimit) |
 | 语言 | TypeScript (strict) |
+| 桌面端 | Electron 37 + Electron Forge 7 (Vite) |
 
 ## 快速开始
 
@@ -87,6 +89,14 @@ apps/
       i18n/             # 服务端字典加载（getDictionary）
       lib/              # 仅 web 的辅助模块：auth、server/{palettes,patterns,meta}、escapeLike
       workers/          # 浏览器内图片解码 + 预缩放（transform.worker.ts）
+  desktop/              # @pindou/desktop —— Electron 应用（离线编辑器）
+    src/
+      main/             # 主进程：窗口、IPC、SQLite 存储、自动更新
+      preload/          # contextBridge API 面
+      renderer/         # React UI（Vite）
+      shared/           # IPC 通道名
+    drizzle/            # SQLite schema + 迁移
+    resources/          # 应用图标（icns）+ 图标源文件
   vercel.json           # Vercel 部署配置（Root Directory: apps/web）
   netlify.toml          # Netlify 部署配置（Base: apps/web）
 
@@ -140,6 +150,39 @@ web 专属依赖（认证、worker、路由、主题）通过 props/hooks 注入
 | `GET` | `/api/brands/[id]` | 获取单个品牌及其色号 |
 
 图片转图纸完全在浏览器内完成（无 `/api/transform`），上传的图片不会离开客户端。发布/编辑的 JSON 请求体上限 20 MB；网格限制为每边 4096 格、总格数 100 万。发布与编辑按用户限流（20 次 / 60 秒），基于 Upstash Redis。
+
+## 桌面应用
+
+桌面应用（`apps/desktop`）是基于 Electron Forge + Vite 的离线 Electron 编辑器。它与网页版通过 `@pindou/*` 包共享 PixiJS 画布和编辑器逻辑，图纸数据本地存储在 SQLite（Drizzle）中。
+
+### 开发
+
+```bash
+pnpm desktop:dev        # 以开发模式运行 Electron 应用
+pnpm desktop:package    # 打包应用（out/Pindou-darwin-arm64/…）
+pnpm desktop:make       # 构建安装包（dmg / exe / zip，输出到 out/make）
+```
+
+### 发布
+
+打 `v*` tag 会触发 `Release Desktop` 工作流，分别构建 macOS（arm64）和 Windows（x64）并发布 GitHub Release：
+
+| 平台 | 产物 |
+|---|---|
+| macOS | `pindou-desktop-mac-arm64.dmg` / `.zip` |
+| Windows | `pindou-desktop-win-x64.exe` |
+
+发布包未做代码签名（beta 阶段）。如果 macOS 下载后提示应用已损坏，请运行：
+
+```bash
+xattr -cr /Applications/Pindou.app
+```
+
+Windows 上 SmartScreen 可能弹出警告——点击 **更多信息** → **仍要运行**。
+
+### 自动更新
+
+打包应用启动时会检查 update.electronjs.org 是否有新版本，并向用户弹出提示（中英文根据系统语言自动切换）。点击确认后打开 GitHub Releases 页面手动下载——刻意不使用自动下载，因为 Squirrel.Mac 会拒绝未签名构建的 adhoc 签名。
 
 ## 开源协议
 
