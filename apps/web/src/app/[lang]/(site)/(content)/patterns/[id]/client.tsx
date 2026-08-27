@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation"
 import { localizedPath } from "@pindou/core/i18n/config"
 import { useI18n } from "@pindou/core/i18n/client"
-import { PatternDetailPage } from "@pindou/ui/components/pages/pattern-detail-page"
+import { PatternDetailPage } from "@pindou/ui/pages/pattern-detail-page"
 import type { PatternDetailType } from "@/db/schema"
 import type { Palette } from "@pindou/shared/types"
 

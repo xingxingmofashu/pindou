@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { PatternDetailPage } from "@pindou/ui/components/pages/pattern-detail-page"
+import { PatternDetailPage } from "@pindou/ui/pages/pattern-detail-page"
 import { PALETTES } from "@pindou/shared/palettes"
 import type { PatternRecord } from "../../../shared/types"
 
