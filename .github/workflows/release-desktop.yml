@@ -95,7 +95,8 @@ jobs:
             **/*.exe
             **/RELEASES
             **/*.nupkg
-          prerelease: true
+          # Full release (not a prerelease), so auto-update's `latest`
+          # resolves to it.
           generate_release_notes: true
           # Version-less asset names: allow overwriting assets already on the
           # release (e.g. when re-running the workflow for the same version).
