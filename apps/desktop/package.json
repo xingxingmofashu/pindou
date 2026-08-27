@@ -30,7 +30,6 @@
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.18.2",
     "sharp": "^0.34.5",
-    "update-electron-app": "^3.1.1",
     "zustand": "^5.0.14"
   },
   "devDependencies": {

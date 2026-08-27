@@ -1,8 +1,8 @@
 import { app, BrowserWindow, shell } from "electron"
 import { join } from "node:path"
-import { updateElectronApp } from "update-electron-app"
 import { registerIpc } from "./ipc"
 import { initDb } from "./db"
+import { setupAutoUpdate } from "./auto-update"
 import { IPC } from "../shared/ipc"
 
 // WebGL needs a GPU or SwiftShader fallback. Chromium now blocks the software
@@ -26,7 +26,7 @@ if (!gotLock) {
   })
 }
 
-function createWindow(): void {
+function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1080,
     height: 720,
@@ -64,21 +64,17 @@ function createWindow(): void {
   } else {
     win.loadFile(join(__dirname, "../renderer/main_window/index.html"))
   }
+  return win
 }
 
 app.whenReady().then(() => {
   initDb()
   registerIpc()
-  createWindow()
+  const win = createWindow()
 
-  // Check for new releases on GitHub at every launch (production only).
-  // update-electron-app reads the `repository` field from package.json and
-  // compares against the latest GitHub release; it downloads and prompts to
-  // restart when a newer version is published.
+  // Ask the user before downloading a new release (packaged builds only).
   if (app.isPackaged) {
-    updateElectronApp({
-      updateInterval: "1 hour",
-    })
+    setupAutoUpdate(win)
   }
 
   app.on("activate", () => {
