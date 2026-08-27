@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm"
+import { eq, desc, like, or } from "drizzle-orm"
 import { randomUUID } from "node:crypto"
 import { db } from "./db"
 import { patterns } from "./db/schema"
@@ -53,8 +53,22 @@ function gcFiles(gridKey: string, thumbUrl: string): Promise<void> {
 }
 
 export const store = {
-  list(): PatternMeta[] {
-    return db.select().from(patterns).orderBy(desc(patterns.updatedAt)).all()
+  /** Paginated list, newest-updated first, optionally filtered by query. */
+  list(page: number, pageSize: number, query = ""): { rows: PatternMeta[]; total: number } {
+    const q = query.trim().toLowerCase()
+    const base = q
+      ? db
+          .select()
+          .from(patterns)
+          .where(or(like(patterns.title, `%${q}%`), like(patterns.description, `%${q}%`)))
+      : db.select().from(patterns)
+    const total = base.all().length
+    const rows = base
+      .orderBy(desc(patterns.updatedAt))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize)
+      .all()
+    return { rows, total }
   },
 
   async get(id: string): Promise<PatternRecord | null> {

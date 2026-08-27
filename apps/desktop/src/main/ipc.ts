@@ -6,7 +6,8 @@ import type { CreatePatternInput, UpdatePatternInput } from "../shared/types"
 
 /** Register all ipcMain.handle handlers. Must run after app is ready. */
 export function registerIpc(): void {
-  ipcMain.handle(IPC.patterns.list, () => store.list())
+  ipcMain.handle(IPC.patterns.list, (_e, page: number, pageSize: number, query?: string) =>
+    store.list(page, pageSize, query))
   ipcMain.handle(IPC.patterns.get, (_e, id: string) => store.get(id))
   ipcMain.handle(IPC.patterns.create, (_e, input: CreatePatternInput) => store.create(input))
   ipcMain.handle(IPC.patterns.update, (_e, id: string, input: UpdatePatternInput) =>
