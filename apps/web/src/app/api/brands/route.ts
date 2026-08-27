@@ -4,14 +4,14 @@ import type { Palette } from "@pindou/shared/types"
 
 /**
  * GET /api/brands — every brand with its colors nested (the client catalog).
- * The query lives in `@/lib/server/patterns` (shared with the SSR pattern
- * pages) and is cached for a week.
+ * Served from the bundled static catalog (`packages/shared/src/palettes.json`,
+ * via `@/lib/server/palettes`) — the same file the desktop app ships.
  *
- * The catalog only changes via `db:migrate` (data migration 0006), so it's
- * effectively immutable at runtime. The handler is statically generated at
- * build time and re-validated every {@link revalidate} seconds (ISR), so the
- * response is served from the edge/CDN without touching Neon per request; a
- * `db:migrate` change lands on the next deploy (or `revalidatePath`).
+ * The catalog only changes with a rebuild (it's a committed JSON file), so the
+ * handler is statically generated at build time and re-validated every
+ * {@link revalidate} seconds (ISR), and the response is served from the
+ * edge/CDN without touching Neon per request. A palette edit lands on the next
+ * deploy.
  */
 export const revalidate = 604800
 
