@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, useCallback } from "react"
-import { Text, type Graphics } from "pixi.js"
+import type { Graphics } from "pixi.js"
 import {
   CELL,
   DEFAULT_ZOOM,
@@ -29,7 +29,6 @@ import {
   mostFrequent,
   type ToolKind,
   type ViewRect,
-  type BeadEntry,
   type CellsData,
   type PixiContext,
   type GridRect,
@@ -49,16 +48,11 @@ const GRID_COLOR_LIGHT = 0x000000
 const GRID_COLOR_DARK = 0xffffff
 const GRID_ALPHA = 0.12
 
-/** Bead label text colour — theme-dependent. */
-const LABEL_FILL_LIGHT = "#111"
-const LABEL_FILL_DARK = "#f5f5f5"
-
 interface UsePixiCanvasOptions {
   initialZoom?: number
   activeTool?: ToolKind
   /** 0 = empty, 1..N = 1‑based index into `palette.colors` */
   activeColorIndex?: number
-  showLabels?: boolean
   /** Disable drawing — pan and zoom still work. */
   readonly?: boolean
   /** Fired whenever the painted cells change (stroke end, fill, clear, load). */
@@ -130,7 +124,6 @@ export function usePixiCanvas(
     initialZoom = DEFAULT_ZOOM,
     activeTool = "pen",
     activeColorIndex = 1,
-    showLabels = false,
     readonly = false,
     onGridChange,
     onHistoryChange,
@@ -144,7 +137,6 @@ export function usePixiCanvas(
   const rafRef = useRef(0)
 
   const gridColor = isDark ? GRID_COLOR_DARK : GRID_COLOR_LIGHT
-  const labelFill = isDark ? LABEL_FILL_DARK : LABEL_FILL_LIGHT
 
   const cellsRef = useRef<Map<string, number>>(new Map())
   const rectRef = useRef<DOMRect | null>(null)
@@ -184,19 +176,8 @@ export function usePixiCanvas(
     }
   }, [])
 
-  /** Place a label child in world-local coords (labels live inside `world`). */
-  function placeLabel(e: BeadEntry): { x: number; y: number; fontSize: number } {
-    return {
-      x: e.worldX + e.size / 2,
-      y: e.worldY + e.size / 2,
-      // `world` is already scaled by zoom, so don't multiply by it again here —
-      // doing so makes the text grow with zoom² and overflow the bead.
-      fontSize: Math.round(e.size * 0.35),
-    }
-  }
-
   const rebuild = useCallback(
-    (opts?: { skipLabels?: boolean; padded?: boolean }) => {
+    (opts?: { padded?: boolean }) => {
       const ctx = pixiRef.current
       const v = viewport()
       if (!ctx || !v) return
@@ -236,37 +217,8 @@ export function usePixiCanvas(
         ctx.beadsGfx.rect(e.worldX, e.worldY, e.size, e.size)
         ctx.beadsGfx.fill({ color: hexToRgb(e.hex) })
       }
-
-      // Labels are children of `world`, so they pan with the container and
-      // don't need recreating on every pan frame.
-      if (opts?.skipLabels) return
-      ctx.labels.removeChildren()
-      if (showLabels) {
-        // `world` scales these labels by `zoom`, so without `resolution` the
-        // texture is rasterized at the tiny world-unit font size and upscaled —
-        // blurry. resolution = zoom makes texture pixels equal screen pixels.
-        const labelResolution = Math.max(1, z)
-        for (const e of entries) {
-          const pos = placeLabel(e)
-          const text = new Text({
-            text: e.code,
-            style: {
-              fontSize: pos.fontSize,
-              fill: labelFill,
-              fontFamily: "monospace",
-              fontWeight: "bold",
-            },
-            resolution: labelResolution,
-            roundPixels: true,
-          })
-          text.anchor.set(0.5)
-          text.x = pos.x
-          text.y = pos.y
-          ctx.labels.addChild(text)
-        }
-      }
     },
-    [viewport, palette, showLabels, gridColor, labelFill]
+    [viewport, palette, gridColor]
   )
 
   // Keep the latest pixiCtx, rebuild callback, and the runtime opts behind
@@ -373,7 +325,7 @@ export function usePixiCanvas(
     ctx.app.renderer.background.color = isDark ? EDITOR_BG_DARK : EDITOR_BG
   }, [isDark, pixiCtx])
 
-  /** Rebuild whenever the rebuild callback changes (covers zoom/palette/showLabels). */
+  /** Rebuild whenever the rebuild callback changes (covers zoom/palette/theme). */
   useEffect(() => {
     rebuildRef.current()
   }, [rebuild])
@@ -560,7 +512,7 @@ export function usePixiCanvas(
           Math.abs(ctx.world.x - built.x) >= ctx.app.screen.width * PAN_BUFFER ||
           Math.abs(ctx.world.y - built.y) >= ctx.app.screen.height * PAN_BUFFER
         ) {
-          rebuildRef.current({ skipLabels: true, padded: true })
+          rebuildRef.current({ padded: true })
         }
         return
       }

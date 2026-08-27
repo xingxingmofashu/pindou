@@ -16,8 +16,6 @@ interface EditStore {
   activeTool: ToolKind
   /** Currently selected palette colour (0 = eraser, 1..N = palette index). */
   activeColorIndex: number
-  /** Whether colour-code labels are shown on the canvas. */
-  showLabels: boolean
   /** Whether the left (fields + palette) panel is shown. */
   showLeftPanel: boolean
   /** Whether the bead-usage panel is shown. */
@@ -41,7 +39,6 @@ interface EditStore {
   setDescription: (description: string) => void
   setActiveTool: (tool: ToolKind | ((prev: ToolKind) => ToolKind)) => void
   setActiveColorIndex: (index: number) => void
-  toggleLabels: () => void
   toggleLeftPanel: () => void
   toggleBeadStats: () => void
   setZoom: (zoom: number) => void
@@ -64,7 +61,6 @@ export const useEditStore = create<EditStore>((set) => ({
   description: "",
   activeTool: "pen",
   activeColorIndex: 1,
-  showLabels: false,
   showLeftPanel: true,
   showBeadStats: true,
   zoom: DEFAULT_ZOOM,
@@ -80,7 +76,6 @@ export const useEditStore = create<EditStore>((set) => ({
       description,
       activeTool: "pen",
       activeColorIndex: 1,
-      showLabels: false,
       showLeftPanel: true,
       showBeadStats: true,
       zoom: DEFAULT_ZOOM,
@@ -95,7 +90,6 @@ export const useEditStore = create<EditStore>((set) => ({
   setActiveTool: (tool) =>
     set((state) => ({ activeTool: typeof tool === "function" ? tool(state.activeTool) : tool })),
   setActiveColorIndex: (index) => set({ activeColorIndex: index }),
-  toggleLabels: () => set((state) => ({ showLabels: !state.showLabels })),
   toggleLeftPanel: () => set((state) => ({ showLeftPanel: !state.showLeftPanel })),
   toggleBeadStats: () => set((state) => ({ showBeadStats: !state.showBeadStats })),
   setZoom: (zoom) => set({ zoom }),

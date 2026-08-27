@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 import {
   ArrowLeft,
-  CaseSensitive,
   Download,
   Eraser,
   List,
@@ -83,7 +82,6 @@ export function PatternEditContentClient({
   const activeTool = useEditStore((s) => s.activeTool)
   const activeColorIndex = useEditStore((s) => s.activeColorIndex)
   const setActiveColorIndex = useEditStore((s) => s.setActiveColorIndex)
-  const showLabels = useEditStore((s) => s.showLabels)
   const showLeftPanel = useEditStore((s) => s.showLeftPanel)
   const showBeadStats = useEditStore((s) => s.showBeadStats)
   const exportOpen = useEditStore((s) => s.exportOpen)
@@ -202,7 +200,6 @@ export function PatternEditContentClient({
           grid={pattern.gridData}
           activeTool={activeTool}
           activeColorIndex={activeColorIndex}
-          label={showLabels}
           isDark={resolvedTheme === "dark"}
           apiRef={canvasApiRef}
           onZoomChange={setZoom}
@@ -226,8 +223,6 @@ export function PatternEditContentClient({
 /** Pattern-editor toolbar: back + title on the left, view toggles and actions on the right. */
 function PatternEditToolbar({ id, onSave }: { id: string; onSave: () => void }) {
   const { locale, t } = useI18n()
-  const showLabels = useEditStore((s) => s.showLabels)
-  const toggleLabels = useEditStore((s) => s.toggleLabels)
   const showLeftPanel = useEditStore((s) => s.showLeftPanel)
   const toggleLeftPanel = useEditStore((s) => s.toggleLeftPanel)
   const showBeadStats = useEditStore((s) => s.showBeadStats)
@@ -252,21 +247,6 @@ function PatternEditToolbar({ id, onSave }: { id: string; onSave: () => void }) 
         <h1 className="truncate text-sm font-semibold">{t("patternDetail.editTitle")}</h1>
       </div>
       <div className="flex items-center gap-2">
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant={showLabels ? "secondary" : "outline"}
-                size="icon-sm"
-                aria-label={t("editor.showLabels")}
-              >
-                <CaseSensitive data-icon="inline-start" />
-              </Button>
-            }
-            onClick={toggleLabels}
-          />
-          <TooltipContent side="bottom">{t("editor.labels")}</TooltipContent>
-        </Tooltip>
         <Tooltip>
           <TooltipTrigger
             render={

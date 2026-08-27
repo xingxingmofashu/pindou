@@ -12,8 +12,6 @@ interface EditorStore {
   activeTool: ToolKind
   /** Currently selected palette colour (0 = eraser, 1..N = palette index). */
   activeColorIndex: number
-  /** Whether colour-code labels are shown on the canvas. */
-  showLabels: boolean
   /** Whether the bead-usage panel is shown. */
   showBeadStats: boolean
   /** Whether the colour palette panel is shown. */
@@ -33,7 +31,6 @@ interface EditorStore {
   setApi: (api: PixiCanvasApi | null) => void
   setActiveTool: (tool: ToolKind | ((prev: ToolKind) => ToolKind)) => void
   setActiveColorIndex: (index: number) => void
-  toggleLabels: () => void
   toggleBeadStats: () => void
   toggleColorPalette: () => void
   setBeadStats: (stats: BeadStats | null) => void
@@ -57,7 +54,6 @@ export const useEditorStore = create<EditorStore>((set) => ({
   api: null,
   activeTool: "pen",
   activeColorIndex: 1,
-  showLabels: false,
   showBeadStats: true,
   showColorPalette: true,
   beadStats: null,
@@ -71,7 +67,6 @@ export const useEditorStore = create<EditorStore>((set) => ({
   setActiveTool: (tool) =>
     set((state) => ({ activeTool: typeof tool === "function" ? tool(state.activeTool) : tool })),
   setActiveColorIndex: (index) => set({ activeColorIndex: index }),
-  toggleLabels: () => set((state) => ({ showLabels: !state.showLabels })),
   toggleBeadStats: () => set((state) => ({ showBeadStats: !state.showBeadStats })),
   toggleColorPalette: () => set((state) => ({ showColorPalette: !state.showColorPalette })),
   setBeadStats: (stats) => set({ beadStats: stats }),
