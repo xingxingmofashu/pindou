@@ -68,6 +68,27 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          body: |
+            ## Pindou Desktop
+
+            Desktop editor for fuse bead patterns.
+
+            ### macOS
+            The app is **not signed** (beta). If macOS reports "Pindou is damaged and can't be opened", run:
+
+            ```bash
+            xattr -cr /Applications/Pindou.app
+            ```
+
+            Or right-click the app in Finder → **Open** → **Open** again.
+
+            ### Windows
+            The installer is not signed, so SmartScreen may warn. Click **More info** → **Run anyway**.
+
+            ### Install
+            1. Download the `.dmg` (macOS) or `.exe` (Windows) for your platform.
+            2. macOS: open the dmg and drag Pindou into Applications.
+            3. Windows: run the installer and follow the prompts.
           files: |
             **/*.dmg
             **/*.zip
