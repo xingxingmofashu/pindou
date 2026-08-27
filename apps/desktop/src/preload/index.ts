@@ -4,7 +4,8 @@ import type { PindouApi } from "../shared/types"
 
 const api: PindouApi = {
   patterns: {
-    list: () => ipcRenderer.invoke(IPC.patterns.list),
+    list: (page: number, pageSize: number, query?: string) =>
+      ipcRenderer.invoke(IPC.patterns.list, page, pageSize, query),
     get: (id: string) => ipcRenderer.invoke(IPC.patterns.get, id),
     create: (input) => ipcRenderer.invoke(IPC.patterns.create, input),
     update: (id, input) => ipcRenderer.invoke(IPC.patterns.update, id, input),

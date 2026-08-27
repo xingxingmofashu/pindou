@@ -56,10 +56,16 @@ export interface UpdatePatternInput {
   grid?: string[][]
 }
 
+/** Paginated result of {@link PindouApi.patterns.list}. */
+export interface PatternListResult {
+  rows: PatternMeta[]
+  total: number
+}
+
 /** The API surface exposed on `window.pindou` by the preload script. */
 export interface PindouApi {
   patterns: {
-    list: () => Promise<PatternMeta[]>
+    list: (page: number, pageSize: number, query?: string) => Promise<PatternListResult>
     get: (id: string) => Promise<PatternRecord | null>
     create: (input: CreatePatternInput) => Promise<PatternMeta>
     update: (id: string, input: UpdatePatternInput) => Promise<PatternMeta>
