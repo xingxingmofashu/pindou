@@ -39,8 +39,8 @@ export default function HomePage() {
         <div className="min-h-0 flex-1 overflow-y-auto">
           <section className="flex flex-col items-center justify-center px-4 py-16 text-center">
             <Logo className="h-20 w-auto" />
-            <h2 className="mt-6 text-3xl font-semibold tracking-tight">{t("home.heroTitle")}</h2>
-            <p className="mt-3 max-w-xl text-sm text-muted-foreground">{t("home.heroDescription")}</p>
+            <h2 className="mt-6 text-3xl font-semibold tracking-tight">{t("desktop.home.heroTitle")}</h2>
+            <p className="mt-3 max-w-xl text-sm text-muted-foreground">{t("desktop.home.heroDescription")}</p>
             <div className="mt-6 flex items-center gap-3">
               <Button size="lg" onClick={() => navigate("/editor")}>
                 {t("home.openEditor")}

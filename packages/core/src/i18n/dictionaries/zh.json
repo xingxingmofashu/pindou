@@ -9,6 +9,8 @@
     "editor": "编辑器",
     "github": "GitHub",
     "githubAria": "在 GitHub 查看源码",
+    "download": "下载",
+    "downloadAria": "下载桌面应用",
     "signIn": "登录",
     "toggleTheme": "切换主题",
     "language": "切换语言"
@@ -33,6 +35,27 @@
     "errorTitle": "出错了",
     "errorDescription": "发生了意外错误，请重试。",
     "goHome": "返回首页"
+  },
+  "download": {
+    "title": "下载拼豆桌面版",
+    "tagline": "离线拼豆图纸编辑器",
+    "heroTitle": "把图纸带到本地",
+    "heroDescription": "桌面版将完整编辑器带到你的设备上——无需账号、无需联网，即可绘制、转换图片和导出图纸。",
+    "macOS": "macOS",
+    "windows": "Windows",
+    "macChip": "Apple 芯片（M1 或更新）",
+    "winChip": "Windows 10 及以上，64 位",
+    "downloadButton": "下载 .dmg",
+    "downloadWinButton": "下载 .exe",
+    "sizeNote": "版本 0.1.0——最新发布",
+    "installTitle": "安装说明",
+    "macNoteTitle": "macOS",
+    "macNote": "应用尚未代码签名（beta）。如果 macOS 提示应用已损坏，请在 Finder 中右键应用选择「打开」，再次点击「打开」；或运行：",
+    "winNoteTitle": "Windows",
+    "winNote": "SmartScreen 可能提示发布者未知，点击「更多信息」，然后选择「仍要运行」。",
+    "otherTitle": "其他平台",
+    "otherNote": "目前提供 Apple 芯片 Mac 和 64 位 Windows 的安装包。其他平台请到 GitHub 查看发布资产。",
+    "browseReleases": "在 GitHub 浏览所有发布"
   },
   "home": {
     "title": "Pindou",
@@ -229,6 +252,8 @@
       "editor": "编辑器"
     },
     "home": {
+      "heroTitle": "拼豆图案，本地创作",
+      "heroDescription": "在无限画布上用真实拼豆色板绘制，将任意图片转换为网格，并导出可打印图纸——全部离线完成，数据留在你的设备上。",
       "features": {
         "import": {
           "title": "导入任意图片",

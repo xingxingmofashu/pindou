@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { Download } from "lucide-react"
 import { Button } from "@pindou/ui/components/ui/button"
 import { Separator } from "@pindou/ui/components/ui/separator"
 import { Logo } from "@pindou/ui/components/logo"
@@ -48,6 +49,15 @@ export async function Header() {
           {dict.header.github}
         </Button>
         <ThemeToggle />
+        {/* Landing page for the desktop app — platform cards + install notes. */}
+        <Button
+          render={<Link href={localizedPath(locale, "/download")} />}
+          nativeButton={false}
+          className="gap-2"
+        >
+          <Download className="size-4" aria-hidden="true" />
+          {dict.header.download}
+        </Button>
         <AuthNav />
       </div>
     </header>

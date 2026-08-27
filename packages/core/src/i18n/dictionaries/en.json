@@ -9,6 +9,8 @@
     "editor": "Editor",
     "github": "GitHub",
     "githubAria": "View source on GitHub",
+    "download": "Download",
+    "downloadAria": "Download the desktop app",
     "signIn": "Sign in",
     "toggleTheme": "Toggle theme",
     "language": "Switch language"
@@ -33,6 +35,27 @@
     "errorTitle": "Something went wrong",
     "errorDescription": "An unexpected error occurred. Please try again.",
     "goHome": "Go home"
+  },
+  "download": {
+    "title": "Download Pindou Desktop",
+    "tagline": "The offline editor for fuse bead patterns",
+    "heroTitle": "Take your patterns offline",
+    "heroDescription": "The desktop app brings the full editor to your device — draw, convert images, and export charts without an account or a network connection.",
+    "macOS": "macOS",
+    "windows": "Windows",
+    "macChip": "Apple Silicon (M1 or later)",
+    "winChip": "Windows 10 or later, 64-bit",
+    "downloadButton": "Download .dmg",
+    "downloadWinButton": "Download .exe",
+    "sizeNote": "Version 0.1.0 — the latest release",
+    "installTitle": "Installation notes",
+    "macNoteTitle": "macOS",
+    "macNote": "The app is not code-signed yet (beta). If macOS says the app is damaged, right-click it in Finder, choose Open, then click Open again — or run:",
+    "winNoteTitle": "Windows",
+    "winNote": "SmartScreen may warn about an unknown publisher. Click More info, then Run anyway.",
+    "otherTitle": "Other platforms",
+    "otherNote": "Downloads are available for Apple Silicon Macs and 64-bit Windows. For anything else, browse the release assets on GitHub.",
+    "browseReleases": "Browse all releases on GitHub"
   },
   "home": {
     "title": "Pindou",
@@ -229,6 +252,8 @@
       "editor": "Editor"
     },
     "home": {
+      "heroTitle": "Fuse bead patterns, made locally",
+      "heroDescription": "Draw on an infinite canvas with real bead palettes, convert any image into a grid, and export a printable chart — all offline on your device.",
       "features": {
         "import": {
           "title": "Import any image",
