@@ -5,29 +5,3 @@
 /* Everything below (tw-animate-css, shadcn preset, theme tokens, @theme
    mapping, :root/.dark variables) lives in the @pindou/ui package. */
 @import "@pindou/ui/index.css";
-
-/* Route loading bar — a 1px bar that sweeps across the content area while a
-   route's loading.tsx is mounted. In normal flow (rendered by the loading
-   boundary inside the site layout), so it sits right below the header. Pure
-   CSS animation (no JS timing). */
-.route-progress {
-  position: relative;
-  height: 1px;
-  width: 100%;
-  pointer-events: none;
-  overflow: hidden;
-  background: transparent;
-}
-.route-progress::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--color-primary, #171717);
-  animation: route-progress-sweep 1.2s ease-in-out infinite;
-  transform-origin: left;
-}
-@keyframes route-progress-sweep {
-  0% { transform: scaleX(0); opacity: 1; }
-  60% { transform: scaleX(0.8); opacity: 1; }
-  100% { transform: scaleX(1); opacity: 0; }
-}
