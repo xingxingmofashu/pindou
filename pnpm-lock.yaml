@@ -35,6 +35,9 @@ importers:
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@neondatabase/serverless@1.1.0)(@types/better-sqlite3@7.6.13)(@upstash/redis@1.38.2)(better-sqlite3@12.11.1)(kysely@0.29.4)
+      electron-squirrel-startup:
+        specifier: ^1.0.1
+        version: 1.0.1(supports-color@8.1.1)
       lucide-react:
         specifier: ^1.27.0
         version: 1.27.0(react@19.2.4)
@@ -3287,6 +3290,9 @@ packages:
     engines: {node: '>= 10.0.0'}
     os: [darwin, linux]
     hasBin: true
+
+  electron-squirrel-startup@1.0.1:
+    resolution: {integrity: sha512-sTfFIHGku+7PsHLJ7v0dRcZNkALrV+YEozINTW8X1nM//e5O3L+rfYuvSW00lmGHnYmUjARZulD8F2V8ISI9RA==}
 
   electron-to-chromium@1.5.397:
     resolution: {integrity: sha512-khGTy9U9x02KEtsKM8vx5A62BsRmcOsIgDpWr1ImE32Ax8GxHGPHZf+Eu9H8zOOyHJnB0jTbseyTHbq2XCT8yw==}
@@ -9208,6 +9214,12 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
     optional: true
+
+  electron-squirrel-startup@1.0.1(supports-color@8.1.1):
+    dependencies:
+      debug: 2.6.9(supports-color@8.1.1)
+    transitivePeerDependencies:
+      - supports-color
 
   electron-to-chromium@1.5.397: {}
 

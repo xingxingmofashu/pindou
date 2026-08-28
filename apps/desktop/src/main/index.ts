@@ -5,6 +5,16 @@ import { initDb } from "./db"
 import { setupAutoUpdate } from "./auto-update"
 import { IPC } from "../shared/ipc"
 
+// Squirrel.Windows spawns the app with special args on install/update/
+// uninstall. Handle them first and quit, otherwise Updater.exe hangs waiting
+// for the app to exit.
+if (require("electron-squirrel-startup")) {
+  app.quit()
+}
+
+// Windows taskbar grouping + notifications (Squirrel requires this).
+app.setAppUserModelId("com.pindou.desktop")
+
 // WebGL needs a GPU or SwiftShader fallback. Chromium now blocks the software
 // rasterizer by default, so without this switch PixiJS's canvas init throws
 // ("WebGL unavailable") on machines without hardware acceleration — e.g.
