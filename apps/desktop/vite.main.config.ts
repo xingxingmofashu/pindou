@@ -12,7 +12,7 @@ import { defineConfig } from "vite"
 export default defineConfig({
   build: {
     rollupOptions: {
-      external: ["electron", "better-sqlite3", "sharp"],
+      external: ["electron", "better-sqlite3", "sharp", "electron-squirrel-startup"],
     },
   },
 })

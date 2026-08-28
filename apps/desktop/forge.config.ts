@@ -162,7 +162,13 @@ const config: ForgeConfig = {
         // dereferenced modules with their transitive runtime closure.
         const nm = join(buildPath, "node_modules")
         const rootNm = resolve(__dirname, "../../node_modules")
-        for (const name of ["better-sqlite3", "sharp"]) {
+        for (const name of [
+          "better-sqlite3",
+          "sharp",
+          // Squirrel startup detector — externalized by the main bundle (it
+          // must run before anything else), so ship it inside the asar too.
+          "electron-squirrel-startup",
+        ]) {
           await copyClosure(name, join(rootNm, name), nm)
         }
       } catch (err) {
