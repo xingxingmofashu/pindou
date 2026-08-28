@@ -18,11 +18,11 @@ import { basename, dirname, join, resolve } from "node:path"
 const config: ForgeConfig = {
   packagerConfig: {
     // Native `.node` binaries are unpacked by plugin-auto-unpack-natives
-    // (`**/*.node`). sharp's libvips runtime is a `.dylib` that the unpacked
-    // .node dlopens at runtime — it must live on disk too, so unpack shared
-    // libraries as well.
+    // (`**/*.node`). sharp's libvips runtime is a `.dylib` (macOS) or `.dll`
+    // (Windows) that the unpacked .node dlopens at runtime — it must live on
+    // disk too, so unpack shared libraries as well.
     asar: {
-      unpack: "**/*.{node,dylib}",
+      unpack: "**/*.{node,dylib,dll}",
     },
     name: "Pindou",
     appBundleId: "com.pindou.desktop",
