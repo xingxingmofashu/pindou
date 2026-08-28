@@ -13,7 +13,9 @@
     "downloadAria": "下载桌面应用",
     "signIn": "登录",
     "toggleTheme": "切换主题",
-    "language": "切换语言"
+    "language": "切换语言",
+    "nav": "菜单",
+    "menuAria": "打开菜单"
   },
   "auth": {
     "signOut": "退出登录",

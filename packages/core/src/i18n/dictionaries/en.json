@@ -13,7 +13,9 @@
     "downloadAria": "Download the desktop app",
     "signIn": "Sign in",
     "toggleTheme": "Toggle theme",
-    "language": "Switch language"
+    "language": "Switch language",
+    "nav": "Menu",
+    "menuAria": "Open menu"
   },
   "auth": {
     "signOut": "Sign out",
