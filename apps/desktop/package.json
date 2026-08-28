@@ -1,7 +1,7 @@
 {
   "name": "@pindou/desktop",
   "productName": "Pindou",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Pindou desktop editor — offline fuse bead pattern editor (Electron)",
   "author": "xingxingmofashu",
   "private": true,
