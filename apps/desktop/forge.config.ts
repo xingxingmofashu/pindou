@@ -97,11 +97,9 @@ const config: ForgeConfig = {
         // The package name is scoped (@pindou/desktop); squirrel would write
         // the nuspec into a `@pindou\desktop.nuspec` path and fail with ENOENT.
         // Give it an explicit unscoped app name.
-        name: "pindou-desktop",
+        name: "Pindou",
         // NuGet rejects a nuspec without an authors field.
         authors: "xingxingmofashu",
-        // Version-less asset name, matching the mac dmg convention.
-        setupExe: "pindou-desktop-win-x64.exe",
       },
     },
     {
