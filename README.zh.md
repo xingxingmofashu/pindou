@@ -180,6 +180,23 @@ xattr -cr /Applications/Pindou.app
 
 Windows 上 SmartScreen 可能弹出警告——点击 **更多信息** → **仍要运行**。
 
+### Windows FAQ
+
+**应用安装在哪里？**
+Squirrel 按用户安装（无需管理员权限），位置在 `%LOCALAPPDATA%\pindou-desktop`，不在 Program Files。会自动创建开始菜单快捷方式。
+
+**为什么 SmartScreen 会警告？**
+安装包尚未代码签名。点击 **更多信息** → **仍要运行** 即可——应用由本仓库的 CI 构建。
+
+**为什么安装时会运行 `Updater.exe` / 出现 `%LOCALAPPDATA%\SquirrelTemp`？**
+那是 Squirrel 的安装器/更新器，是"按用户安装"流程的正常部分。它只在安装/更新/卸载时短暂运行，用于注册快捷方式并完成安装，然后退出。它不会下载任何东西，也不会在每次启动应用时运行。
+
+**如何更新？**
+应用启动时会检查新版本并弹窗提示（中英文按系统语言切换）。点击确认后打开 GitHub Releases 页面——下载新的 `.exe` 并运行即可，本地图纸数据会保留。
+
+**如何卸载？**
+设置 → 应用 → 已安装的应用 → 找到 **Pindou** → 卸载。卸载后 `%LOCALAPPDATA%\pindou-desktop` 下的图纸数据可能仍会保留。
+
 ### 自动更新
 
 打包应用启动时会检查 update.electronjs.org 是否有新版本，并向用户弹出提示（中英文根据系统语言自动切换）。点击确认后打开 GitHub Releases 页面手动下载——刻意不使用自动下载，因为 Squirrel.Mac 会拒绝未签名构建的 adhoc 签名。

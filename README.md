@@ -182,6 +182,23 @@ xattr -cr /Applications/Pindou.app
 
 On Windows, SmartScreen may warn — click **More info** → **Run anyway**.
 
+### Windows FAQ
+
+**Where is the app installed?**
+Squirrel installs per-user (no admin required) to `%LOCALAPPDATA%\pindou-desktop`, not Program Files. A Start Menu shortcut is added automatically.
+
+**Why does SmartScreen warn?**
+The installer is not code-signed yet. Click **More info** → **Run anyway** — the app is built from this repository's CI.
+
+**Why does `Updater.exe` run during install / appear in `%LOCALAPPDATA%\SquirrelTemp`?**
+That's Squirrel's installer/updater, a normal part of the per-user install. It runs briefly during install/update/uninstall to register shortcuts and finish setup, then exits. It does not download anything and does not run at every app launch.
+
+**How do I update?**
+On launch the app checks for a newer release and prompts you (localized zh/en). Accepting opens the GitHub Releases page — download the new `.exe` and run it. Your local patterns are kept.
+
+**How do I uninstall?**
+Settings → Apps → Installed apps → find **Pindou** → Uninstall. Pattern data under `%LOCALAPPDATA%\pindou-desktop` may be kept after uninstall.
+
 ### Auto-update
 
 On launch the packaged app checks update.electronjs.org for a newer release and prompts the user (localized zh/en). Accepting opens the GitHub Releases page for a manual download — auto-download is intentionally not used because Squirrel.Mac rejects the unsigned build's adhoc signature.

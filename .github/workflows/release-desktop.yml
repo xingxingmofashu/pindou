@@ -89,6 +89,23 @@ jobs:
             1. Download the `.dmg` (macOS) or `.exe` (Windows) for your platform.
             2. macOS: open the dmg and drag Pindou into Applications.
             3. Windows: run the installer and follow the prompts.
+
+            ### FAQ
+
+            **Q: Windows shows "Windows protected your PC" / SmartScreen warning.**
+            The installer is not code-signed yet. Click **More info** → **Run anyway**.
+
+            **Q: Where is the app installed on Windows?**
+            Squirrel installs per-user (no admin needed) to `%LOCALAPPDATA%\pindou-desktop` — not Program Files. Shortcuts are added to the Start Menu.
+
+            **Q: Why does `Updater.exe` run during install / appear in `%LOCALAPPDATA%\SquirrelTemp`?**
+            That's Squirrel's installer/updater, a normal part of the per-user install. It runs briefly during install/update/uninstall to register shortcuts and finish the setup, then exits. It does not download anything and does not run at every app launch.
+
+            **Q: How do I update?**
+            On launch the app checks for a newer release and prompts you. Accepting opens the GitHub Releases page — download the new `.exe` and run it. Your local patterns are kept.
+
+            **Q: How do I uninstall?**
+            Settings → Apps → Installed apps → find **Pindou** → Uninstall. This removes the app; your pattern data in `%LOCALAPPDATA%\pindou-desktop` may be kept.
           files: |
             **/*.dmg
             **/*.zip

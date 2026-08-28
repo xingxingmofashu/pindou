@@ -1,4 +1,5 @@
 import { app, BrowserWindow, shell } from "electron"
+import squirrelStartup from 'electron-squirrel-startup'
 import { join } from "node:path"
 import { registerIpc } from "./ipc"
 import { initDb } from "./db"
@@ -8,7 +9,7 @@ import { IPC } from "../shared/ipc"
 // Squirrel.Windows spawns the app with special args on install/update/
 // uninstall. Handle them first and quit, otherwise Updater.exe hangs waiting
 // for the app to exit.
-if (require("electron-squirrel-startup")) {
+if (squirrelStartup) {
   app.quit()
 }
 
