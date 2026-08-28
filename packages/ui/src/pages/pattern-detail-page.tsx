@@ -12,6 +12,7 @@ import { ZoomControls } from "../components/zoom-controls"
 import { ExportDialog } from "../components/dialogs/export-dialog"
 import { Button } from "../components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "../components/ui/tooltip"
+import { cn } from "../utils"
 import type { Palette } from "@pindou/shared/types"
 
 /**
@@ -174,35 +175,41 @@ export function PatternDetailPage({
       </div>
 
       <div className="flex min-h-0 flex-1 gap-2">
-        {showInfoPanel && (
-          <div className="w-56 shrink-0 flex flex-col gap-4 overflow-auto border p-3">
+        {/* Info panel: desktop inline sidebar, mobile right-side drawer —
+            one DOM node, positioned via breakpoints; `showInfoPanel` drives
+            both the sidebar's display and the drawer's slide-in. */}
+        <div
+          className={cn(
+            "flex fixed inset-y-0 right-0 z-40 w-72 max-w-[85vw] flex-col gap-4 overflow-y-auto border bg-popover p-3 shadow-lg transition-transform duration-300 md:static md:z-auto md:w-56 md:max-w-none md:translate-x-0 md:bg-transparent md:shadow-none md:transition-none",
+            showInfoPanel ? "translate-x-0" : "translate-x-full md:hidden",
+          )}
+        >
+          <div>
+            <span className="text-xs text-muted-foreground">{t("patternDetail.grid")}</span>
+            <p className="text-sm tabular-nums">
+              {cols} × {rows} · {t("patternCard.beads", { count: totalBeads.toLocaleString() })}
+            </p>
+          </div>
+          <div>
+            <span className="text-xs text-muted-foreground">{t("patternDetail.brand")}</span>
+            <p className="text-sm">{palette.name}</p>
+          </div>
+          {authorName !== undefined && (
             <div>
-              <span className="text-xs text-muted-foreground">{t("patternDetail.grid")}</span>
-              <p className="text-sm tabular-nums">
-                {cols} × {rows} · {t("patternCard.beads", { count: totalBeads.toLocaleString() })}
+              <span className="text-xs text-muted-foreground">{t("patternDetail.author")}</span>
+              <p className="truncate text-sm">{authorName ?? t("patternDetail.anonymous")}</p>
+            </div>
+          )}
+          {relativeDate && (
+            <div>
+              <span className="text-xs text-muted-foreground">{t("patternDetail.published")}</span>
+              <p className="text-sm" title={absoluteDate}>
+                {relativeDate}
               </p>
             </div>
-            <div>
-              <span className="text-xs text-muted-foreground">{t("patternDetail.brand")}</span>
-              <p className="text-sm">{palette.name}</p>
-            </div>
-            {authorName !== undefined && (
-              <div>
-                <span className="text-xs text-muted-foreground">{t("patternDetail.author")}</span>
-                <p className="truncate text-sm">{authorName ?? t("patternDetail.anonymous")}</p>
-              </div>
-            )}
-            {relativeDate && (
-              <div>
-                <span className="text-xs text-muted-foreground">{t("patternDetail.published")}</span>
-                <p className="text-sm" title={absoluteDate}>
-                  {relativeDate}
-                </p>
-              </div>
-            )}
-            {description && <p className="border-t pt-1 text-sm leading-relaxed">{description}</p>}
-          </div>
-        )}
+          )}
+          {description && <p className="border-t pt-1 text-sm leading-relaxed">{description}</p>}
+        </div>
         <PixiCanvas
           grid={grid}
           palette={palette}
@@ -212,23 +219,28 @@ export function PatternDetailPage({
           onZoomChange={setZoom}
           className="min-h-0 min-w-0 flex-1 border"
         />
-        {showBeadStats && sortedStats.length > 0 && (
-          <div className="w-56 shrink-0 overflow-auto border p-3">
-            <h2 className="mb-2 text-sm font-semibold">{t("patternDetail.beadsUsed")}</h2>
-            <div className="space-y-1">
-              {sortedStats.map(({ code, count, name, hex }) => (
-                <div key={code} className="flex items-center gap-2 text-sm">
-                  <span
-                    className="inline-block h-3.5 w-3.5 shrink-0 rounded-sm border"
-                    style={{ backgroundColor: hex ?? "#ccc" }}
-                  />
-                  <span className="flex-1 truncate">{name ?? code}</span>
-                  <span className="text-xs tabular-nums text-muted-foreground">{count}</span>
-                </div>
-              ))}
-            </div>
+        {/* Bead-usage panel: desktop inline sidebar, mobile right-side drawer —
+            one DOM node; `showBeadStats` drives both. */}
+        <div
+          className={cn(
+            "flex fixed inset-y-0 right-0 z-50 w-72 max-w-[85vw] flex-col gap-3 overflow-y-auto border bg-popover p-3 shadow-lg transition-transform duration-300 md:static md:z-auto md:w-56 md:max-w-none md:translate-x-0 md:bg-transparent md:shadow-none md:transition-none",
+            showBeadStats ? "translate-x-0" : "translate-x-full md:hidden",
+          )}
+        >
+          <h2 className="text-sm font-semibold">{t("patternDetail.beadsUsed")}</h2>
+          <div className="space-y-1">
+            {sortedStats.map(({ code, count, name, hex }) => (
+              <div key={code} className="flex items-center gap-2 text-sm">
+                <span
+                  className="inline-block h-3.5 w-3.5 shrink-0 rounded-sm border"
+                  style={{ backgroundColor: hex ?? "#ccc" }}
+                />
+                <span className="flex-1 truncate">{name ?? code}</span>
+                <span className="text-xs tabular-nums text-muted-foreground">{count}</span>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
       </div>
 
       {exportOpen && (

@@ -28,8 +28,8 @@ interface PatternStore {
 export const usePatternStore = create<PatternStore>((set) => ({
   api: null,
   zoom: DEFAULT_ZOOM,
-  showInfoPanel: true,
-  showBeadStats: true,
+  showInfoPanel: false,
+  showBeadStats: false,
   setApi: (api) => set({ api }),
   setZoom: (zoom) => set({ zoom }),
   toggleInfoPanel: () => set((state) => ({ showInfoPanel: !state.showInfoPanel })),
