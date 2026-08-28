@@ -180,7 +180,7 @@ export function PatternDetailPage({
             both the sidebar's display and the drawer's slide-in. */}
         <div
           className={cn(
-            "flex fixed inset-y-0 right-0 z-40 w-72 max-w-[85vw] flex-col gap-4 overflow-y-auto border bg-popover p-3 shadow-lg transition-transform duration-300 md:static md:z-auto md:w-56 md:max-w-none md:translate-x-0 md:bg-transparent md:shadow-none md:transition-none",
+            "flex fixed right-0 top-[46px] bottom-0 z-40 w-72 max-w-[85vw] flex-col gap-4 overflow-y-auto border bg-popover p-3 shadow-lg transition-transform duration-300 md:static md:z-auto md:w-56 md:max-w-none md:translate-x-0 md:bg-transparent md:shadow-none md:transition-none",
             showInfoPanel ? "translate-x-0" : "translate-x-full md:hidden",
           )}
         >
@@ -223,7 +223,7 @@ export function PatternDetailPage({
             one DOM node; `showBeadStats` drives both. */}
         <div
           className={cn(
-            "flex fixed inset-y-0 right-0 z-50 w-72 max-w-[85vw] flex-col gap-3 overflow-y-auto border bg-popover p-3 shadow-lg transition-transform duration-300 md:static md:z-auto md:w-56 md:max-w-none md:translate-x-0 md:bg-transparent md:shadow-none md:transition-none",
+            "flex fixed right-0 top-[46px] bottom-0 z-50 w-72 max-w-[85vw] flex-col gap-3 overflow-y-auto border bg-popover p-3 shadow-lg transition-transform duration-300 md:static md:z-auto md:w-56 md:max-w-none md:translate-x-0 md:bg-transparent md:shadow-none md:transition-none",
             showBeadStats ? "translate-x-0" : "translate-x-full md:hidden",
           )}
         >
@@ -242,6 +242,18 @@ export function PatternDetailPage({
           </div>
         </div>
       </div>
+
+      {/* Mobile: tapping outside either open drawer closes it (the header
+          stays visible — the backdrop starts below it). */}
+      {(showInfoPanel || showBeadStats) && (
+        <div
+          className="fixed inset-x-0 top-[46px] bottom-0 z-30 md:hidden"
+          onClick={() => {
+            if (showInfoPanel) toggleInfoPanel()
+            if (showBeadStats) toggleBeadStats()
+          }}
+        />
+      )}
 
       {exportOpen && (
         <ExportDialog
