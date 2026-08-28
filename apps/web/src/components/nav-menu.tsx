@@ -20,6 +20,7 @@ const navItemClass =
 
 /** The main navigation targets, reused by both the inline and drawer forms. */
 const NAV_ITEMS = [
+  { path: "/", labelKey: "header.home" },
   { path: "/patterns", labelKey: "header.patterns" },
   { path: "/editor", labelKey: "header.editor" },
   { path: "/download", labelKey: "header.download" },
