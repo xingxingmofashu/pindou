@@ -39,9 +39,10 @@ export function NavMenu({ locale }: { locale: Locale }) {
 
   return (
     <>
-      {/* Desktop inline nav */}
+      {/* Desktop inline nav — patterns + editor only (home and download
+          live in the mobile drawer / footer). */}
       <nav className="hidden items-center gap-1 md:flex">
-        {NAV_ITEMS.slice(0, 2).map(({ path, labelKey }) => (
+        {NAV_ITEMS.slice(1, 3).map(({ path, labelKey }) => (
           <Button
             key={path}
             variant="link"
