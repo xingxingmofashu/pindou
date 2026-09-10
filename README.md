@@ -25,16 +25,17 @@ Create pixel-art patterns, sign in with GitHub, and share them with the world.
 
 ## Features
 
-- **Canvas editor** — WebGL-powered (PixiJS v8) with an infinite sparse grid, cursor-centred zoom, pan, and pen / eraser / fill tools
+- **Canvas editor** — WebGL-powered (PixiJS v8) with an infinite sparse grid, cursor-centred zoom, pan, and pen / eraser / fill / eyedropper tools
 - **Fixed grid resolution** — grid lines and beads always render at data-cell resolution, so an imported pattern keeps its exact cell count at any zoom (LOD only controls paint-brush block size)
 - **Image to pattern** — convert any image into a bead pattern in your browser (Web Worker + canvas, perceptual OKLab colour matching); Photo / Illustration modes, merge similar colours, remove background, and exclude specific colours from the conversion
 - **Live bead usage** — the editor shows the painted grid size, total beads, and per-colour counts that update as you draw
-- **Export PNG chart** — download the pattern as a printable chart with coordinates, optional colour-code labels, and a scaled bead-usage list
+- **Export PNG chart** — download the pattern as a printable chart with row/column coordinates on all four edges, optional colour-code labels, an adjustable major grid, and a scaled bead-usage list
 - **Multi-brand palettes** — MARD (漫漫), Perler, Hama, Artkal with switchable series
 - **GitHub sign-in** — publish patterns with your GitHub identity (Better Auth), no separate account or username needed
-- **Pattern gallery** — browse recently published patterns with thumbnail previews
+- **Pattern gallery** — browse, search, and paginate recently published patterns with thumbnail previews
 - **Detail view** — interactive read-only canvas on each pattern page, editable by the author
-- **Desktop app** — an offline Electron editor (macOS + Windows) with the same canvas, SQLite storage, and update prompts via GitHub Releases
+- **Responsive & installable** — mobile layout with a slide-out nav, a light/dark theme toggle, and a PWA manifest + service worker
+- **Desktop app** — an offline Electron editor (macOS + Windows) with the same canvas, SQLite storage, and update prompts via GitHub Releases, distributed from a built-in `/download` page
 
 ## Tech Stack
 
@@ -43,6 +44,8 @@ Create pixel-art patterns, sign in with GitHub, and share them with the world.
 | Framework | Next.js 16 (App Router) |
 | Canvas | PixiJS v8 (WebGL) |
 | Styling | Tailwind CSS v4 + shadcn/ui (Base UI) |
+| Client state / data | Zustand + SWR |
+| Theming | next-themes (light/dark) |
 | Database | PostgreSQL (Neon) via @neondatabase/serverless + Drizzle ORM |
 | Auth | Better Auth (GitHub OAuth) |
 | Image conversion | In-browser (Web Worker + canvas, perceptual OKLab) |
@@ -77,19 +80,21 @@ apps/
   web/                  # @pindou/web — Next.js 16 app (the deployable)
     src/
       app/              # App Router routes — server pages fetch data and render a
-                        # client.tsx content component, each route with loading.tsx (skeleton)
+                        # client content component; data routes add loading.tsx (skeleton)
                         # and error.tsx (error boundary)
         [lang]/         # Locale-prefixed routes (en / zh)
           (site)/       # Main site layout (header + footer chrome)
-            (content)/  # Home + pattern gallery + pattern detail
+            (content)/  # Home + pattern gallery + pattern detail + desktop download
             (workspace)/# Editor + pattern edit pages
           sign-in/      # GitHub sign-in page
         api/            # Better Auth handlers + REST API (patterns, brands)
-      components/       # Web-specific components (header, footer, color-palette, providers, ...)
+      components/       # Web-specific components (header, footer, nav menu, theme toggle, providers, pwa, ...)
       db/               # Drizzle schema (auth + app tables) + Neon connection
       i18n/             # Server-side dictionary loading (getDictionary)
-      lib/              # Web-only helpers: auth, server/{palettes,patterns,meta}, escapeLike
+      lib/              # Web-only helpers: auth, server/{palettes,patterns,meta}, utils (escapeLike)
       workers/          # In-browser image decode + pre-scale (transform.worker.ts)
+    vercel.json         # Vercel deployment config (Root Directory = apps/web)
+    netlify.toml        # Netlify deployment config (Base = apps/web)
   desktop/              # @pindou/desktop — Electron app (offline editor)
     src/
       main/             # Main process: window, IPC, SQLite store, auto-update
@@ -98,18 +103,18 @@ apps/
       shared/           # IPC channel names
     drizzle/            # SQLite schema + migrations
     resources/          # App icon (icns) + icon source
-  vercel.json           # Vercel deployment config (Root Directory: apps/web)
-  netlify.toml          # Netlify deployment config (Base: apps/web)
 
 packages/
   shared/               # @pindou/shared — pure constants + types (no dependencies)
     src/constants.ts    #   Editor/upload limits, canvas bg
-    src/types.ts        #   Row types for the three tables + Palette
+    src/types.ts        #   Brand / Color / Palette types (the palette catalog)
+    src/palettes.json   #   Bundled brand palette catalog (single source of truth)
   core/                 # @pindou/core — framework-agnostic business logic
     src/editor.ts       #   Pure grid math: LOD, flood fill, serialization, counting
     src/export.ts       #   Client-only PNG chart export (never on the server)
     src/transform.ts    #   Pure image→grid quantization (perceptual OKLab)
     src/date.ts         #   Localized date formatting (date-fns)
+    src/use-theme.tsx   #   Theme helper (light/dark)
     src/utils.ts        #   cn, fetcher, postJson, hexToRgb, bead-count helpers
     src/i18n/           #   Locale config + dictionaries (en/zh) + client I18nProvider
     src/hooks/          #   Zustand stores + PixiJS lifecycle hooks (use-editor, use-pixi-canvas, ...)
@@ -117,23 +122,24 @@ packages/
   ui/                   # @pindou/ui — component library (Base UI + Tailwind)
     src/components/     #   Shared editor components (pixi-canvas, bead-stats, dialogs, ...)
     src/components/ui/  #   shadcn/ui primitives (never edited manually)
+    src/pages/          #   Shared page components (HomePage, EditorPage, PatternsPage, ...)
     src/index.css       #   Tailwind entry (tw-animate-css + @layer base)
     src/index.ts        #   Root exports (primitives + branding + utils)
 ```
 
 Web-specific dependencies (auth, worker, router, theming) are injected into the
-shared components as props/hooks, keeping the package graph acyclic — the ui
-package never touches Next.js, and core never touches React state.
+shared components as props/hooks, keeping the package graph acyclic — `@pindou/ui`
+never imports Next.js, and Next-only concerns stay in the app.
 
 ## Editor
 
 The editor at `/editor` provides:
 
-- **Pen / Eraser / Fill** — paint with the active colour (Bresenham-interpolated drags), erase beads, or flood-fill connected regions
+- **Pen / Eraser / Fill / Eyedropper** — paint with the active colour (Bresenham-interpolated drags), erase beads, flood-fill connected regions, or pick the colour under the cursor (then keep painting with it)
 - **Undo / Redo** — step back through your edits (⌘Z / ⇧⌘Z; Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y on Windows/Linux)
 - **Show colour codes** — toggle per-bead colour-code labels on the canvas
 - **Import from image** — upload an image and convert it into a bead pattern; advanced options include Photo / Illustration modes, merge similar colours, remove background, and excluding colours from the palette
-- **Export PNG** — download a printable chart with coordinates, optional colour-code labels, and a bead-usage list
+- **Export PNG** — download a printable chart with coordinates on all four edges, optional colour-code labels, an adjustable major grid, and a bead-usage list
 - **Bead usage panel** — a right sidebar showing grid size, total beads, and per-colour counts, updating live as you draw
 - **Zoom** — wheel zoom (cursor-centred, 0.5×–20×), percentage input, fit button
 - **Pan** — middle- or right-button drag
