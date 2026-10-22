@@ -15,7 +15,7 @@
 
 ---
 
-Create pixel-art patterns, sign in with GitHub, and share them with the world.
+Create pixel-art patterns, sign in, and share them with the world.
 
 **Live:** [xingxing-pindou.vercel.app](https://xingxing-pindou.vercel.app) (Vercel) · [xingxing-pindou.netlify.app](https://xingxing-pindou.netlify.app) (Netlify — accessible from mainland China)
 
@@ -31,7 +31,7 @@ Create pixel-art patterns, sign in with GitHub, and share them with the world.
 - **Live bead usage** — the editor shows the painted grid size, total beads, and per-colour counts that update as you draw
 - **Export PNG chart** — download the pattern as a printable chart with row/column coordinates on all four edges, optional colour-code labels, an adjustable major grid, and a scaled bead-usage list
 - **Multi-brand palettes** — MARD (漫漫), Perler, Hama, Artkal with switchable series
-- **GitHub sign-in** — publish patterns with your GitHub identity (Better Auth), no separate account or username needed
+- **GitHub or email sign-in** — publish patterns with your GitHub or email account (Better Auth); your display name becomes the author name
 - **Pattern gallery** — browse, search, and paginate recently published patterns with thumbnail previews
 - **Detail view** — interactive read-only canvas on each pattern page, editable by the author
 - **Responsive & installable** — mobile layout with a slide-out nav, a light/dark theme toggle, and a PWA manifest + service worker
@@ -86,7 +86,7 @@ apps/
           (site)/       # Main site layout (header + footer chrome)
             (content)/  # Home + pattern gallery + pattern detail + desktop download
             (workspace)/# Editor + pattern edit pages
-          sign-in/      # GitHub sign-in page
+          (auth)/       # Sign-in, sign-up, forgot-password, reset-password
         api/            # Better Auth handlers + REST API (patterns, brands)
       components/       # Web-specific components (header, footer, nav menu, theme toggle, providers, pwa, ...)
       db/               # Drizzle schema (auth + app tables) + Neon connection
@@ -144,14 +144,14 @@ The editor at `/editor` provides:
 - **Zoom** — wheel zoom (cursor-centred, 0.5×–20×), percentage input, fit button
 - **Pan** — middle- or right-button drag
 - **Palette sidebar** — brand switcher, swatches grouped by series
-- **Publish** — sign in with GitHub and save the pattern to the gallery with a title and description; your author name comes from your GitHub account
+- **Publish** — sign in with GitHub or email and save the pattern to the gallery with a title and description; your author name comes from your account
 
 ## API
 
 | Method | Route | Description |
 |---|---|---|
 | `GET` | `/api/patterns?page=1` | List published patterns (paginated) |
-| `POST` | `/api/patterns` | Publish a new pattern (GitHub sign-in required, rate limited) |
+| `POST` | `/api/patterns` | Publish a new pattern (sign-in required, rate limited) |
 | `GET` | `/api/patterns/[id]` | Get a single pattern |
 | `PATCH` | `/api/patterns/[id]` | Update a pattern's title, description, or grid (author only, rate limited) |
 | `GET` | `/api/brands` | List all brands with their colors |

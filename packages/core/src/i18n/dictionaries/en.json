@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "拼豆 Pindou — Fuse Bead Pattern Editor",
-    "description": "Create, share, and discover MARD fuse bead patterns. Sign in with GitHub to publish your own patterns."
+    "description": "Create, share, and discover MARD fuse bead patterns. Sign in to publish your own patterns."
   },
   "header": {
     "homeAria": "PINDOU home",
@@ -20,12 +20,65 @@
   },
   "auth": {
     "signOut": "Sign out",
+    "signInTitle": "Welcome back",
+    "signInDescription": "Sign in with your email and password.",
+    "signUpTitle": "Create an account",
+    "signUpDescription": "Create an account to publish your patterns.",
+    "forgotPasswordTitle": "Reset your password",
+    "forgotPasswordDescription": "Enter your email and we'll send you a reset link if an account exists.",
+    "resetPasswordTitle": "Choose a new password",
+    "resetPasswordDescription": "Enter a new password for your account.",
+    "name": "Display name",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "signInWithEmail": "Sign in",
+    "signUp": "Create account",
     "continueWithGitHub": "Continue with GitHub",
-    "signInPrompt": "Sign in with GitHub so your name appears on the pattern.",
+    "or": "or",
+    "forgotPassword": "Forgot password?",
+    "sendResetLink": "Send reset link",
+    "resetPassword": "Set new password",
+    "resetLinkSent": "If that email exists, we've sent a reset link. Check your inbox.",
+    "resetSuccess": "Your password has been updated. Sign in with your new password.",
+    "verifyEmailSent": "Check your inbox to verify your email address.",
+    "invalidResetLink": "This reset link is invalid or has expired.",
+    "requestNewLink": "Request a new link",
+    "backToSignIn": "Back to sign in",
+    "resetUnavailable": "Password reset is not available yet. Please try again later.",
+    "passwordHint": "At least 8 characters.",
+    "noAccount": "Don't have an account?",
+    "haveAccount": "Already have an account?",
+    "signInPrompt": "Sign in so your name appears on the pattern.",
     "signInToPublish": "Sign in to publish",
     "publishedAs": "Published as {name}.",
     "signInFailed": "Sign in failed",
-    "signInFailedDescription": "Could not reach GitHub. Please try again."
+    "signInFailedDescription": "Could not reach GitHub. Please try again.",
+    "errors": {
+      "required": "This field is required.",
+      "invalidEmail": "Enter a valid email address.",
+      "nameTooLong": "Display name must be 50 characters or fewer.",
+      "passwordTooShort": "Password must be at least 8 characters.",
+      "passwordTooLong": "Password is too long.",
+      "passwordMismatch": "Passwords do not match.",
+      "invalidCredentials": "Incorrect email or password.",
+      "emailExists": "An account with this email already exists. Sign in instead.",
+      "invalidToken": "This reset link is invalid or has expired.",
+      "tooManyRequests": "Too many attempts. Please wait a moment and try again.",
+      "emailNotVerified": "Please verify your email address before signing in.",
+      "accountNotLinked": "This email is registered with a password. Sign in with your email and password instead.",
+      "generic": "Something went wrong. Please try again."
+    }
+  },
+  "emails": {
+    "passwordReset": {
+      "subject": "Reset your Pindou password",
+      "heading": "Reset your password",
+      "body": "We received a request to reset the password for your Pindou account. Click the button below to choose a new password.",
+      "button": "Reset password",
+      "expiry": "This link expires in 1 hour.",
+      "ignore": "If you didn't request this, you can ignore this email."
+    }
   },
   "common": {
     "cancel": "Cancel",
@@ -64,7 +117,7 @@
     "title": "Pindou",
     "tagline": "Fuse bead pattern editor & community",
     "heroTitle": "Fuse bead patterns, made pixel-perfect",
-    "heroDescription": "Draw on an infinite canvas with real bead palettes, convert any image into a grid, and export a printable chart. Sign in with GitHub to publish and share.",
+    "heroDescription": "Draw on an infinite canvas with real bead palettes, convert any image into a grid, and export a printable chart. Sign in with GitHub or email to publish and share.",
     "openEditor": "Open Editor",
     "browsePatterns": "Browse Patterns",
     "features": {
@@ -81,8 +134,8 @@
         "description": "Export a high-resolution PNG with grid lines and colour codes."
       },
       "share": {
-        "title": "Publish with GitHub",
-        "description": "Sign in with GitHub and share your pattern with the community."
+        "title": "Publish your patterns",
+        "description": "Sign in with GitHub or email and share your pattern with the community."
       }
     }
   },

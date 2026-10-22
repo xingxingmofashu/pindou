@@ -4,7 +4,7 @@ Guidance for agent sessions working in `apps/web`.
 
 ## What this app is
 
-The deployable **Next.js 16 App Router** app (`src/`). It owns routing, server data fetching, the API routes, Neon Postgres + Drizzle, Better Auth (GitHub sign-in), i18n wiring, and deployment. The editor/UI itself lives in `@pindou/ui`; the canvas/state logic lives in `@pindou/core`.
+The deployable **Next.js 16 App Router** app (`src/`). It owns routing, server data fetching, the API routes, Neon Postgres + Drizzle, Better Auth (GitHub + email/password sign-in), i18n wiring, and deployment. The editor/UI itself lives in `@pindou/ui`; the canvas/state logic lives in `@pindou/core`.
 
 ## Routing (`src/app/[lang]/...`)
 
@@ -12,7 +12,7 @@ Every route lives under the locale segment `[lang]`, grouped by chrome:
 
 - `(site)/(content)` — home, pattern gallery + detail, download
 - `(site)/(workspace)` — editor, pattern edit
-- `sign-in/` — sits at the `[lang]` level
+- `(auth)/` — sign-in, sign-up, forgot-password, reset-password (route group; URLs stay `/[lang]/sign-in`, etc.)
 
 The convention is **server page fetches data → renders a thin `client.tsx` that wraps a shared `@pindou/ui/pages/*` component**, with a sibling `loading.tsx` (route Suspense skeleton) and `error.tsx` (`"use client"` error boundary) per segment. Only the top-level `apps/web/src/app/[lang]/error.tsx` and `global-error.tsx` are fallback boundaries.
 
@@ -59,10 +59,14 @@ src/lib/server/meta.ts             pageMetadata
 src/lib/utils.ts                   re-exports cn from @pindou/core + web-only escapeLike
 src/db/                            Drizzle schema + Neon Postgres Pool; auth-schema.ts;
                                    migrations in drizzle/
-src/lib/auth/                      Better Auth client (client.ts) + server (server.ts)
+src/lib/auth/                      Better Auth client (client.ts) + server (server.ts),
+                                   auth error mapping, callback sanitizing
+src/lib/email/                     sendEmail transport (console in dev, Resend in prod),
+                                   password-reset template
 ```
 
-- **Tables**: `patterns` only (id uuid PK defaultRandom, title, description, author_name, grid_key, fk_brand_id uuid — **no FK constraint**, fk_user_id → auth.users, bead_stats, thumb_url, timestamps). The `brands`/`colors` tables were removed in migration 0014; brand/color data lives exclusively in `packages/shared/src/palettes.json`. `patterns` rows use uuid `id` and DB-generated `created_at`/`updated_at`, so routes never set them.
+- **Email authentication**: `emailAndPassword` is enabled. Reset links go through `src/lib/email/` (console transport in dev; Resend REST when `RESEND_API_KEY` + `EMAIL_FROM` are set). `requireEmailVerification` stays off until a mail provider is configured, and `accountLinking.disableImplicitLinking` keeps same-email GitHub/email accounts separate. Auth pages live under `[lang]/(auth)/`.
+- **Tables**: `patterns` only (id uuid PK defaultRandom, title, description, author_name, grid_key, fk_brand_id uuid — **no FK constraint**, fk_user_id → auth.users, bead_stats, thumb_url, timestamps). The `brands`/`colors` tables were removed in migration 0014; brand/color data lives exclusively in `packages/shared/src/palettes.json`. `patterns` rows use uuid `id` and DB-generated `created_at`/`updated_at`, so routes never set them. Email/password auth reuses the existing `users`/`accounts`/`verifications` tables — no migration.
 - **Grid contract**: the wire format is a **code grid** — `string[][]`, `grid[row][col]` = `""` (empty) or a colour code (e.g. `"A1"`). `/api/patterns` stores/serves codes; the editor converts to its index-based sparse map via `Grid.fromCodeGrid`, and `ImportDialog` feeds the transform's code grid straight into `loadGrid`.
 - **Grids (Cloudflare R2)**: grid JSON is **never stored in Postgres** — `GridStorage` uploads it under versioned keys `patterns/{patternId}/{uuid}.json`; `patterns.grid_key` holds the active key. Each publish/edit writes a **new** object so a failed DB write can roll back by deleting only the new key; a successful edit garbage-collects the superseded object. The pattern-detail GET (inside `unstable_cache`) fetches the grid and 500s if missing. R2 is a **hard read AND write dependency** — grids and thumbnails share the bucket.
 - **Thumbnails (Cloudflare R2)**: on publish, `Thumbnail.generate` (128×128 PNG, `EDITOR_BG` background) + `upload` to `thumbnails/{patternId}/{uuid}.png`; the public URL goes in `patterns.thumb_url`. An upload failure fails the request (503), no base64 fallback. Versioned keys make rollback/GC safe.
@@ -91,7 +95,7 @@ Env is per-platform and gitignored, all under `apps/web/`:
 - `.env` (local), `.env.preview`, `.env.vercel.production`, `.env.netlify.production`
 - `.env.example` is the committed template — copy it, don't invent vars.
 
-Required for DB-backed code (`db:migrate`, anything touching `src/db/index.ts`): `DATABASE_URL` (Neon Postgres). `drizzle.config.ts` reads it via `process.env.DATABASE_URL!`. R2 needs `R2_ENDPOINT_URL`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME` (+ `NEXT_R2_PUBLIC_URL`); rate limiting needs the Upstash vars; auth needs `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`.
+Required for DB-backed code (`db:migrate`, anything touching `src/db/index.ts`): `DATABASE_URL` (Neon Postgres). `drizzle.config.ts` reads it via `process.env.DATABASE_URL!`. R2 needs `R2_ENDPOINT_URL`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME` (+ `NEXT_R2_PUBLIC_URL`); rate limiting needs the Upstash vars; auth needs `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`. Password-reset email uses `EMAIL_FROM` + `RESEND_API_KEY` in production; without them the flow logs in dev and the “forgot password” entry is hidden in production.
 
 ## Commands
 

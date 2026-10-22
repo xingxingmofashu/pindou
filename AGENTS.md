@@ -4,7 +4,7 @@ Guidance for agent sessions (e.g. Claude Code, OpenCode, Codex) working in this 
 
 ## Project
 
-拼豆 (Pindou) — fuse beads / MARD bead pattern editor and community. A Next.js web app plus an offline Electron desktop app, in one pnpm monorepo. Browse anonymously; publishing requires a GitHub sign-in (Better Auth).
+拼豆 (Pindou) — fuse beads / MARD bead pattern editor and community. A Next.js web app plus an offline Electron desktop app, in one pnpm monorepo. Browse anonymously; publishing requires an account (GitHub or email/password via Better Auth).
 
 ## Monorepo layout
 
