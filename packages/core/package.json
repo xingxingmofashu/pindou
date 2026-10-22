@@ -9,8 +9,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./date": "./src/date.ts",
-    "./editor": "./src/editor.ts",
+    "./grid": "./src/grid/index.ts",
     "./grid/*": "./src/grid/*.ts",
+    "./palette": "./src/palette/index.ts",
     "./palette/*": "./src/palette/*.ts",
     "./most-frequent": "./src/most-frequent.ts",
     "./export": "./src/export.ts",

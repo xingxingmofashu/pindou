@@ -11,7 +11,8 @@ import {
   EDITOR_BG,
   EDITOR_BG_DARK,
 } from "@pindou/shared/constants"
-import type { CellsData, GridRect, PixiContext, ToolKind, ViewRect } from "../editor"
+import type { BeadStats, GridRect, ViewRect } from "../grid/types"
+import type { PixiContext } from "./use-pixi-app"
 import { BeadRenderer } from "../grid/bead-renderer"
 import { CodeGrid } from "../grid/code-grid"
 import { EMPTY, Grid } from "../grid/grid"
@@ -31,6 +32,39 @@ const UNDO_LIMIT = 50
 const GRID_COLOR_LIGHT = 0x000000
 const GRID_COLOR_DARK = 0xffffff
 const GRID_ALPHA = 0.12
+
+/** Identifies one of the drawing tools. */
+export type ToolKind = "pen" | "eraser" | "fill" | "eyedropper"
+
+/** The canvas snapshot contract shared by the editor, export, and publish. */
+export interface CellsData {
+  grid: string[][]
+  brandCode: string
+  beadStats: string
+}
+
+/**
+ * Imperative canvas API surfaced to parent components (via a ref) by the
+ * canvas wrapper. Declared alongside the hook that implements the underlying
+ * behaviour so state hooks can import the type without depending on the UI
+ * component — the `core → ui` dependency direction stays one-way.
+ */
+export interface PixiCanvasApi {
+  setZoom: (z: number | ((prev: number) => number)) => void
+  /** Fit the view to the painted grid's bounding box. */
+  fitToCanvas: () => void
+  /** Empty the canvas (undoable). */
+  clearCanvas: () => void
+  undo: () => void
+  redo: () => void
+  getCellsData: () => CellsData | null
+  /** Live per-colour bead counts + painted dims (null when the grid is empty). */
+  getBeadStats: () => BeadStats | null
+  /** Replace the canvas contents with a serialized code grid. When `seed` is
+   *  true (initial load of an existing pattern), the loaded grid becomes the
+   *  history baseline instead of an undoable step. */
+  loadGrid: (grid: string[][], seed?: boolean) => void
+}
 
 interface UsePixiCanvasOptions {
   initialZoom?: number

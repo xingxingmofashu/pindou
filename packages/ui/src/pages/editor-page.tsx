@@ -38,7 +38,7 @@ import { useShortcuts } from "@pindou/core/hooks/use-shortcuts"
 import { useEditorStore } from "@pindou/core/hooks/use-editor"
 import { usePalette } from "@pindou/core/hooks/use-palette"
 import { useI18n } from "@pindou/core/i18n/client"
-import type { ToolKind } from "@pindou/core/editor"
+import type { ToolKind } from "@pindou/core/hooks/use-pixi-canvas"
 import type { Palette } from "@pindou/shared/types"
 
 const TOOLS: { value: ToolKind; icon: typeof Pencil; shortcut: string }[] = [

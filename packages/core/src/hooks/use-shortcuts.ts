@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import type { ToolKind } from "../editor"
+import type { ToolKind } from "./use-pixi-canvas"
 import { Keyboard } from "../utils"
 
 /** Keyboard shortcut matching each tool, mirroring the ToolBar tooltips. */

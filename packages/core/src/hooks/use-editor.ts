@@ -2,8 +2,8 @@
 
 import { create } from "zustand"
 import { DEFAULT_ZOOM } from "@pindou/shared/constants"
-import type { ToolKind, BeadStats } from "../editor"
-import type { PixiCanvasApi } from "../editor"
+import type { BeadStats } from "../grid/types"
+import type { PixiCanvasApi, ToolKind } from "./use-pixi-canvas"
 
 interface EditorStore {
   /** Imperative canvas API, registered by the editor canvas on mount. */

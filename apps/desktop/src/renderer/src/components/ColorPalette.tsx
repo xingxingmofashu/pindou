@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { ChevronDown } from "lucide-react"
-import { ColorSeries } from "@pindou/core/editor"
+import { ColorSeries } from "@pindou/core/palette"
 import { cn } from "@pindou/ui/utils"
 import { useI18n } from "@pindou/core/i18n/client"
 import { ScrollArea } from "@pindou/ui/components/ui/scroll-area"

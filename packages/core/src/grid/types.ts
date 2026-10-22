@@ -2,9 +2,9 @@
  * Geometry and statistics types shared by the grid model, the renderer, and
  * the canvas hook.
  *
- * They live here (rather than in `editor.ts`) so the classes under `grid/` can
- * reference them without importing the public entry point — `editor.ts`
- * re-exports every one of them, so the public API is unchanged.
+ * They live here so the classes under `grid/` can reference them without
+ * importing the `grid/index.ts` barrel, and consumers get every one of them
+ * from `@pindou/core/grid`.
  */
 
 /** Bounding box of painted cells in data-cell coordinates. */
