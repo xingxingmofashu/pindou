@@ -2,7 +2,7 @@ import { BrowserWindow, ipcMain } from "electron"
 import { IPC } from "../shared/ipc"
 import { store } from "./store"
 import { savePngFile } from "./save-service"
-import type { CreatePatternInput, UpdatePatternInput } from "../shared/types"
+import type { CreatePatternInput, UpdatePatternInput } from "../shared/ipc"
 
 /** Register all ipcMain.handle handlers. Must run after app is ready. */
 export function registerIpc(): void {

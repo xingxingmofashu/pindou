@@ -13,7 +13,7 @@ import { useI18n } from "@pindou/core/i18n/client"
 import { PatternInsertSchema } from "@/db/schema"
 import { Http } from "@pindou/core/utils"
 import { signIn, useSession } from "@/lib/auth/client"
-import type { Palette } from "@pindou/shared/types"
+import type { Palette } from "@pindou/shared/palettes"
 
 // The publish dialog is only opened on demand — load it (and its heavy deps)
 // lazily instead of blocking the editor's initial bundle.

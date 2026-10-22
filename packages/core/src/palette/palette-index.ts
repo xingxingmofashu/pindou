@@ -1,4 +1,4 @@
-import type { Palette } from "@pindou/shared/types"
+import type { Palette } from "@pindou/shared/palettes"
 
 /**
  * Code / index / hex lookups over a palette.

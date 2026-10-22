@@ -8,7 +8,7 @@ import type {
   TransformResult,
 } from "@pindou/core/transform"
 import { MAX_INPUT_PIXELS } from "@pindou/shared/constants"
-import type { Palette } from "@pindou/shared/types"
+import type { Palette } from "@pindou/shared/palettes"
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope
 

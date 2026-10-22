@@ -10,7 +10,6 @@ export * from "./utils"
 // i18n (client-side context; server helpers stay in the app)
 export * from "./i18n/config"
 export * from "./i18n/client"
-export type { Messages } from "./i18n/types"
 export { dictionaries, enDictionary, zhDictionary } from "./i18n"
 
 // React hooks

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { PatternDetailPage } from "@pindou/ui/pages/pattern-detail-page"
 import { PALETTES } from "@pindou/shared/palettes"
-import type { PatternRecord } from "../../../shared/types"
+import type { PatternRecord } from "../../../shared/ipc"
 
 /**
  * Desktop read-only pattern viewer — thin wrapper around the shared

@@ -2,7 +2,7 @@
 
 import { create } from "zustand"
 import { DEFAULT_ZOOM } from "@pindou/shared/constants"
-import type { BeadStats } from "../grid/types"
+import type { BeadStats } from "../grid/grid"
 import type { PixiCanvasApi, ToolKind } from "./use-pixi-canvas"
 
 interface EditorStore {

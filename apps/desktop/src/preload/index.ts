@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron"
 import { IPC } from "../shared/ipc"
-import type { PindouApi } from "../shared/types"
+import type { PindouApi } from "../shared/ipc"
 
 const api: PindouApi = {
   patterns: {

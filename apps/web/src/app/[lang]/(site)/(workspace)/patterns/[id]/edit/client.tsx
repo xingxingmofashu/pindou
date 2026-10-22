@@ -10,7 +10,7 @@ import { I18nConfig } from "@pindou/core/i18n/config"
 import { useI18n } from "@pindou/core/i18n/client"
 import { toast } from "@pindou/ui/components/ui/toast"
 import type { PatternDetailType } from "@/db/schema"
-import type { Palette } from "@pindou/shared/types"
+import type { Palette } from "@pindou/shared/palettes"
 
 /**
  * Thin web wrapper around the shared {@link PatternEditPage}: seeds the shared

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { PaletteService } from "@/lib/server/palettes"
-import type { Palette } from "@pindou/shared/types"
+import type { Palette } from "@pindou/shared/palettes"
 
 /**
  * GET /api/brands — every brand with its colors nested (the client catalog).

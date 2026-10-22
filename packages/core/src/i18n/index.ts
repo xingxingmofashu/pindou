@@ -1,6 +1,5 @@
 export * from "./config"
 export * from "./client"
-export type { Messages } from "./types"
 import en from "./dictionaries/en.json"
 import zh from "./dictionaries/zh.json"
 

@@ -5,13 +5,13 @@ import { patterns } from "./db/schema"
 import { GridStorage } from "./storage/grid-storage"
 import { ThumbnailStorage } from "./storage/thumbnail-storage"
 import { PALETTES } from "@pindou/shared/palettes"
-import type { Palette } from "@pindou/shared/types"
+import type { Palette } from "@pindou/shared/palettes"
 import type {
   CreatePatternInput,
   PatternMeta,
   PatternRecord,
   UpdatePatternInput,
-} from "../shared/types"
+} from "../shared/ipc"
 
 /** Resolve the bundled brand palette for a fk_brand_id (uuid). */
 function paletteOf(fkBrandId: string): Palette {

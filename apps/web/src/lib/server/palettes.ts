@@ -1,5 +1,5 @@
 import { PALETTES } from "@pindou/shared/palettes"
-import type { Palette } from "@pindou/shared/types"
+import type { Palette } from "@pindou/shared/palettes"
 
 /**
  * Lookups over the bundled static palette catalog.

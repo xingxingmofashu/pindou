@@ -11,15 +11,15 @@ import {
   EDITOR_BG,
   EDITOR_BG_DARK,
 } from "@pindou/shared/constants"
-import type { BeadStats, GridRect, ViewRect } from "../grid/types"
+import type { GridRect, ViewRect } from "../grid/viewport"
 import type { PixiContext } from "./use-pixi-app"
 import { BeadRenderer } from "../grid/bead-renderer"
 import { CodeGrid } from "../grid/code-grid"
-import { EMPTY, Grid } from "../grid/grid"
+import { EMPTY, Grid, type BeadStats } from "../grid/grid"
 import { GridHistory } from "../grid/grid-history"
 import { Viewport } from "../grid/viewport"
 import { HexColor, Keyboard } from "../utils"
-import type { Palette } from "@pindou/shared/types"
+import type { Palette } from "@pindou/shared/palettes"
 
 /** Fraction of the viewport kept as pan slack around a padded rebuild. */
 const PAN_BUFFER = 0.5

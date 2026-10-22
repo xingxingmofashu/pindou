@@ -2,9 +2,11 @@
 
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react"
 import type { Locale } from "./config"
-import type { Messages } from "./types"
 import en from "./dictionaries/en.json"
 import zh from "./dictionaries/zh.json"
+
+/** Shape of every locale's message dictionary (mirrors `en.json`). */
+export type Messages = typeof en
 
 const dictionaries = { en, zh } as const
 

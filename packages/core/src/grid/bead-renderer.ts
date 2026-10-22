@@ -2,7 +2,16 @@ import { CELL } from "@pindou/shared/constants"
 import { MostFrequent } from "../most-frequent"
 import { EMPTY } from "./grid"
 import type { Grid } from "./grid"
-import type { BeadEntry, ViewRect } from "./types"
+import type { ViewRect } from "./viewport"
+
+/** Descriptor for one visual bead rectangle to be drawn. */
+export interface BeadEntry {
+  worldX: number
+  worldY: number
+  size: number
+  hex: string
+  code: string
+}
 
 /**
  * Builds the draw list for the bead layer: one entry per painted cell (or per

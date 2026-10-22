@@ -7,7 +7,7 @@ import { CodeGrid } from "@pindou/core/grid"
 import { PaletteIndex } from "@pindou/core/palette"
 import { EDITOR_BG } from "@pindou/shared/constants"
 import { HexColor } from "@pindou/core/utils"
-import type { Palette } from "@pindou/shared/types"
+import type { Palette } from "@pindou/shared/palettes"
 
 /** Maximum cells per axis before downsampling kicks in. */
 const MAX_CELLS = 48

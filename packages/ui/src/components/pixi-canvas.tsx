@@ -10,7 +10,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "./ui/tooltip"
 import { toast } from "./ui/toast"
 import { useI18n } from "@pindou/core/i18n/client"
 import type { PixiCanvasApi, ToolKind } from "@pindou/core/hooks/use-pixi-canvas"
-import type { Palette } from "@pindou/shared/types"
+import type { Palette } from "@pindou/shared/palettes"
 
 
 export interface PixiCanvasProps {

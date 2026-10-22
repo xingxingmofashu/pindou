@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { PatternsPage, type PatternItem } from "@pindou/ui/pages/patterns-page"
 import { BeadUsage } from "@pindou/core/utils"
 import { useI18n } from "@pindou/core/i18n/client"
-import type { PatternMeta } from "../../../shared/types"
+import type { PatternMeta } from "../../../shared/ipc"
 
 /** Patterns per page for the local gallery. */
 const PAGE_SIZE = 20
