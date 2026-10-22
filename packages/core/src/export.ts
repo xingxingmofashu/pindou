@@ -1,10 +1,6 @@
 import { zipSync } from "fflate"
-import {
-  buildHexByCode,
-  forEachPaintedCell,
-  forEachPaintedCellInWindow,
-  gridSize,
-} from "./editor"
+import { CodeGrid } from "./grid/code-grid"
+import { PaletteIndex } from "./palette/palette-index"
 import { MAJOR_GRID_STEP } from "@pindou/shared/constants"
 import type { Palette } from "@pindou/shared/types"
 
@@ -240,9 +236,9 @@ export class Export {
   /** The distinct number of painted colours — one bead-usage row per colour. */
   private static usedColorCount(grid: string[][]): number {
     // Only the distinct count is needed (each colour is one usage row), so a
-    // Set avoids the count bookkeeping of `countGridBeads`.
+    // Set avoids the count bookkeeping of `counts()`.
     const seen = new Set<string>()
-    forEachPaintedCell(grid, (code) => seen.add(code))
+    CodeGrid.from(grid)?.forEachPainted((code) => seen.add(code))
     return seen.size
   }
 
@@ -252,7 +248,7 @@ export class Export {
     win: { colStart: number; colEnd: number; rowStart: number; rowEnd: number },
   ): number {
     const seen = new Set<string>()
-    forEachPaintedCellInWindow(grid, win, (code) => {
+    CodeGrid.from(grid)?.forEachPaintedInWindow(win, (code) => {
       seen.add(code)
     })
     return seen.size
@@ -265,13 +261,14 @@ export class Export {
     win?: { colStart: number; colEnd: number; rowStart: number; rowEnd: number },
   ): UsedColor[] {
     const order = new Map(palette.colors.map((color, i) => [color.code, i]))
-    const hexByCode = buildHexByCode(palette)
+    const hexByCode = new PaletteIndex(palette).hexMap()
     const counts = new Map<string, number>()
     const countCell = (code: string) => counts.set(code, (counts.get(code) ?? 0) + 1)
+    const codeGrid = CodeGrid.from(grid)
     if (win) {
-      forEachPaintedCellInWindow(grid, win, countCell)
+      codeGrid?.forEachPaintedInWindow(win, countCell)
     } else {
-      forEachPaintedCell(grid, countCell)
+      codeGrid?.forEachPainted(countCell)
     }
     return Array.from(counts)
       .sort(([a], [b]) => (order.get(a) ?? Infinity) - (order.get(b) ?? Infinity))
@@ -595,7 +592,7 @@ export class Export {
    *          for an empty grid.
    */
   size(grid: string[][], scale: number, opts: ExportGridOptions = {}): ExportSize | null {
-    const size = gridSize(grid)
+    const size = CodeGrid.from(grid)?.size
     if (!size) return null
     const count = opts.showBeadStats ? Export.usedColorCount(grid) : 0
     const tileCount = opts.tileCount ?? 1
@@ -654,7 +651,7 @@ export class Export {
     scale = DEFAULT_EXPORT_SCALE,
     opts: ExportGridOptions = {},
   ): Promise<boolean> {
-    const size = gridSize(grid)
+    const size = CodeGrid.from(grid)?.size
     if (!size) return false
     const tileCount = opts.tileCount ?? 1
     if (tileCount > 1) return this.renderTiles(grid, palette, scale, opts, tileCount)
@@ -662,8 +659,8 @@ export class Export {
     const blob = await this.pngBlob(grid, palette, scale, opts)
     if (!blob) return false
     const layout = this.fullLayout(grid, scale)
-    const cols = layout?.cols ?? gridSize(grid)!.cols
-    const rows = layout?.rows ?? gridSize(grid)!.rows
+    const cols = layout?.cols ?? size.cols
+    const rows = layout?.rows ?? size.rows
     const s = layout?.s ?? scale
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
@@ -692,7 +689,7 @@ export class Export {
     scale = DEFAULT_EXPORT_SCALE,
     opts: ExportGridOptions = {},
   ): Promise<Blob | null> {
-    const size = gridSize(grid)
+    const size = CodeGrid.from(grid)?.size
     if (!size) return null
 
     const layout = this.fullLayout(grid, scale)
@@ -734,7 +731,7 @@ export class Export {
     grid: string[][],
     scale: number,
   ): (Layout & { rows: number; cols: number }) | null {
-    const size = gridSize(grid)
+    const size = CodeGrid.from(grid)?.size
     if (!size) return null
     const { rows, cols } = size
     const layout = Export.computeLayout(cols, rows, scale, 0)
@@ -853,8 +850,8 @@ export class Export {
 
     // Build the palette lookup once; split exports reuse it across sheets via
     // the `shared` cache.
-    const hexByCode = shared?.hexByCode ?? buildHexByCode(palette)
-    forEachPaintedCellInWindow(grid, win, (code, r, c) => {
+    const hexByCode = shared?.hexByCode ?? new PaletteIndex(palette).hexMap()
+    CodeGrid.from(grid)?.forEachPaintedInWindow(win, (code, c, r) => {
       const hex = hexByCode.get(code)
       if (!hex) return
       ctx.fillStyle = hex
@@ -945,7 +942,7 @@ export class Export {
     // split export, where all sheets use the same `ts`.
     const labelWidths = shared?.labelWidths ?? new Map<string, number>()
     if (opts.showLabels && labelWidths.size === 0) {
-      forEachPaintedCell(grid, (code) => {
+      CodeGrid.from(grid)?.forEachPainted((code) => {
         if (!labelWidths.has(code)) labelWidths.set(code, ctx.measureText(code).width)
       })
     }
@@ -1007,7 +1004,7 @@ export class Export {
         tctx.font = `${labelFont}px ui-monospace, monospace`
         tctx.textAlign = "center"
         tctx.textBaseline = "middle"
-        forEachPaintedCellInWindow(grid, win, (code, r, c) => {
+        CodeGrid.from(grid)?.forEachPaintedInWindow(win, (code, c, r) => {
           const x = headerW + (c - win.colStart + 0.5) * s
           const y = headerH + (r - win.rowStart + 0.5) * s
           const width = labelWidths.get(code)
@@ -1135,7 +1132,7 @@ export class Export {
     opts: ExportGridOptions,
     tileCount: number,
   ): Promise<boolean> {
-    const size = gridSize(grid)
+    const size = CodeGrid.from(grid)?.size
     if (!size) return false
     const { rows, cols } = size
     const full = this.fullLayout(grid, scale)
@@ -1158,7 +1155,7 @@ export class Export {
     // `labelWidths` is filled lazily by the first `renderWindow` call (it needs
     // a canvas context to measure with).
     const shared: { hexByCode: Map<string, string>; labelWidths: Map<string, number> } = {
-      hexByCode: buildHexByCode(palette),
+      hexByCode: new PaletteIndex(palette).hexMap(),
       labelWidths: new Map(),
     }
 
