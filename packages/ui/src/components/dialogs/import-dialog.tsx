@@ -20,7 +20,7 @@ import { Switch } from "../ui/switch"
 import { Spinner } from "../ui/spinner"
 import { toast } from "../ui/toast"
 import { MAX_FILE_BYTES, MAX_GRID_DIMENSION } from "@pindou/shared/constants"
-import { buildHexByCode, gridSize, mostFrequent, groupColorsBySeries } from "@pindou/core/editor"
+import { CodeGrid, ColorSeries, MostFrequent, PaletteIndex } from "@pindou/core/editor"
 import { usePalette } from "@pindou/core/hooks/use-palette"
 import { useI18n } from "@pindou/core/i18n/client"
 import type { TransformMode, TransformRequest, TransformResponse, TransformResult } from "@pindou/core/transform"
@@ -62,10 +62,10 @@ function drawGridToCanvas(
   grid: string[][],
   palette: Palette,
 ): void {
-  const { rows, cols } = gridSize(grid) ?? { rows: 0, cols: 0 }
+  const { rows, cols } = CodeGrid.from(grid)?.size ?? { rows: 0, cols: 0 }
   if (rows === 0 || cols === 0) return
 
-  const hexByCode = buildHexByCode(palette)
+  const hexByCode = new PaletteIndex(palette).hexMap()
 
   const scale = Math.min(1, PREVIEW_MAX / Math.max(rows, cols))
   const pw = Math.max(1, Math.round(cols * scale))
@@ -109,7 +109,7 @@ function drawGridToCanvas(
     }
   }
   for (const [key, bucket] of freq) {
-    const best = mostFrequent(bucket)
+    const best = MostFrequent.of(bucket)
     if (!best) continue
     const hex = hexByCode.get(best)
     if (!hex) continue
@@ -145,7 +145,7 @@ function ExcludeColours({ palette, excluded, onToggle, onToggleGroup, onReset }:
       )
     : palette.colors
 
-  const groups = groupColorsBySeries(filtered, (c) => c.series ?? "?")
+  const groups = ColorSeries.group(filtered, (c) => c.series ?? "?")
 
   const toggleOpen = (series: string) =>
     setOpenSeries((prev) => {

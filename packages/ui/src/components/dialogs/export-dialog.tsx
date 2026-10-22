@@ -19,7 +19,7 @@ import { usePalette } from "@pindou/core/hooks/use-palette"
 import { useI18n } from "@pindou/core/i18n/client"
 import { EXPORT_WATERMARK_TEXT, MAJOR_GRID_STEP } from "@pindou/shared/constants"
 import { Export, EXPORT_TILE_COUNTS, DEFAULT_EXPORT_SCALE } from "@pindou/core/export"
-import { gridSize, type CellsData } from "@pindou/core/editor"
+import { CodeGrid, type CellsData } from "@pindou/core/editor"
 import type { Palette } from "@pindou/shared/types"
 
 interface ExportDialogProps {
@@ -69,7 +69,7 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
   const { palette: storePalette } = usePalette()
   const palette = pinnedPalette ?? storePalette
   const grid = data?.grid ?? null
-  const { rows, cols } = (grid ? gridSize(grid) : null) ?? { rows: 0, cols: 0 }
+  const { rows, cols } = (grid ? CodeGrid.from(grid)?.size : null) ?? { rows: 0, cols: 0 }
   const scale = Math.max(1, Math.floor(Number(scaleInput)) || 1)
   const majorStep = Math.max(1, Math.floor(Number(majorGridStep)) || MAJOR_GRID_STEP)
   // `size()` walks the whole grid (window stats per sheet when splitting), so

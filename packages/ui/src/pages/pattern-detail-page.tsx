@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ArrowLeft, Download, Info, List } from "lucide-react"
-import { gridSize } from "@pindou/core/editor"
+import { CodeGrid } from "@pindou/core/editor"
 import { parseBeadStats, totalBeadCount } from "@pindou/core/utils"
 import { formatAbsoluteDate, formatRelativeDate } from "@pindou/core/date"
 import { usePatternStore } from "@pindou/core/hooks/use-pattern"
@@ -86,7 +86,7 @@ export function PatternDetailPage({
   }, [setApi])
 
   const beadStatsParsed = useMemo(() => parseBeadStats(beadStats), [beadStats])
-  const { rows = 0, cols = 0 } = gridSize(grid) ?? {}
+  const { rows = 0, cols = 0 } = CodeGrid.from(grid)?.size ?? {}
   const totalBeads = totalBeadCount(beadStatsParsed)
 
   // Index palette colours by code once, so the per-code lookup below stays O(1).
