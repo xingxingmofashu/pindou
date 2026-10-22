@@ -15,7 +15,7 @@
 
 ---
 
-创建像素风格的拼豆图纸，使用 GitHub 登录，与世界分享你的设计。
+创建像素风格的拼豆图纸，登录后与世界分享你的设计。
 
 **线上地址：** [xingxing-pindou.vercel.app](https://xingxing-pindou.vercel.app)（Vercel）· [xingxing-pindou.netlify.app](https://xingxing-pindou.netlify.app)（Netlify，中国大陆可访问）
 
@@ -31,7 +31,7 @@
 - **实时珠子用量** — 编辑器右侧面板实时显示已绘制的尺寸、珠子总数和每种色号的数量
 - **导出 PNG 图纸** — 下载带坐标的打印图纸，四边均标注行列坐标，可选色号标签、可调粗网格和随珠尺寸缩放的用量列表
 - **多品牌色号** — 内置 MARD（漫漫）、Perler、Hama、Artkal 色号库，可自由切换品牌
-- **GitHub 登录** — 使用 GitHub 身份发布图纸（Better Auth），无需单独注册账号或填写用户名
+- **GitHub / 邮箱登录** — 使用 GitHub 或邮箱账号发布图纸（Better Auth），显示名称会作为作者署名
 - **图纸画廊** — 浏览、搜索并分页查看最新发布的图纸，带缩略图预览
 - **详情页** — 每张图纸都有只读交互式画布，作者可进入编辑
 - **响应式与可安装** — 移动端布局（抽屉式导航）、浅色 / 深色主题切换，以及 PWA manifest + service worker
@@ -85,7 +85,7 @@ apps/
           (site)/       # 站点主布局（页头 + 页脚外壳）
             (content)/  # 首页 + 图纸画廊 + 图纸详情 + 桌面下载页
             (workspace)/# 编辑器 + 图纸编辑页面
-          sign-in/      # GitHub 登录页
+          (auth)/       # 登录、注册、忘记密码、重置密码
         api/            # Better Auth 路由处理 + REST API（patterns、brands）
       components/       # 仅 web 使用的组件（header、footer、导航菜单、主题切换、providers、pwa 等）
       db/               # Drizzle schema（认证 + 应用表）+ Neon 连接
@@ -142,14 +142,14 @@ web 专属依赖（认证、worker、路由、主题）通过 props/hooks 注入
 - **缩放** — 滚轮缩放（以光标为中心，0.5×–20×）、百分比输入、适应画布按钮
 - **平移** — 鼠标中键或右键拖拽
 - **色号面板** — 左侧边栏，品牌切换器，按系列分组的色块
-- **发布** — 使用 GitHub 登录后将图纸保存到画廊，可填写标题和描述；署名自动取自你的 GitHub 账号
+- **发布** — 使用 GitHub 或邮箱登录后将图纸保存到画廊，可填写标题和描述；署名自动取自你的账号
 
 ## API
 
 | 方法 | 路由 | 说明 |
 |---|---|---|
 | `GET` | `/api/patterns?page=1` | 分页获取已发布图纸列表 |
-| `POST` | `/api/patterns` | 发布新图纸（需 GitHub 登录，已限流） |
+| `POST` | `/api/patterns` | 发布新图纸（需登录，已限流） |
 | `GET` | `/api/patterns/[id]` | 获取单张图纸 |
 | `PATCH` | `/api/patterns/[id]` | 更新图纸的标题、描述或网格（仅作者，已限流） |
 | `GET` | `/api/brands` | 获取所有品牌及其色号 |

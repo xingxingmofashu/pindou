@@ -20,8 +20,8 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     name: isZh ? "拼豆" : "Pindou",
     short_name: isZh ? "拼豆" : "Pindou",
     description: isZh
-      ? "创建、分享和发现拼豆图案。使用 GitHub 登录即可发布自己的作品。"
-      : "Create, share, and discover MARD fuse bead patterns. Sign in with GitHub to publish your own patterns.",
+      ? "创建、分享和发现拼豆图案。登录即可发布自己的作品。"
+      : "Create, share, and discover MARD fuse bead patterns. Sign in to publish your own patterns.",
     start_url: "/",
     display: "standalone",
     background_color: "#ffffff",

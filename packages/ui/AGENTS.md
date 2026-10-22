@@ -20,6 +20,7 @@ src/components/color-palette.tsx   brand/colour switcher; seeds the active-palet
 src/components/bead-stats.tsx      per-colour usage panel
 src/components/zoom-controls.tsx   zoom in/out/fit
 src/components/github-button.tsx   GitHub sign-in button
+src/components/auth/               Email/password sign-in form (host injects auth)
 src/components/logo.tsx
 src/components/unsaved-changes-guard.tsx
 src/components/dialogs/            publish / import / export dialogs
@@ -85,7 +86,7 @@ The wrapper around `<canvas>` must stay **padding-free** (`h-full w-full`): Pixi
 
 ## Dialogs
 
-- **PublishDialog** — title/desc/author → the host's POST `/api/patterns` via `getCellsData`.
+- **PublishDialog** — title/desc/author → the host's POST `/api/patterns` via `getCellsData`. Signed-out users can sign in with a GitHub popup or, when the host injects `onEmailSignIn`, an inline email/password form that preserves the editor draft.
 - **ImportDialog** — upload → client-side image→grid conversion in a Web Worker → Apply → `loadGrid(grid)`. The host passes `createWorker` because the worker URL is bundle-specific; the dialog lazy-creates the worker, tags requests with a `reqId` to drop stale responses, and terminates it on unmount.
 - **ExportDialog** — reads the grid via `getCellsData` → client-side PNG chart via `Export.size/png/pngBlob` (`@pindou/core/export`). Export text is drawn on small per-tile canvases and composited back, because Safari silently drops canvas text on canvases wider/taller than ~4096px while fills/strokes still render.
 

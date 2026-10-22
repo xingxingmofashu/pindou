@@ -7,4 +7,11 @@ export const authClient = createAuthClient({
   plugins: [oauthPopupClient()],
 })
 
-export const { signIn, signOut, useSession } = authClient
+export const {
+  signIn,
+  signUp,
+  signOut,
+  useSession,
+  requestPasswordReset,
+  resetPassword,
+} = authClient

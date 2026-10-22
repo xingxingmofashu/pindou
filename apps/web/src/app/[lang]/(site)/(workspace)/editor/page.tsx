@@ -13,6 +13,7 @@ import { useI18n } from "@pindou/core/i18n/client"
 import { PatternInsertSchema } from "@/db/schema"
 import { Http } from "@pindou/core/utils"
 import { signIn, useSession } from "@/lib/auth/client"
+import { authErrorKey } from "@/lib/auth/errors"
 import type { Palette } from "@pindou/shared/palettes"
 
 // The publish dialog is only opened on demand — load it (and its heavy deps)
@@ -46,6 +47,17 @@ export default function EditorContent() {
       }),
     [],
   )
+  const handleEmailSignIn = useCallback(
+    async (email: string, password: string) => {
+      try {
+        const { error } = await signIn.email({ email, password })
+        return error ? t(authErrorKey(error)) : null
+      } catch {
+        return t("auth.errors.generic")
+      }
+    },
+    [t],
+  )
   const createWorker = useCallback(
     () => new Worker(new URL("../../../../../workers/transform.worker", import.meta.url)),
     [],
@@ -65,6 +77,7 @@ export default function EditorContent() {
       >
         <PublishDialogHost
           onSignIn={handleSignIn}
+          onEmailSignIn={handleEmailSignIn}
           onPublish={(payload: unknown) => publishTrigger(JSON.stringify(payload))}
         />
       </EditorPage>
@@ -75,9 +88,11 @@ export default function EditorContent() {
 /** Publish dialog driven by the shared store's publishOpen flag. */
 function PublishDialogHost({
   onSignIn,
+  onEmailSignIn,
   onPublish,
 }: {
   onSignIn: (callbackURL: string) => Promise<{ error?: unknown }>
+  onEmailSignIn: (email: string, password: string) => Promise<string | null>
   onPublish: (payload: unknown) => Promise<{ id: string }>
 }) {
   const publishOpen = useEditorStore((s) => s.publishOpen)
@@ -93,6 +108,7 @@ function PublishDialogHost({
       insertSchema={PatternInsertSchema}
       useAuth={useSession}
       onSignIn={onSignIn}
+      onEmailSignIn={onEmailSignIn}
       onPublish={onPublish}
     />
   )

@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "拼豆 Pindou — 拼豆图案编辑器",
-    "description": "创建、分享和发现拼豆图案。使用 GitHub 登录即可发布自己的作品。"
+    "description": "创建、分享和发现拼豆图案。登录即可发布自己的作品。"
   },
   "header": {
     "homeAria": "PINDOU 首页",
@@ -20,12 +20,65 @@
   },
   "auth": {
     "signOut": "退出登录",
+    "signInTitle": "欢迎回来",
+    "signInDescription": "使用邮箱和密码登录。",
+    "signUpTitle": "创建账号",
+    "signUpDescription": "创建账号后即可发布你的图案。",
+    "forgotPasswordTitle": "重置密码",
+    "forgotPasswordDescription": "输入邮箱；如果账号存在，我们会发送重置链接。",
+    "resetPasswordTitle": "设置新密码",
+    "resetPasswordDescription": "为你的账号设置一个新密码。",
+    "name": "显示名称",
+    "email": "邮箱",
+    "password": "密码",
+    "confirmPassword": "确认密码",
+    "signInWithEmail": "登录",
+    "signUp": "创建账号",
     "continueWithGitHub": "使用 GitHub 继续",
-    "signInPrompt": "使用 GitHub 登录，你的名字会显示在图案上。",
+    "or": "或",
+    "forgotPassword": "忘记密码？",
+    "sendResetLink": "发送重置链接",
+    "resetPassword": "设置新密码",
+    "resetLinkSent": "如果该邮箱存在，我们已经发送了重置链接，请查收。",
+    "resetSuccess": "密码已更新，请使用新密码登录。",
+    "verifyEmailSent": "请查收邮件并验证你的邮箱地址。",
+    "invalidResetLink": "重置链接无效或已过期。",
+    "requestNewLink": "重新发送链接",
+    "backToSignIn": "返回登录",
+    "resetUnavailable": "找回密码功能尚未开放，请稍后再试。",
+    "passwordHint": "至少 8 个字符。",
+    "noAccount": "还没有账号？",
+    "haveAccount": "已有账号？",
+    "signInPrompt": "登录后你的名字会显示在图案上。",
     "signInToPublish": "登录后发布",
     "publishedAs": "以 {name} 发布。",
     "signInFailed": "登录失败",
-    "signInFailedDescription": "无法连接到 GitHub，请重试。"
+    "signInFailedDescription": "无法连接到 GitHub，请重试。",
+    "errors": {
+      "required": "此项为必填项。",
+      "invalidEmail": "请输入有效的邮箱地址。",
+      "nameTooLong": "显示名称不能超过 50 个字符。",
+      "passwordTooShort": "密码至少需要 8 个字符。",
+      "passwordTooLong": "密码过长。",
+      "passwordMismatch": "两次输入的密码不一致。",
+      "invalidCredentials": "邮箱或密码错误。",
+      "emailExists": "该邮箱已注册，请直接登录。",
+      "invalidToken": "重置链接无效或已过期。",
+      "tooManyRequests": "尝试次数过多，请稍后再试。",
+      "emailNotVerified": "请先验证邮箱地址再登录。",
+      "accountNotLinked": "该邮箱已注册邮箱密码账号，请使用邮箱和密码登录。",
+      "generic": "出错了，请重试。"
+    }
+  },
+  "emails": {
+    "passwordReset": {
+      "subject": "重置你的拼豆密码",
+      "heading": "重置密码",
+      "body": "我们收到了重置你拼豆账号密码的请求。点击下面的按钮设置新密码。",
+      "button": "重置密码",
+      "expiry": "此链接将在 1 小时后失效。",
+      "ignore": "如果这不是你发起的请求，请忽略这封邮件。"
+    }
   },
   "common": {
     "cancel": "取消",
@@ -64,7 +117,7 @@
     "title": "Pindou",
     "tagline": "拼豆图案编辑器与社区",
     "heroTitle": "像素级完美的拼豆图案",
-    "heroDescription": "在无限画布上用真实拼豆色板绘制，将任意图片转换为网格，并导出可打印图纸。使用 GitHub 登录即可发布分享。",
+    "heroDescription": "在无限画布上用真实拼豆色板绘制，将任意图片转换为网格，并导出可打印图纸。使用 GitHub 或邮箱登录即可发布分享。",
     "openEditor": "打开编辑器",
     "browsePatterns": "浏览图案",
     "features": {
@@ -81,8 +134,8 @@
         "description": "导出带网格线和色号的高分辨率 PNG。"
       },
       "share": {
-        "title": "GitHub 登录发布",
-        "description": "使用 GitHub 登录，与社区分享你的图案。"
+        "title": "发布你的图案",
+        "description": "使用 GitHub 或邮箱登录，与社区分享你的图案。"
       }
     }
   },

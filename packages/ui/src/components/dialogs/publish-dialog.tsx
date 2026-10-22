@@ -20,6 +20,7 @@ import { Spinner } from "../ui/spinner"
 import { toast } from "../ui/toast"
 import type { CellsData } from "@pindou/core/hooks/use-pixi-canvas"
 import { GithubIcon } from "../icon/github"
+import { EmailSignInForm } from "../auth/email-sign-in-form"
 import { I18nConfig } from "@pindou/core/i18n/config"
 import { useI18n } from "@pindou/core/i18n/client"
 
@@ -47,6 +48,11 @@ interface PublishDialogProps<TSession extends AuthSession = AuthSession> {
    *  the callback URL, mirroring {@link GitHubButton}'s `onSignIn`. */
   onSignIn: (callbackURL: string) => Promise<{ error?: unknown }>
   /**
+   * Email/password sign-in — injected by the app. Resolves to a localized
+   * error message, or `null` when authentication succeeded.
+   */
+  onEmailSignIn?: (email: string, password: string) => Promise<string | null>
+  /**
    * Publishes the validated payload — injected by the app (which owns the
    * network layer, e.g. SWR + `Http.send`). Resolves with the new pattern id
    * or rejects with an error. Keeps the dialog free of data-fetching deps.
@@ -62,6 +68,7 @@ export function PublishDialog<TSession extends AuthSession = AuthSession>({
   insertSchema,
   useAuth,
   onSignIn,
+  onEmailSignIn,
   onPublish,
 }: PublishDialogProps<TSession>) {
   const { locale, t } = useI18n()
@@ -185,6 +192,17 @@ export function PublishDialog<TSession extends AuthSession = AuthSession>({
                   <GithubIcon />
                   {t("auth.signInToPublish")}
                 </Button>
+
+                {onEmailSignIn && (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <span className="h-px flex-1 bg-border" />
+                      <span className="text-xs text-muted-foreground">{t("auth.or")}</span>
+                      <span className="h-px flex-1 bg-border" />
+                    </div>
+                    <EmailSignInForm onSubmit={onEmailSignIn} />
+                  </>
+                )}
               </div>
             ) : (
               <div className="grid gap-3">
