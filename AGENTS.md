@@ -27,6 +27,7 @@ pnpm dev          # @pindou/web dev server (Turbopack, http://localhost:3000)
 pnpm build        # @pindou/web production build (also runs the web TypeScript typecheck)
 pnpm start        # @pindou/web production server
 pnpm lint         # @pindou/web ESLint
+pnpm test         # @pindou/core vitest suite (pure Node, no browser)
 pnpm db:generate  # drizzle-kit generate (apps/web/drizzle)
 pnpm db:migrate   # apply pending migrations to Neon
 pnpm desktop:dev      # @pindou/desktop electron-forge start
@@ -34,7 +35,7 @@ pnpm desktop:package  # @pindou/desktop package
 pnpm desktop:make     # @pindou/desktop make (out/make)
 ```
 
-- There is **no test suite**. Verification is `pnpm lint` + `pnpm build`.
+- Tests: `pnpm test` runs `@pindou/core`'s vitest characterization suite (`packages/core/test/`, pure Node — no DOM). Verification is `pnpm test` + `pnpm lint` + `pnpm build`.
 - There is **no web `typecheck` script** — `pnpm build` runs it. Per-package typecheck: `pnpm --filter @pindou/desktop typecheck` and `pnpm --filter @pindou/core typecheck` (also `@pindou/shared`, `@pindou/ui`).
 - A husky `pre-commit` hook runs `pnpm lint` on every commit (commits are lint-gated; `--no-verify` to bypass if truly needed).
 - DB-backed commands (`db:migrate`, and any code path that touches the pool in `apps/web/src/db/index.ts`) need `DATABASE_URL` in `apps/web/.env` (gitignored, Neon Postgres). `apps/web/drizzle.config.ts` reads it via `process.env.DATABASE_URL!`.

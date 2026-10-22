@@ -9,6 +9,7 @@
     "build": "pnpm --filter @pindou/web build",
     "start": "pnpm --filter @pindou/web start",
     "lint": "pnpm --filter @pindou/web lint",
+    "test": "pnpm --filter @pindou/core test",
     "db:generate": "pnpm --filter @pindou/web db:generate",
     "db:migrate": "pnpm --filter @pindou/web db:migrate",
     "desktop:dev": "pnpm --filter @pindou/desktop dev",
