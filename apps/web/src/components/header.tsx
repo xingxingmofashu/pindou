@@ -7,7 +7,7 @@ import { AuthNav } from "@/components/auth-nav"
 import { NavMenu } from "@/components/nav-menu"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { GITHUB_URL } from "@pindou/shared/constants"
-import { localizedPath } from "@pindou/core/i18n/config"
+import { I18nConfig } from "@pindou/core/i18n/config"
 import { getDictionary, getLocale } from "@/i18n/server"
 
 export async function Header() {
@@ -42,7 +42,7 @@ export async function Header() {
         <ThemeToggle />
         {/* Landing page for the desktop app — platform cards + install notes. */}
         <Button
-          render={<Link href={localizedPath(locale, "/download")} />}
+          render={<Link href={I18nConfig.localizedPath(locale, "/download")} />}
           nativeButton={false}
           className="hidden gap-2 md:inline-flex"
         >

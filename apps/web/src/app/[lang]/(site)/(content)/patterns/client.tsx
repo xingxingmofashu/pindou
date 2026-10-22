@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation"
 import { PatternsPage, type PatternItem } from "@pindou/ui/pages/patterns-page"
-import { totalBeadCount } from "@/lib/utils"
-import { localizedPath } from "@pindou/core/i18n/config"
+import { BeadUsage } from "@pindou/core/utils"
+import { I18nConfig } from "@pindou/core/i18n/config"
 import { useI18n } from "@pindou/core/i18n/client"
 
 export interface PatternListItem {
@@ -42,7 +42,7 @@ export function PatternsContentClient({
     thumbUrl: p.thumbUrl || undefined,
     authorName: p.authorName,
     date: p.createdAt,
-    beads: totalBeadCount(p.beadStats),
+    beads: BeadUsage.total(p.beadStats),
   }))
 
   return (
@@ -54,18 +54,18 @@ export function PatternsContentClient({
       searchPlaceholder={t("patterns.searchPlaceholder")}
       searchAriaLabel={t("patterns.searchAria")}
       onSearch={(query) =>
-        router.push(localizedPath(locale, query ? `/patterns?q=${encodeURIComponent(query)}` : "/patterns"))
+        router.push(I18nConfig.localizedPath(locale, query ? `/patterns?q=${encodeURIComponent(query)}` : "/patterns"))
       }
-      onClearSearch={() => router.push(localizedPath(locale, "/patterns"))}
-      onOpen={(id) => router.push(localizedPath(locale, `/patterns/${id}`))}
+      onClearSearch={() => router.push(I18nConfig.localizedPath(locale, "/patterns"))}
+      onOpen={(id) => router.push(I18nConfig.localizedPath(locale, `/patterns/${id}`))}
       emptyTitle={q ? t("patterns.noResults") : t("patterns.empty")}
       emptyActionLabel={q ? undefined : t("patterns.createFirst")}
-      onEmptyAction={() => router.push(localizedPath(locale, "/editor"))}
+      onEmptyAction={() => router.push(I18nConfig.localizedPath(locale, "/editor"))}
       page={page}
       totalPages={totalPages}
       onPageChange={(target) => {
         const searchSuffix = q ? `&q=${encodeURIComponent(q)}` : ""
-        router.push(localizedPath(locale, `/patterns?page=${target}${searchSuffix}`))
+        router.push(I18nConfig.localizedPath(locale, `/patterns?page=${target}${searchSuffix}`))
       }}
     />
   )

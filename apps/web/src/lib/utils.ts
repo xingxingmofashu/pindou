@@ -1,6 +1,6 @@
 // Re-exported shared utilities (defined in @pindou/core so both web and the
 // desktop app share the same implementations).
-export { cn, fetcher, postJson, hexToRgb, safeParseJson, isTypingTarget, totalBeadCount, parseBeadStats } from "@pindou/core"
+export { cn } from "@pindou/core"
 
 /**
  * Escape `\`, `%` and `_` for use inside a SQL `LIKE` pattern so user input is

@@ -2,7 +2,7 @@ import sharp from "sharp"
 import { CodeGrid } from "../grid/code-grid"
 import { PaletteIndex } from "../palette/palette-index"
 import { EDITOR_BG } from "@pindou/shared/constants"
-import { hexToRgb } from "../utils"
+import { HexColor } from "../utils"
 import { R2 } from "./r2"
 import type { Palette } from "@pindou/shared/types"
 
@@ -53,7 +53,7 @@ export class Thumbnail {
     const offsetY = Math.floor((SIZE - totalH) / 2)
 
     const rgba = Buffer.alloc(SIZE * SIZE * 4)
-    const bg = hexToRgb(EDITOR_BG)
+    const bg = HexColor.toInt(EDITOR_BG)
     for (let i = 0; i < rgba.length; i += 4) {
       rgba[i] = (bg >> 16) & 0xff
       rgba[i + 1] = (bg >> 8) & 0xff
@@ -69,7 +69,7 @@ export class Thumbnail {
         if (code === "") continue
         const hex = hexByCode.get(code)
         if (!hex) continue
-        const rgb = hexToRgb(hex)
+        const rgb = HexColor.toInt(hex)
         const y0 = offsetY + r * cellPx
         const x0 = offsetX + c * cellPx
         for (let dr = 0; dr < cellPx; dr++) {

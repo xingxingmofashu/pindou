@@ -1,10 +1,10 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { getPatternsPage } from "@/lib/server/patterns"
-import { parseBeadStats } from "@/lib/utils"
+import { BeadUsage } from "@pindou/core/utils"
 import { pageMetadata } from "@/lib/server/meta"
 import { PATTERNS_PAGE_SIZE } from "@pindou/shared/constants"
-import { localizedPath } from "@pindou/core/i18n/config"
+import { I18nConfig } from "@pindou/core/i18n/config"
 import { getDictionary, getLocale } from "@/i18n/server"
 import { PaginationSchema } from "@/db/schema"
 import { PatternsContentClient } from "./client"
@@ -45,11 +45,11 @@ export default async function PatternsPage({
   if (page !== requested) {
     const params = new URLSearchParams(q ? { q } : {})
     params.set("page", String(page))
-    redirect(localizedPath(locale, `/patterns?${params}`))
+    redirect(I18nConfig.localizedPath(locale, `/patterns?${params}`))
   }
   const list = rows.map((r) => ({
     ...r,
-    beadStats: parseBeadStats(r.beadStats),
+    beadStats: BeadUsage.parse(r.beadStats),
   }))
 
   return <PatternsContentClient q={q} page={page} totalPages={totalPages} total={total} list={list} />

@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ArrowLeft, Download, Info, List } from "lucide-react"
 import { CodeGrid } from "@pindou/core/editor"
-import { parseBeadStats, totalBeadCount } from "@pindou/core/utils"
-import { formatAbsoluteDate, formatRelativeDate } from "@pindou/core/date"
+import { BeadUsage } from "@pindou/core/utils"
+import { Dates } from "@pindou/core/date"
 import { usePatternStore } from "@pindou/core/hooks/use-pattern"
 import { useI18n } from "@pindou/core/i18n/client"
 import { PixiCanvas, type PixiCanvasApi } from "../components/pixi-canvas"
@@ -85,9 +85,9 @@ export function PatternDetailPage({
     return () => setApi(null)
   }, [setApi])
 
-  const beadStatsParsed = useMemo(() => parseBeadStats(beadStats), [beadStats])
+  const beadStatsParsed = useMemo(() => BeadUsage.parse(beadStats), [beadStats])
   const { rows = 0, cols = 0 } = CodeGrid.from(grid)?.size ?? {}
-  const totalBeads = totalBeadCount(beadStatsParsed)
+  const totalBeads = BeadUsage.total(beadStatsParsed)
 
   // Index palette colours by code once, so the per-code lookup below stays O(1).
   const colorByCode = useMemo(() => new Map(palette.colors.map((c) => [c.code, c])), [palette])
@@ -110,8 +110,8 @@ export function PatternDetailPage({
     [grid, palette.code, beadStats],
   )
 
-  const absoluteDate = formatAbsoluteDate(createdAt, locale, t("patternDetail.dateFormat"))
-  const relativeDate = formatRelativeDate(updatedAt, locale)
+  const absoluteDate = Dates.absolute(createdAt, locale, t("patternDetail.dateFormat"))
+  const relativeDate = Dates.relative(updatedAt, locale)
 
   return (
     <div className="flex h-full flex-col gap-2 overflow-hidden">

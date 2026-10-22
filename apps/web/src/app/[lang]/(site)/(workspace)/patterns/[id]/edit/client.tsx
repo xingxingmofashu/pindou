@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation"
 import { PatternEditPage } from "@pindou/ui/pages/pattern-edit-page"
 import { useEditStore } from "@pindou/core/hooks/use-edit"
 import { PatternUpdateSchema } from "@/db/schema"
-import { postJson } from "@/lib/utils"
-import { localizedPath } from "@pindou/core/i18n/config"
+import { Http } from "@pindou/core/utils"
+import { I18nConfig } from "@pindou/core/i18n/config"
 import { useI18n } from "@pindou/core/i18n/client"
 import { toast } from "@pindou/ui/components/ui/toast"
 import type { PatternDetailType } from "@/db/schema"
@@ -55,14 +55,14 @@ export function PatternEditContentClient({
         })
         return
       }
-      await postJson<{ id: string }>(
+      await Http.send<{ id: string }>(
         `/api/patterns/${id}`,
         JSON.stringify(parsed.data),
         t("patternDetail.saveFailedTitle"),
         "PATCH",
       )
       toast.add({ type: "success", title: t("patternDetail.saveSuccess") })
-      router.push(localizedPath(locale, `/patterns/${id}`))
+      router.push(I18nConfig.localizedPath(locale, `/patterns/${id}`))
     },
     [id, locale, router, t],
   )
@@ -71,7 +71,7 @@ export function PatternEditContentClient({
     <PatternEditPage
       palette={palette}
       grid={pattern.gridData}
-      onBack={() => router.push(localizedPath(locale, `/patterns/${id}`))}
+      onBack={() => router.push(I18nConfig.localizedPath(locale, `/patterns/${id}`))}
       onSave={handleSave}
     />
   )

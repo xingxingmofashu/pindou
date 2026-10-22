@@ -104,13 +104,22 @@ The canvas exposes an imperative API (`PixiCanvasApi`: `setZoom`/`fitToCanvas`/`
 **`usePixiCanvas` hook** (`@pindou/core/hooks/use-pixi-canvas.ts`) is a thin coordinator for the PixiJS lifecycle; the logic lives in pure, React-free library modules:
 
 ```
-packages/core/src/editor.ts        EMPTY/CELL/MIN_PX/MAX_GRID_DIMENSION/MAX_GRID_CELLS, serializeGrid/deserializeGrid/serializeBeadStats, countGridBeads/countBeadStats, gridSize/buildHexByCode/forEachPaintedCell, paintBlock/walkLine/floodFill, lodParams/computeGridLines/buildBeadEntries, getGridBounds/centerViewport, PixiContext/ViewRect/BeadEntry/GridRect/BeadStats types
+packages/core/src/editor.ts        public entry: grid types + class re-exports (no free functions)
+packages/core/src/grid/grid.ts     Grid — sparse mutable 1-based-index map (at/bounds/stats/dominant/paintBlock/floodFill/paintLine/clear/clone/equals/toCodeGrid)
+packages/core/src/grid/code-grid.ts CodeGrid — dense code grid (from/size/at/forEachPainted(+InWindow)/counts/beadStatsJson/toCells/toGrid)
+packages/core/src/grid/grid-history.ts GridHistory — undo/redo snapshots (push/undo/redo/clear, limit)
+packages/core/src/grid/viewport.ts Viewport — boundsSize/center, lod(), gridLines()
+packages/core/src/grid/bead-renderer.ts BeadRenderer.entries() — bead-layer draw list
+packages/core/src/grid/path.ts     Path.walk() — Bresenham interpolation
+packages/core/src/palette/palette-index.ts PaletteIndex — code ↔ 1-based index ↔ hex
+packages/core/src/palette/color-series.ts  ColorSeries.group()
+packages/core/src/most-frequent.ts MostFrequent.of()
 packages/core/src/hooks/use-pixi-app.ts    usePixiApp() — PixiJS Application lifecycle hook (owns app.destroy(true))
 packages/core/src/hooks/use-pixi-canvas.ts PixiJS lifecycle coordinator, wheel + pointer events, zoom/pan state. Takes a fully-resolved palette argument (never subscribes to the active-palette store itself).
 packages/ui/src/components/pixi-canvas.tsx PixiCanvas resolves the palette: read-only views that pin `palette` render without a store subscription; the editor branch subscribes via `usePalette` (in `EditablePaletteBridge`).
 ```
 
-The canvas grid lives in a ref (`cellsRef`) and mutates **outside React**. To surface changes, `usePixiCanvas` takes an `onGridChange` callback (fired at stroke end, fill, clear, and load — never per pointermove) and exposes `getCellsData()` (dense code grid + `beadStats` JSON for publish/export) and `getBeadStats()` (sparse `BeadStats`: painted dims + per-code counts, O(painted cells), no dense allocation). The editor stores the stats via `setBeadStats` and `BeadStatsPanel` reads them back from the store. Undo/redo snapshots the sparse map before each destructive op (`pushHistory`, capped at `UNDO_LIMIT` = 50, no-op strokes dropped via `mapsEqual`); the history is **wiped on brand switch** (`clearHistory`) because 1‑based cell indices change meaning across palettes, so stale snapshots would render wrong colours.
+The canvas grid lives in a ref (`gridRef`, a `Grid`) and mutates **outside React**. To surface changes, `usePixiCanvas` takes an `onGridChange` callback (fired at stroke end, fill, clear, and load — never per pointermove) and exposes `getCellsData()` (dense code grid + `beadStats` JSON for publish/export) and `getBeadStats()` (sparse `BeadStats`: painted dims + per-code counts, O(painted cells), no dense allocation). The editor stores the stats via `setBeadStats` and `BeadStatsPanel` reads them back from the store. Undo/redo snapshots the grid before each destructive op (`GridHistory`, capped at `UNDO_LIMIT` = 50, no-op strokes dropped via `Grid.equals`); the history is **wiped on brand switch** (`clearHistory`) because 1‑based cell indices change meaning across palettes, so stale snapshots would render wrong colours.
 
 ```
 PixiJS Application (WebGL)
@@ -136,7 +145,7 @@ PixiJS Application (WebGL)
 Native Next.js i18n (no next-intl): every route lives under `app/[lang]/` and `apps/web/src/proxy.ts` (Next 16 middleware) prefixes requests with a locale detected from `Accept-Language` (`/` → `/en` or `/zh`; `/api/*` and static assets are excluded). `apps/web/next.config.ts` enables `experimental.rootParams` so server components read the segment via `next/root-params` `lang()`.
 
 ```
-packages/core/src/i18n/config.ts        locales (["en","zh"]), defaultLocale, isLocale, localizedPath(locale, path), detectLocale
+packages/core/src/i18n/config.ts        I18nConfig.locales (["en","zh"]), .defaultLocale, .isLocale(value), .localizedPath(locale, path), .detectLocale(header)
 packages/core/src/i18n/dictionaries/    en.json + zh.json (structurally identical; en is the Messages type source)
 packages/core/src/i18n/client.tsx       I18nProvider + useI18n() → { locale, t(path, vars) } for client components
 packages/core/src/i18n/types.ts         Messages type
@@ -147,14 +156,14 @@ apps/web/src/proxy.ts                   locale detection + redirect; matcher exc
 
 - **Server components** call `getDictionary()` (no args — locale resolved from the segment). The root layout `[lang]/layout.tsx` cannot use `lang()` (it owns the segment) and reads `params` instead.
 - **Client components** read `useI18n()`; the dictionary is passed down by the root layout via `I18nProvider`.
-- **Links/routes**: use `localizedPath(locale, path)` (e.g. `/editor` → `/en/editor`); SWR/API calls stay locale-agnostic absolute paths (`/api/...`).
+- **Links/routes**: use `I18nConfig.localizedPath(locale, path)` (e.g. `/editor` → `/en/editor`); SWR/API calls stay locale-agnostic absolute paths (`/api/...`).
 - **Dates**: date-fns locale `zhCN` (`date-fns/locale`) for `zh`; localized format strings live in the dictionary (`patternDetail.dateFormat`).
 - Better Auth OAuth callback `/api/auth/callback/github` is under `/api`, so the proxy never touches it.
 - `/api/auth/...` (Better Auth) lives in `apps/web/src/app/api/auth/` via `toNextJsHandler`; the sign-in UI is `apps/web/src/components/` (`auth-nav.tsx`, `theme-toggle.tsx`) and `@pindou/ui/components/github-button.tsx`.
 
 ### Data model
 
-- **Infinite sparse grid**: `Map<string, number>` where key = `"col,row"` and value = 1‑based palette colour index. 0 = empty (cell absent from the map). Supports negative coordinates; only painted cells consume memory.
+- **Infinite sparse grid**: `Grid` wraps `Map<string, number>` where key = `"col,row"` and value = 1‑based palette colour index. 0 = empty (cell absent from the map). Supports negative coordinates; only painted cells consume memory.
 - **Colour convention**: 0 = empty / eraser, 1..N = 1‑based index into `palette.colors` (converted to 0‑based with `palette.colors[val - 1]` for array access).
 
 ### LOD (Level of Detail) system
@@ -169,12 +178,12 @@ visualCellWorldSize = lodScale × CELL
 
 - At zoom ≥ 100%: lodScale = 1 → one brush press targets one data cell
 - At zoom 25%: lodScale = 4 → one brush press fills a 4×4 data-cell block
-- `buildBeadEntries` is always called with `lodScale = 1` and `cellSize = CELL`
+- `BeadRenderer.entries` is always called with `lodScale = 1` and `cellSize = CELL`
 - Grid lines are drawn at `CELL` spacing (data-cell boundaries), filling the entire viewport (infinite extent)
 
 ### Rendering
 
-Single render path, **`rebuild`** — redraws grid lines at data-cell spacing AND draws each painted cell as its own bead via `buildBeadEntries()` (always called with `lodScale = 1`, so no merging), covering both Graphics layers. Called on zoom change, draw strokes, resize, and pan.
+Single render path, **`rebuild`** — redraws grid lines at data-cell spacing AND draws each painted cell as its own bead via `BeadRenderer.entries()` (always called with `lodScale = 1`, so no merging), covering both Graphics layers. Called on zoom change, draw strokes, resize, and pan.
 
 Pan draws beads + grid lines for a **padded** region (`rebuild({ skipLabels: true, padded: true })`) — a slack of `PAN_BUFFER` (0.5×) around the viewport. While a pan stays inside that slack it skips the redraw entirely (beads and grid lines are children of the `world` Container and move with it), only rebuilding when the pan leaves the slack. Labels are never rebuilt during pan, avoiding per-frame text rasterization.
 
@@ -186,10 +195,10 @@ All four tools are implemented in the pointer interaction effect:
 
 | Tool | Behaviour |
 |---|---|
-| **Pen** | Paints the active colour into the visual-cell block via `paintBlock()`. Drag uses Bresenham interpolation (`walkLine`) between visual-cell coords (stored in `drawRef` as `vc/vr`, rederived from `toPaintTarget` each move at the current LOD — survives zoom changes mid-stroke). |
+| **Pen** | Paints the active colour into the visual-cell block via `Grid#paintBlock()`. Drag uses Bresenham interpolation (`Path.walk`) between visual-cell coords (stored in `drawRef` as `vc/vr`, rederived from `toPaintTarget` each move at the current LOD — survives zoom changes mid-stroke). |
 | **Eraser** | Same as pen but writes `EMPTY` (deletes from the sparse map). |
-| **Fill** | Flood-fills a 4-connected region of the start cell's colour via `floodFill()`. Empty start regions are bounded by the painted bounds ±1, so filling background can't escape to infinity on the unbounded grid. |
-| **Eyedropper** | Samples the **dominant** colour across the visual-cell block under the cursor via `sampleDominantColor()`/`mostFrequent` (the same block a pen press would paint) and sets it as the active colour via `onColorPick`, then switches back to the pen tool. Empty cells are ignored (no pick, tool stays). While active, hovering a painted cell fires `onHoverCell({ code, hex })` — `null` on empty/leave, throttled to colour changes — which `PixiCanvas` feeds into a cursor-following shadcn Tooltip (`trackCursorAxis="both"`) as a colour preview. |
+| **Fill** | Flood-fills a 4-connected region of the start cell's colour via `Grid#floodFill()`. Empty start regions are bounded by the painted bounds ±1, so filling background can't escape to infinity on the unbounded grid; an entirely empty canvas is a no-op. |
+| **Eyedropper** | Samples the **dominant** colour across the visual-cell block under the cursor via `Grid#dominant()` (the same block a pen press would paint) and sets it as the active colour via `onColorPick`, then switches back to the pen tool. Empty cells are ignored (no pick, tool stays). While active, hovering a painted cell fires `onHoverCell({ code, hex })` — `null` on empty/leave, throttled to colour changes — which `PixiCanvas` feeds into a cursor-following shadcn Tooltip (`trackCursorAxis="both"`) as a colour preview. |
 
 `ToolKind` is `"pen" | "eraser" | "fill" | "eyedropper"` and lives in `@pindou/core/editor`.
 
@@ -215,7 +224,7 @@ packages/shared/src/palettes.json     The catalog (Palette[] — brands with nes
 packages/shared/src/palettes.ts       PALETTES export — loads the JSON, converts ISO dates → Date
 packages/shared/src/types.ts          Brand/Color/Palette types (data source: the JSON, not a DB table)
 packages/shared/src/constants.ts      Limits, canvas bg, page size
-apps/web/src/lib/server/palettes.ts   getPaletteByCode / getPaletteById / getBrandPalette / getAllPalettes — pure in-memory lookups over PALETTES
+apps/web/src/lib/server/palettes.ts   PaletteService.byCode / .byId / .matching / .brand / .all — pure in-memory lookups over PALETTES
 apps/web/src/app/api/brands/route.ts  GET — all brands with colors nested (the client catalog)
 apps/web/src/app/api/brands/[id]/route.ts GET — one brand by uuid id, colors nested (runtime lookup)
 apps/web/src/db/schema.ts             patterns table only (fk_brand_id is a plain uuid, no FK constraint)
@@ -223,10 +232,10 @@ packages/core/src/hooks/use-palette.ts Editor store (Zustand) — active palette
 ```
 
 - `code`/`name` are uppercase (e.g. `"A1"`); `series` is nullable — use `c.series ?? "?"`
-- Two representations coexist: the editor's **in-memory sparse map holds 1‑based indices** into `palette.colors` (order-dependent), while the **wire/stored grid is code‑based** (`string[][]`, `""` = empty — migration 0012). Colors are served in `sortOrder` (file order) because the in-memory index and the editor's ordering depend on it. Reordering color entries no longer corrupts *published* patterns (codes are stable), but it shifts in-memory index semantics — `serializeGrid`/`deserializeGrid` take the palette for exactly this reason, and any brand-palette replace must rebuild the code→index binding wherever sparse state is held.
+- Two representations coexist: the editor's **in-memory sparse map holds 1‑based indices** into `palette.colors` (order-dependent), while the **wire/stored grid is code‑based** (`string[][]`, `""` = empty — migration 0012). Colors are served in `sortOrder` (file order) because the in-memory index and the editor's ordering depend on it. Reordering color entries no longer corrupts *published* patterns (codes are stable), but it shifts in-memory index semantics — `Grid#toCodeGrid()` / `CodeGrid#toCells()` take the palette for exactly this reason, and any brand-palette replace must rebuild the code→index binding wherever sparse state is held.
 - `/api/brands` is CDN/browser-cacheable: the catalog only changes on a rebuild (committed JSON), so the route sends `Cache-Control: public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400`. Palette changes propagate only after the next deploy + cache expiry.
-- Wire contract between client and server is the brand **code** (a plain string matching `code`, e.g. `"mard"`); the server maps code↔brand uuid (`patterns.fk_brand_id`) internally. `patterns.fk_brand_id` is a **plain uuid column** — the FK to `brands.id` was dropped in migration 0014, so validity is enforced in the app layer (`getPaletteByCode` on publish; the uuid is preserved on edit).
-- `usePalette()` returns `{ palette, setActivePalette }`; it holds only the active palette (a `Palette` — a brand entry with colors nested) and makes no network requests. ColorPalette fetches `/api/brands` (the catalog) for its switcher, builds the chosen brand's palette, and pushes it into the store. The editor canvas (`EditablePaletteBridge`), the export dialog, and the import dialog read the shared palette because the export dialog must use the same palette instance the canvas draws with — a freshly fetched brand could serve a cached colour order and shift every bead. Consumers that need a *specific* brand (pattern detail/edit pages) fetch it directly via `getBrandPalette` instead. Read-only views pin a `palette` prop and bypass the store. SSR snapshots are null, so hydration stays consistent.
+- Wire contract between client and server is the brand **code** (a plain string matching `code`, e.g. `"mard"`); the server maps code↔brand uuid (`patterns.fk_brand_id`) internally. `patterns.fk_brand_id` is a **plain uuid column** — the FK to `brands.id` was dropped in migration 0014, so validity is enforced in the app layer (`PaletteService.byCode` on publish; the uuid is preserved on edit).
+- `usePalette()` returns `{ palette, setActivePalette }`; it holds only the active palette (a `Palette` — a brand entry with colors nested) and makes no network requests. ColorPalette fetches `/api/brands` (the catalog) for its switcher, builds the chosen brand's palette, and pushes it into the store. The editor canvas (`EditablePaletteBridge`), the export dialog, and the import dialog read the shared palette because the export dialog must use the same palette instance the canvas draws with — a freshly fetched brand could serve a cached colour order and shift every bead. Consumers that need a *specific* brand (pattern detail/edit pages) fetch it directly via `PaletteService.brand` instead. Read-only views pin a `palette` prop and bypass the store. SSR snapshots are null, so hydration stays consistent.
 
 ### Server-side (`/api` + database)
 
@@ -235,24 +244,24 @@ apps/web/src/app/api/brands/route.ts        GET — all brands + colors (the cli
 apps/web/src/app/api/brands/[id]/route.ts   GET — one brand by uuid id + colors
 apps/web/src/app/api/patterns/route.ts      GET (paginated list) + POST (publish, per-user rate limited)
 apps/web/src/app/api/patterns/[id]/route.ts GET (single pattern) + PATCH (author updates, per-user rate limited)
-apps/web/src/lib/server/palettes.ts         getPaletteByCode(code)/getPaletteById/getAllPalettes — in-memory lookups over the bundled palettes.json (no DB)
+apps/web/src/lib/server/palettes.ts         PaletteService.byCode(code)/.byId/.matching/.brand/.all — in-memory lookups over the bundled palettes.json (no DB)
 apps/web/src/lib/server/patterns.ts         getPatternsPage/getPattern — `unstable_cache`(30s, tags `patterns`/`pattern`) shared by routes + SSR pages; Dates normalized; brandCode resolved via the palette catalog, not a join
 apps/web/src/lib/server/meta.ts             pageMetadata
 packages/core/src/server/thumbnail.ts       Thumbnail class: generate(grid, palette) → PNG Buffer + upload(png, patternId) → public URL, run on publish — Node-only (imports sharp)
 packages/core/src/server/grid-storage.ts    GridStorage class: upload(id, grid) → R2 key, get(key) → grid, delete(key) — the DB stores only the object key
 packages/core/src/server/r2.ts              R2 class: upload/get/delete(key) — generic Cloudflare R2 client (S3 API)
-packages/core/src/server/rate-limit.ts      rateLimit(key, limit, windowMs) — Upstash sliding window
+packages/core/src/server/rate-limit.ts      RateLimiter.check(key, limit, windowMs) — Upstash sliding window
 packages/core/src/export.ts                  exportGridPng — client-only canvas PNG chart (used by ExportDialog)
-apps/web/src/lib/utils.ts                   re-exports `cn`/`fetcher`/`postJson`/bead-count helpers from `@pindou/core` + web-only `escapeLike` (Postgres-specific)
+apps/web/src/lib/utils.ts                   re-exports `cn` from `@pindou/core` + web-only `escapeLike` (Postgres-specific)
 apps/web/src/db/                            Drizzle schema + Neon Postgres Pool (@neondatabase/serverless); Better Auth tables in `auth-schema.ts`; migrations in `apps/web/drizzle/`
 apps/web/src/lib/auth/                      Better Auth client (`client.ts`) + server (`server.ts`)
 ```
 
 - **Tables**: `patterns` only (id uuid PK defaultRandom, title, description, author_name, grid_key, fk_brand_id uuid — **no FK constraint**, fk_user_id → auth.users, bead_stats, thumb_url, timestamps). The `brands`/`colors` tables were removed in migration 0014; brand/color data lives exclusively in `packages/shared/src/palettes.json`. `patterns` rows use uuid `id` (default `gen_random_uuid()`) and `created_at`/`updated_at` (`timestamp with time zone`, default `now()`) — the DB generates them, so routes never set them. `patterns.fk_brand_id` holds a brand uuid from the catalog, resolved to a code in the app layer.
-- **Grid contract**: the wire format is a **code grid** — `string[][]`, `grid[row][col]` = `""` (empty) or a colour code (e.g. `"A1"`). `/api/patterns` stores/serves codes; the editor converts to its in-memory index-based sparse map via `deserializeGrid`, and `ImportDialog` feeds the client-side transform's code grid straight into `loadGrid`.
-- **Edit flow**: `/patterns/[id]/edit` (under `[lang]/(site)/(workspace)/patterns/[id]/edit/page.tsx`) is a server page that loads the pattern + brand palette + session via `getPattern`/`getBrandPalette`/`auth`, `notFound()`s missing data, gates non-owners with a notice, then renders an editable `client.tsx` that `PATCH`es the grid/title/desc through `/api/patterns/[id]` via `postJson` (method `"PATCH"`). Only the owner (session `fkUserId` match) can edit — the API returns 403 otherwise.
+- **Grid contract**: the wire format is a **code grid** — `string[][]`, `grid[row][col]` = `""` (empty) or a colour code (e.g. `"A1"`). `/api/patterns` stores/serves codes; the editor converts to its in-memory index-based sparse map via `CodeGrid#toGrid`, and `ImportDialog` feeds the client-side transform's code grid straight into `loadGrid`.
+- **Edit flow**: `/patterns/[id]/edit` (under `[lang]/(site)/(workspace)/patterns/[id]/edit/page.tsx`) is a server page that loads the pattern + brand palette + session via `getPattern`/`PaletteService.brand`/`auth`, `notFound()`s missing data, gates non-owners with a notice, then renders an editable `client.tsx` that `PATCH`es the grid/title/desc through `/api/patterns/[id]` via `Http.send` (method `"PATCH"`). Only the owner (session `fkUserId` match) can edit — the API returns 403 otherwise.
 - `thumbnail.ts` imports sharp and must never be imported from a client component — only API routes use it. Routes reach the DB through `apps/web/src/lib/server/` helpers — never the pool directly — and palette data is never bundled into the client.
-- **Distributed rate limiting**: `rateLimit(key, limit, windowMs)` (in `@pindou/core/server/rate-limit`) uses an Upstash Redis sliding window shared across Vercel + Netlify instances. Publish (`POST /api/patterns`) and edit (`PATCH /api/patterns/[id]`) are rate-limited **per user** (`user:<id>`, 20 req / 60 s), enforced right after the 401 auth check. `rateLimit` **fails open**: a Redis outage or missing env vars resolves `true` (allows) instead of 500ing the route — deployments must set `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (Netlify: Production scope + a manual redeploy, since env changes don't auto-redeploy) for throttling to engage.
+- **Distributed rate limiting**: `RateLimiter.check(key, limit, windowMs)` (in `@pindou/core/server/rate-limit`) uses an Upstash Redis sliding window shared across Vercel + Netlify instances. Publish (`POST /api/patterns`) and edit (`PATCH /api/patterns/[id]`) are rate-limited **per user** (`user:<id>`, 20 req / 60 s), enforced right after the 401 auth check. `RateLimiter.check` **fails open**: a Redis outage or missing env vars resolves `true` (allows) instead of 500ing the route — deployments must set `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (Netlify: Production scope + a manual redeploy, since env changes don't auto-redeploy) for throttling to engage.
 - **Hard request limits**: the client import dialog rejects images > 40 MB (`MAX_FILE_BYTES`) and > `MAX_INPUT_PIXELS` (40M) before decode. Publish/edit reject JSON bodies > 20 MB (413). Grids are bounded by the wire schema: rows/cols ≤ `MAX_GRID_DIMENSION` (4096), total cells ≤ `MAX_GRID_CELLS` (1,000,000); the importer clamps its output to that budget. Text caps: title ≤ 200, description ≤ 2000, beadStats ≤ 100,000.
 - **Grids (Cloudflare R2)**: the grid JSON is **never stored in Postgres** — it lives in R2 under versioned keys `patterns/{patternId}/{uuid}.json` (`GridStorage`, wrapping `R2`). `patterns.grid_key` holds the active object key (migration 0013 renamed `grid_data` → `grid_key`). Each publish/edit uploads a **new** object so a failed DB write can roll back by deleting only the new key, leaving the previous grid intact; after a successful edit the superseded object is garbage-collected. The pattern-detail GET (inside `unstable_cache`) fetches the grid via `grids.get(gridKey)` and 500s if missing. R2 is a **hard read AND write dependency** — grids and thumbnails share the bucket. Required env (copy from `.env.example`): `R2_ENDPOINT_URL`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`.
 - **Thumbnails (Cloudflare R2)**: on publish, `Thumbnail` calls `generate` (grid → 128×128 PNG Buffer, background `EDITOR_BG`), then `upload` to a **versioned** key `thumbnails/{patternId}/{uuid}.png` and returns the public URL saved in `patterns.thumb_url`. An upload failure fails the request (503, nothing written); no base64 fallback. Versioned keys let a failed DB write roll back by deleting only the new object and a successful edit garbage-collects the superseded one.

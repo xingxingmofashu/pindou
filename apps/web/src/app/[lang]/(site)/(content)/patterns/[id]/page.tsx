@@ -2,10 +2,10 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { headers } from "next/headers"
 import { getPattern } from "@/lib/server/patterns"
-import { getBrandPalette } from "@/lib/server/palettes"
+import { PaletteService } from "@/lib/server/palettes"
 import { pageMetadata } from "@/lib/server/meta"
 import { getDictionary, getLocale } from "@/i18n/server"
-import { isLocale } from "@pindou/core/i18n/config"
+import { I18nConfig } from "@pindou/core/i18n/config"
 import { auth } from "@/lib/auth/server"
 import { PatternDetailClient } from "./client"
 import type { PatternDetailType } from "@/db/schema"
@@ -16,7 +16,7 @@ export async function generateMetadata({
   params: Promise<{ lang: string; id: string }>
 }): Promise<Metadata> {
   const [{ lang, id }, locale] = await Promise.all([params, getLocale()])
-  const dict = await getDictionary(isLocale(lang) ? lang : undefined)
+  const dict = await getDictionary(I18nConfig.isLocale(lang) ? lang : undefined)
   const pattern = await getPattern(id)
   if (!pattern || !pattern.grid) return {}
 
@@ -42,7 +42,7 @@ export default async function PatternDetailPage({
   ])
   if (!pattern || !pattern.grid) notFound()
 
-  const palette = await getBrandPalette(pattern.brandId)
+  const palette = await PaletteService.brand(pattern.brandId)
   if (!palette) notFound()
 
   const canEdit = Boolean(session && session.user.id === pattern.fkUserId)

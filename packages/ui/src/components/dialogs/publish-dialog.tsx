@@ -20,7 +20,7 @@ import { Spinner } from "../ui/spinner"
 import { toast } from "../ui/toast"
 import type { CellsData } from "@pindou/core/editor"
 import { GithubIcon } from "../icon/github"
-import { localizedPath } from "@pindou/core/i18n/config"
+import { I18nConfig } from "@pindou/core/i18n/config"
 import { useI18n } from "@pindou/core/i18n/client"
 
 /** Minimal shape of the session the dialog reads; host apps may pass richer
@@ -48,7 +48,7 @@ interface PublishDialogProps<TSession extends AuthSession = AuthSession> {
   onSignIn: (callbackURL: string) => Promise<{ error?: unknown }>
   /**
    * Publishes the validated payload — injected by the app (which owns the
-   * network layer, e.g. SWR + `postJson`). Resolves with the new pattern id
+   * network layer, e.g. SWR + `Http.send`). Resolves with the new pattern id
    * or rejects with an error. Keeps the dialog free of data-fetching deps.
    */
   onPublish: (payload: unknown) => Promise<{ id: string }>
@@ -125,7 +125,7 @@ export function PublishDialog<TSession extends AuthSession = AuthSession>({
   // away and the in-memory draft survives the sign-in. On success the reactive
   // session hook updates and this dialog swaps to the publish form.
   const handleSignInPopup = useCallback(async () => {
-    const { error } = await onSignIn(localizedPath(locale, "/editor"))
+    const { error } = await onSignIn(I18nConfig.localizedPath(locale, "/editor"))
     if (error) {
       toast.add({
         id: "sign-in-failed",
@@ -151,7 +151,7 @@ export function PublishDialog<TSession extends AuthSession = AuthSession>({
               <AlertDialogDescription>
                 {t("editor.publishSuccessDescription")}{" "}
                 <code className="rounded bg-muted px-1 text-xs">
-                  {localizedPath(locale, `/patterns/${patternId}`)}
+                  {I18nConfig.localizedPath(locale, `/patterns/${patternId}`)}
                 </code>
               </AlertDialogDescription>
             </AlertDialogHeader>

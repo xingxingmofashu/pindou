@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { detectLocale, isLocale } from "@pindou/core/i18n/config"
+import { I18nConfig } from "@pindou/core/i18n/config"
 
 /**
  * Locale-aware routing proxy: prefixes every page request with the detected
@@ -11,9 +11,9 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const [segment] = pathname.split("/").filter(Boolean)
 
-  if (segment && isLocale(segment)) return
+  if (segment && I18nConfig.isLocale(segment)) return
 
-  const locale = detectLocale(request.headers.get("accept-language"))
+  const locale = I18nConfig.detectLocale(request.headers.get("accept-language"))
   request.nextUrl.pathname = `/${locale}${pathname}`
   return NextResponse.redirect(request.nextUrl)
 }

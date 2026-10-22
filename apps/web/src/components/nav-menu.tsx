@@ -11,7 +11,7 @@ import {
   DrawerFooter,
 } from "@pindou/ui/components/ui/drawer"
 import { useI18n } from "@pindou/core/i18n/client"
-import { localizedPath, type Locale } from "@pindou/core/i18n/config"
+import { I18nConfig, type Locale } from "@pindou/core/i18n/config"
 import { GITHUB_URL } from "@pindou/shared/constants"
 
 /** Shared nav-item styles: full-width row with 24px medium label. */
@@ -47,7 +47,7 @@ export function NavMenu({ locale }: { locale: Locale }) {
             key={path}
             variant="link"
             nativeButton={false}
-            render={<Link href={localizedPath(locale, path)} />}
+            render={<Link href={I18nConfig.localizedPath(locale, path)} />}
           >
             {t(labelKey)}
           </Button>
@@ -91,7 +91,7 @@ export function NavMenu({ locale }: { locale: Locale }) {
               <DrawerClose
                 key={path}
                 nativeButton={false}
-                render={<Link href={localizedPath(locale, path)} className={navItemClass} />}
+                render={<Link href={I18nConfig.localizedPath(locale, path)} className={navItemClass} />}
               >
                 {t(labelKey)}
               </DrawerClose>

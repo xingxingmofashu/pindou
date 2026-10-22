@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getAllPalettes } from "@/lib/server/palettes"
+import { PaletteService } from "@/lib/server/palettes"
 import type { Palette } from "@pindou/shared/types"
 
 /**
@@ -16,7 +16,7 @@ import type { Palette } from "@pindou/shared/types"
 export const revalidate = 604800
 
 export async function GET() {
-  const result = await getAllPalettes()
+  const result = await PaletteService.all()
   return NextResponse.json<Array<Palette>>(result, {
     headers: {
       "Cache-Control": "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400",

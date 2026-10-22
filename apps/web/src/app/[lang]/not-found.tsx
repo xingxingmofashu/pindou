@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { Button } from "@pindou/ui/components/ui/button"
 import { Logo } from "@pindou/ui/components/logo"
-import { localizedPath } from "@pindou/core/i18n/config"
+import { I18nConfig } from "@pindou/core/i18n/config"
 import { getDictionary, getLocale } from "@/i18n/server"
 
 export default async function NotFound() {
@@ -20,7 +20,7 @@ export default async function NotFound() {
       <Button
         variant="outline"
         nativeButton={false}
-        render={<Link href={localizedPath(locale, "/")} />}
+        render={<Link href={I18nConfig.localizedPath(locale, "/")} />}
       >
         {dict.common.goHome}
       </Button>

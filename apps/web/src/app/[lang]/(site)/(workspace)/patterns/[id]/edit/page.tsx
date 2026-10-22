@@ -3,10 +3,10 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { headers } from "next/headers"
 import { getPattern } from "@/lib/server/patterns"
-import { getBrandPalette } from "@/lib/server/palettes"
+import { PaletteService } from "@/lib/server/palettes"
 import { pageMetadata } from "@/lib/server/meta"
 import { getDictionary, getLocale } from "@/i18n/server"
-import { isLocale, localizedPath } from "@pindou/core/i18n/config"
+import { I18nConfig } from "@pindou/core/i18n/config"
 import { auth } from "@/lib/auth/server"
 import { Button } from "@pindou/ui/components/ui/button"
 import { PatternEditContentClient } from "./client"
@@ -18,7 +18,7 @@ export async function generateMetadata({
   params: Promise<{ lang: string; id: string }>
 }): Promise<Metadata> {
   const [{ lang, id }, locale] = await Promise.all([params, getLocale()])
-  const dict = await getDictionary(isLocale(lang) ? lang : undefined)
+  const dict = await getDictionary(I18nConfig.isLocale(lang) ? lang : undefined)
   const pattern = await getPattern(id)
   if (!pattern || !pattern.grid) return {}
 
@@ -45,7 +45,7 @@ export default async function PatternEditPage({
   ])
   if (!pattern || !pattern.grid) notFound()
 
-  const palette = await getBrandPalette(pattern.brandId)
+  const palette = await PaletteService.brand(pattern.brandId)
   if (!palette) notFound()
 
   // Only the author may edit; show a friendly notice (the API 403s anyway).
@@ -56,7 +56,7 @@ export default async function PatternEditPage({
         <Button
           variant="outline"
           nativeButton={false}
-          render={<Link href={localizedPath(locale, `/patterns/${id}`)} />}
+          render={<Link href={I18nConfig.localizedPath(locale, `/patterns/${id}`)} />}
         >
           {dict.patternDetail.backToPattern}
         </Button>

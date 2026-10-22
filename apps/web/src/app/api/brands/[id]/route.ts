@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getBrandPalette } from "@/lib/server/palettes"
+import { PaletteService } from "@/lib/server/palettes"
 import type { Palette } from "@pindou/shared/types"
 
 /**
@@ -29,7 +29,7 @@ export async function GET(
     return NextResponse.json({ error: "Brand not found" }, { status: 404 })
   }
 
-  const palette = await getBrandPalette(id)
+  const palette = await PaletteService.brand(id)
 
   if (!palette) {
     return NextResponse.json({ error: "Brand not found" }, { status: 404 })

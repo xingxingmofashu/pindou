@@ -1,6 +1,6 @@
 import { headers } from "next/headers"
 import type { MetadataRoute } from "next"
-import { detectLocale } from "@pindou/core/i18n/config"
+import { I18nConfig } from "@pindou/core/i18n/config"
 
 /**
  * PWA web app manifest. Served at `/manifest.webmanifest` (root, outside the
@@ -12,7 +12,7 @@ import { detectLocale } from "@pindou/core/i18n/config"
  * icon (`apps/desktop/resources/icon-source.png`).
  */
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
-  const locale = detectLocale((await headers()).get("accept-language"))
+  const locale = I18nConfig.detectLocale((await headers()).get("accept-language"))
 
   const isZh = locale === "zh"
 

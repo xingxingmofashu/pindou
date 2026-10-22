@@ -1,16 +1,6 @@
 import { Ratelimit } from "@upstash/ratelimit"
 import { Redis } from "@upstash/redis"
 
-/**
- * Distributed sliding-window rate limiter backed by Upstash Redis.
- *
- * Unlike an in-memory counter, the budget is shared across every serverless
- * instance (Vercel + Netlify), so concurrent requests from the same key can't
- * bypass it by hitting different cold-start instances.
- *
- * Required env vars: `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`
- * (create a free database at https://console.upstash.com; Vercel KV works too).
- */
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL!,
   token: process.env.UPSTASH_REDIS_REST_TOKEN!,
@@ -34,20 +24,33 @@ function limiterFor(limit: number, windowMs: number): Ratelimit {
 }
 
 /**
- * Enforce a per-key request budget within a sliding window.
+ * Distributed sliding-window rate limiter backed by Upstash Redis.
  *
- * @param key      - The bucket key (e.g. `ip:<addr>` or `user:<id>`).
- * @param limit    - Max requests allowed in one window.
- * @param windowMs - Window length in milliseconds.
- * @returns A promise resolving to `true` when allowed, `false` when over the limit.
+ * Unlike an in-memory counter, the budget is shared across every serverless
+ * instance (Vercel + Netlify), so concurrent requests from the same key can't
+ * bypass it by hitting different cold-start instances.
+ *
+ * Required env vars: `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`
+ * (create a free database at https://console.upstash.com; Vercel KV works too).
  */
-export async function rateLimit(key: string, limit: number, windowMs: number): Promise<boolean> {
-  try {
-    const { success } = await limiterFor(limit, windowMs).limit(key)
-    return success
-  } catch {
-    // Fail open: a Redis outage/misconfiguration must never 500 the route it
-    // protects — losing rate limiting is preferable to taking the feature down.
-    return true
+export class RateLimiter {
+  /**
+   * Enforce a per-key request budget within a sliding window.
+   *
+   * Fails open: a Redis outage or missing configuration allows the request
+   * rather than 500ing the route it protects.
+   *
+   * @param key      - The bucket key (e.g. `ip:<addr>` or `user:<id>`).
+   * @param limit    - Max requests allowed in one window.
+   * @param windowMs - Window length in milliseconds.
+   * @returns A promise resolving to `true` when allowed, `false` when over the limit.
+   */
+  static async check(key: string, limit: number, windowMs: number): Promise<boolean> {
+    try {
+      const { success } = await limiterFor(limit, windowMs).limit(key)
+      return success
+    } catch {
+      return true
+    }
   }
 }
