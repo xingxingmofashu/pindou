@@ -1,6 +1,7 @@
 import { converter } from "culori"
 import { MAX_GRID_CELLS, MAX_GRID_DIMENSION } from "@pindou/shared/constants"
-import { countGridBeads, mostFrequent } from "./editor"
+import { CodeGrid } from "./grid/code-grid"
+import { MostFrequent } from "./most-frequent"
 import type { Palette } from "@pindou/shared/types"
 
 /** Pixels with alpha below this are treated as empty cells. */
@@ -252,7 +253,7 @@ export class Transform {
    * @param threshold - Maximum OKLab distance between the merged pair.
    */
   private mergeSimilarColors(grid: string[][], threshold: number): void {
-    const counts = countGridBeads(grid)
+    const counts = CodeGrid.from(grid)?.counts() ?? new Map<string, number>()
     if (counts.size < 2) return
 
     const codes = Array.from(counts.entries())
@@ -313,7 +314,7 @@ export class Transform {
       count(grid[r][w - 1])
     }
 
-    const bg = mostFrequent(borderCounts)
+    const bg = MostFrequent.of(borderCounts)
     if (!bg) return
 
     const visited = new Uint8Array(w * h)
@@ -403,7 +404,7 @@ export class Transform {
       this.removeBackgroundColor(grid)
     }
 
-    const counts = countGridBeads(grid)
+    const counts = CodeGrid.from(grid)?.counts() ?? new Map<string, number>()
     const beadCount = Array.from(counts.values()).reduce((sum, n) => sum + n, 0)
     return { grid, width, height, beadCount }
   }

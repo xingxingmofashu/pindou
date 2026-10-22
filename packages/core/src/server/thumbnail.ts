@@ -1,5 +1,6 @@
 import sharp from "sharp"
-import { buildHexByCode, gridSize } from "../editor"
+import { CodeGrid } from "../grid/code-grid"
+import { PaletteIndex } from "../palette/palette-index"
 import { EDITOR_BG } from "@pindou/shared/constants"
 import { hexToRgb } from "../utils"
 import { R2 } from "./r2"
@@ -34,11 +35,11 @@ export class Thumbnail {
    * @returns The encoded PNG bytes, or null for an empty grid.
    */
   async generate(grid: string[][], palette: Palette): Promise<Buffer | null> {
-    const size = gridSize(grid)
+    const size = CodeGrid.from(grid)?.size
     if (!size) return null
     const { rows: h, cols: w } = size
 
-    const hexByCode = buildHexByCode(palette)
+    const hexByCode = new PaletteIndex(palette).hexMap()
 
     const step = Math.ceil(Math.max(h, w) / MAX_CELLS)
     const cellsH = Math.ceil(h / step)
