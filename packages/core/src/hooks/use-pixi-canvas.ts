@@ -11,28 +11,12 @@ import {
   EDITOR_BG,
   EDITOR_BG_DARK,
 } from "@pindou/shared/constants"
-import {
-  EMPTY,
-  paintBlock,
-  floodFill,
-  serializeGrid,
-  deserializeGrid,
-  serializeBeadStats,
-  countBeadStats,
-  walkLine,
-  lodParams,
-  computeGridLines,
-  buildBeadEntries,
-  getGridBounds,
-  boundsWorldSize,
-  centerViewport,
-  mostFrequent,
-  type ToolKind,
-  type ViewRect,
-  type CellsData,
-  type PixiContext,
-  type GridRect,
-} from "../editor"
+import type { CellsData, GridRect, PixiContext, ToolKind, ViewRect } from "../editor"
+import { BeadRenderer } from "../grid/bead-renderer"
+import { CodeGrid } from "../grid/code-grid"
+import { EMPTY, Grid } from "../grid/grid"
+import { GridHistory } from "../grid/grid-history"
+import { Viewport } from "../grid/viewport"
 import { hexToRgb, isTypingTarget } from "../utils"
 import type { Palette } from "@pindou/shared/types"
 
@@ -87,34 +71,6 @@ function paintGridLines(poly: Graphics, rects: GridRect[], color: number, alpha:
   poly.fill({ color, alpha })
 }
 
-/** Whether two sparse grids hold identical cells (same keys + values). */
-function mapsEqual(a: Map<string, number>, b: Map<string, number>): boolean {
-  if (a.size !== b.size) return false
-  for (const [key, value] of a) {
-    if (b.get(key) !== value) return false
-  }
-  return true
-}
-
-/** Dominant 1‑based colour index across a visual-cell block, or `undefined`
- *  when every cell in the block is empty. Used by the eyedropper for both
- *  picking and the hover preview, so a zoomed-out sample matches what a pen
- *  press would paint. `EMPTY` is never stored in the map, so no skip needed. */
-function sampleDominantColor(
-  map: Map<string, number>,
-  t: { c0: number; r0: number; c1: number; r1: number },
-): number | undefined {
-  const counts = new Map<number, number>()
-  for (let r = t.r0; r < t.r1; r++) {
-    for (let c = t.c0; c < t.c1; c++) {
-      const v = map.get(`${c},${r}`)
-      if (v === undefined) continue
-      counts.set(v, (counts.get(v) ?? 0) + 1)
-    }
-  }
-  return mostFrequent(counts)
-}
-
 export function usePixiCanvas(
   pixiCtx: PixiContext | null,
   palette: Palette,
@@ -138,21 +94,20 @@ export function usePixiCanvas(
 
   const gridColor = isDark ? GRID_COLOR_DARK : GRID_COLOR_LIGHT
 
-  const cellsRef = useRef<Map<string, number>>(new Map())
+  const gridRef = useRef<Grid>(new Grid(palette))
   const rectRef = useRef<DOMRect | null>(null)
   /** World position of the last padded rebuild; null when nothing covers a slack region. */
   const builtWorldRef = useRef<{ x: number; y: number } | null>(null)
 
-  /** Undo/redo history: sparse-map snapshots taken before each destructive op. */
-  const undoStackRef = useRef<Map<string, number>[]>([])
-  const redoStackRef = useRef<Map<string, number>[]>([])
+  /** Undo/redo history: whole-grid snapshots taken before each destructive op. */
+  const historyRef = useRef(new GridHistory(UNDO_LIMIT))
 
   const pixiRef = useRef(pixiCtx)
   const runtimeRef = useRef<RuntimeOpts>({ activeTool, activeColorIndex, readonly, onColorPick: null, onHoverCell: null })
   const onGridChangeRef = useRef(onGridChange)
   const onHistoryChangeRef = useRef(onHistoryChange)
   const panRef = useRef({ on: false, startX: 0, startY: 0, startWX: 0, startWY: 0 })
-  const drawRef = useRef<{ on: boolean; vc: number; vr: number; before: Map<string, number> | null }>({
+  const drawRef = useRef<{ on: boolean; vc: number; vr: number; before: Grid | null }>({
     on: false, vc: 0, vr: 0, before: null,
   })
   /** Last colour reported via `onHoverCell`, to skip unchanged samples. */
@@ -207,10 +162,12 @@ export function usePixiCanvas(
       // Grid lines and beads always render at data-cell resolution (CELL /
       // lodScale 1) so an imported pattern keeps its fixed cell count at any
       // zoom. LOD only controls the paint-brush block size, never the display.
-      const { rects } = computeGridLines(buildView, CELL, z)
+      const { rects } = new Viewport(z).gridLines(buildView, CELL)
       paintGridLines(ctx.gridGfx, rects, gridColor, GRID_ALPHA)
 
-      const entries = buildBeadEntries(cellsRef.current, buildView, 1, CELL, palette)
+      // The grid owns its palette binding, so index → hex resolution can never
+      // disagree with the cells being drawn.
+      const entries = BeadRenderer.entries(gridRef.current, buildView, 1, CELL)
 
       ctx.beadsGfx.clear()
       for (const e of entries) {
@@ -218,7 +175,7 @@ export function usePixiCanvas(
         ctx.beadsGfx.fill({ color: hexToRgb(e.hex) })
       }
     },
-    [viewport, palette, gridColor]
+    [viewport, gridColor]
   )
 
   // Keep the latest pixiCtx, rebuild callback, and the runtime opts behind
@@ -242,49 +199,44 @@ export function usePixiCanvas(
   })
 
   /** Deep-copy the sparse grid so a snapshot survives later mutations. */
-  function snapshot(): Map<string, number> {
-    return new Map(cellsRef.current)
+  function snapshot(): Grid {
+    return gridRef.current.clone()
   }
 
-  const pushHistory = useCallback((before: Map<string, number>) => {
+  const pushHistory = useCallback((before: Grid) => {
     if (runtimeRef.current.readonly) return
     // No-op ops (same colour on an already-painted cell, empty clear, …) would
     // push a snapshot identical to the current state — drop them so undo/redo
     // stay meaningful.
-    if (mapsEqual(before, cellsRef.current)) return
-    undoStackRef.current.push(before)
-    if (undoStackRef.current.length > UNDO_LIMIT) undoStackRef.current.shift()
-    redoStackRef.current = []
-    onHistoryChangeRef.current?.(true, false)
+    if (before.equals(gridRef.current)) return
+    const history = historyRef.current
+    history.push(before, gridRef.current)
+    onHistoryChangeRef.current?.(history.canUndo, history.canRedo)
   }, [])
 
   const undo = useCallback(() => {
     if (runtimeRef.current.readonly) return
-    const prev = undoStackRef.current.pop()
+    const prev = historyRef.current.undo(gridRef.current)
     if (!prev) return
-    redoStackRef.current.push(cellsRef.current)
-    cellsRef.current = prev
+    gridRef.current = prev
     rebuildRef.current()
     onGridChangeRef.current?.()
-    onHistoryChangeRef.current?.(undoStackRef.current.length > 0, true)
+    onHistoryChangeRef.current?.(historyRef.current.canUndo, historyRef.current.canRedo)
   }, [])
 
   const redo = useCallback(() => {
     if (runtimeRef.current.readonly) return
-    const next = redoStackRef.current.pop()
+    const next = historyRef.current.redo(gridRef.current)
     if (!next) return
-    undoStackRef.current.push(cellsRef.current)
-    if (undoStackRef.current.length > UNDO_LIMIT) undoStackRef.current.shift()
-    cellsRef.current = next
+    gridRef.current = next
     rebuildRef.current()
     onGridChangeRef.current?.()
-    onHistoryChangeRef.current?.(true, redoStackRef.current.length > 0)
+    onHistoryChangeRef.current?.(historyRef.current.canUndo, historyRef.current.canRedo)
   }, [])
 
   /** Clear undo/redo history (used on brand switch, where cell indices change meaning). */
   const clearHistory = useCallback(() => {
-    undoStackRef.current = []
-    redoStackRef.current = []
+    historyRef.current.clear()
     onHistoryChangeRef.current?.(false, false)
   }, [])
 
@@ -294,9 +246,11 @@ export function usePixiCanvas(
     if (!ctx?.app.screen) return
     ctx.world.scale.set(zoomRef.current)
 
-    const bounds = getGridBounds(cellsRef.current)
+    const bounds = gridRef.current.bounds()
     if (bounds) {
-      centerViewport(ctx.world, bounds, ctx.app.screen.width, ctx.app.screen.height, zoomRef.current)
+      const { x, y } = Viewport.center(bounds, ctx.app.screen.width, ctx.app.screen.height, zoomRef.current)
+      ctx.world.x = x
+      ctx.world.y = y
     }
 
     rebuildRef.current()
@@ -372,7 +326,7 @@ export function usePixiCanvas(
     (clientX: number, clientY: number, rect?: DOMRect | null) => {
       const w = toWorld(clientX, clientY, rect)
       if (!w) return null
-      const { scale, size } = lodParams(zoomRef.current)
+      const { scale, size } = new Viewport(zoomRef.current).lod()
       const vc = Math.floor(w.wx / size)
       const vr = Math.floor(w.wy / size)
       return { scale, size, vc, vr, c0: vc * scale, r0: vr * scale, c1: (vc + 1) * scale, r1: (vr + 1) * scale }
@@ -467,7 +421,7 @@ export function usePixiCanvas(
         const w = toWorld(e.clientX, e.clientY, rectRef.current)
         if (!w) return
         const before = snapshot()
-        floodFill(cellsRef.current, Math.floor(w.wx / CELL), Math.floor(w.wy / CELL), rt.activeColorIndex)
+        gridRef.current.floodFill(Math.floor(w.wx / CELL), Math.floor(w.wy / CELL), rt.activeColorIndex)
         pushHistory(before)
         rebuildRef.current()
         onGridChangeRef.current?.()
@@ -480,7 +434,7 @@ export function usePixiCanvas(
         e.preventDefault()
         const t = toPaintTarget(e.clientX, e.clientY, rectRef.current)
         if (!t) return
-        const best = sampleDominantColor(cellsRef.current, t)
+        const best = gridRef.current.dominant(t.c0, t.r0, t.c1, t.r1)
         if (best !== undefined) rt.onColorPick?.(best)
         return
       }
@@ -491,7 +445,7 @@ export function usePixiCanvas(
       if (!t) return
       // Capture the pre-stroke state; it becomes an undo entry at stroke end.
       drawRef.current = { on: true, vc: t.vc, vr: t.vr, before: snapshot() }
-      paintBlock(cellsRef.current, t.c0, t.r0, t.c1, t.r1, rt.activeTool === "eraser" ? EMPTY : rt.activeColorIndex)
+      gridRef.current.paintBlock(t.c0, t.r0, t.c1, t.r1, rt.activeTool === "eraser" ? EMPTY : rt.activeColorIndex)
       rebuildRef.current()
       cvs.setPointerCapture(e.pointerId)
     }
@@ -525,7 +479,7 @@ export function usePixiCanvas(
       if (!d.on && runtimeRef.current.activeTool === "eyedropper") {
         const t = toPaintTarget(e.clientX, e.clientY, rectRef.current)
         if (!t) return
-        const idx = sampleDominantColor(cellsRef.current, t)
+        const idx = gridRef.current.dominant(t.c0, t.r0, t.c1, t.r1)
         if (idx === undefined) {
           if (lastHoverRef.current !== null) {
             lastHoverRef.current = null
@@ -547,9 +501,7 @@ export function usePixiCanvas(
       if (!t) return
 
       const colorIdx = runtimeRef.current.activeTool === "eraser" ? EMPTY : runtimeRef.current.activeColorIndex
-      walkLine(d.vc, d.vr, t.vc, t.vr, (bc, br) => {
-        paintBlock(cellsRef.current, bc * t.scale, br * t.scale, (bc + 1) * t.scale, (br + 1) * t.scale, colorIdx)
-      })
+      gridRef.current.paintLine(d.vc, d.vr, t.vc, t.vr, colorIdx, t.scale)
 
       d.vc = t.vc
       d.vr = t.vr
@@ -599,55 +551,59 @@ export function usePixiCanvas(
     if (clearHistoryFlag) {
       clearHistory()
     }
-    cellsRef.current = new Map()
-    // Push *after* the swap so `mapsEqual` sees old vs new and records the
-    // clear as an undoable step.
+    gridRef.current = new Grid(palette)
+    // Push *after* the swap so `equals` sees old vs new and records the clear
+    // as an undoable step.
     if (!clearHistoryFlag) pushHistory(before)
     rebuildRef.current()
     onGridChangeRef.current?.()
-  }, [clearHistory, pushHistory])
+  }, [clearHistory, pushHistory, palette])
 
   const fitToCanvas = useCallback(() => {
     const ctx = pixiRef.current
     if (!ctx?.app.screen) return
-    const bounds = getGridBounds(cellsRef.current)
+    const bounds = gridRef.current.bounds()
     if (!bounds) {
       ctx.world.x = ctx.app.screen.width / 2
       ctx.world.y = ctx.app.screen.height / 2
       return
     }
-    const { ww, wh } = boundsWorldSize(bounds)
+    const { ww, wh } = Viewport.boundsSize(bounds)
     const z = Math.max(
       MIN_ZOOM,
       Math.min(MAX_ZOOM, Math.min(ctx.app.screen.width / ww, ctx.app.screen.height / wh)),
     )
     zoomRef.current = z
     ctx.world.scale.set(z)
-    centerViewport(ctx.world, bounds, ctx.app.screen.width, ctx.app.screen.height, z)
+    const { x, y } = Viewport.center(bounds, ctx.app.screen.width, ctx.app.screen.height, z)
+    ctx.world.x = x
+    ctx.world.y = y
     rebuildRef.current()
     syncZoom()
   }, [syncZoom])
 
   const getCellsData = useCallback((): CellsData | null => {
-    const grid = serializeGrid(cellsRef.current, palette)
-    if (!grid) return null
+    const codeGrid = gridRef.current.toCodeGrid()
+    if (!codeGrid) return null
     return {
-      grid,
-      brandCode: palette.code,
-      beadStats: serializeBeadStats(grid),
+      grid: codeGrid.codes,
+      // Read the code from the grid's own palette: `grid` and `brandCode` must
+      // be resolved against the same colour order.
+      brandCode: gridRef.current.palette.code,
+      beadStats: codeGrid.beadStatsJson(),
     }
-  }, [palette])
+  }, [])
 
   const loadGrid = useCallback((grid: string[][], seed = false) => {
     const before = snapshot()
-    cellsRef.current = deserializeGrid(grid, palette)
+    gridRef.current = CodeGrid.from(grid)?.toGrid(palette) ?? new Grid(palette)
     if (seed) {
       // Initial load (edit page): the loaded grid is the baseline, not an undo
       // step — otherwise `canUndo` would be true on a pristine page and the
       // first undo would wipe the whole pattern back to a blank canvas.
       clearHistory()
     } else {
-      // Push *after* the swap so `mapsEqual` sees old vs new and records the
+      // Push *after* the swap so `equals` sees old vs new and records the
       // load as an undoable step (undo returns to the previous canvas).
       pushHistory(before)
     }
@@ -663,8 +619,8 @@ export function usePixiCanvas(
   /** Live bead-usage stats computed straight from the sparse model — no dense
    *  grid allocation (cheap enough to call after every stroke). */
   const getBeadStats = useCallback(
-    () => countBeadStats(cellsRef.current, palette),
-    [palette],
+    () => gridRef.current.stats(),
+    [],
   )
 
   return {
