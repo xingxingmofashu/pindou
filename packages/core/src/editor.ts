@@ -198,8 +198,9 @@ export function paintBlock(
  * Empty start regions (colour {@link EMPTY}) are bounded by the painted
  * bounding box padded by one cell, so filling background can't escape to
  * infinity on the unbounded sparse grid; non‑empty regions are already closed
- * off by neighbouring colours. Passing {@link EMPTY} as `colorIdx` removes the
- * filled cells (erase a connected region).
+ * off by neighbouring colours. On an entirely empty canvas there is no
+ * bounding box to fill against, so the call is a no-op. Passing {@link EMPTY}
+ * as `colorIdx` removes the filled cells (erase a connected region).
  *
  * @param map      - The sparse cell map to write into.
  * @param c        - Start column.
@@ -221,13 +222,14 @@ export function floodFill(
   let maxC = Infinity
   let maxR = Infinity
   if (startColor === EMPTY) {
+    // Without painted bounds there is nothing to bound the BFS, so an empty
+    // canvas would expand forever. Filling an empty canvas is a no-op.
     const b = getGridBounds(map)
-    if (b) {
-      minC = b.minC - 1
-      minR = b.minR - 1
-      maxC = b.maxC + 1
-      maxR = b.maxR + 1
-    }
+    if (!b) return
+    minC = b.minC - 1
+    minR = b.minR - 1
+    maxC = b.maxC + 1
+    maxR = b.maxR + 1
   }
 
   const queue: [number, number][] = [[c, r]]

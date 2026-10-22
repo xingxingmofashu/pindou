@@ -235,6 +235,14 @@ describe("floodFill", () => {
     expect([...cells.entries()]).toEqual([["2,0", 2]])
   })
 
+  it("is a no-op on a completely empty canvas", () => {
+    const cells = new Map<string, number>()
+
+    floodFill(cells, 0, 0, 1)
+
+    expect(cells.size).toBe(0)
+  })
+
   it("bounds a background fill to the painted bounding box padded by one cell", () => {
     const cells = new Map<string, number>([
       ["0,0", 1],
