@@ -105,8 +105,8 @@ The canvas exposes an imperative API (`PixiCanvasApi`: `setZoom`/`fitToCanvas`/`
 
 ```
 packages/core/src/editor.ts        public entry: grid types + class re-exports (no free functions)
-packages/core/src/grid/grid.ts     Grid — sparse mutable 1-based-index map (at/bounds/stats/dominant/paintBlock/floodFill/paintLine/clear/clone/equals/toCodeGrid)
-packages/core/src/grid/code-grid.ts CodeGrid — dense code grid (from/size/at/forEachPainted(+InWindow)/counts/beadStatsJson/toCells/toGrid)
+packages/core/src/grid/grid.ts     Grid — sparse mutable 1-based-index map (static fromCodeGrid; at/bounds/stats/dominant/paintBlock/floodFill/paintLine/clear/clone/equals/toCodeGrid)
+packages/core/src/grid/code-grid.ts CodeGrid — dense code grid (from/size/at/forEachPainted(+InWindow)/counts/beadStatsJson/toCells)
 packages/core/src/grid/grid-history.ts GridHistory — undo/redo snapshots (push/undo/redo/clear, limit)
 packages/core/src/grid/viewport.ts Viewport — boundsSize/center, lod(), gridLines()
 packages/core/src/grid/bead-renderer.ts BeadRenderer.entries() — bead-layer draw list
@@ -258,7 +258,7 @@ apps/web/src/lib/auth/                      Better Auth client (`client.ts`) + s
 ```
 
 - **Tables**: `patterns` only (id uuid PK defaultRandom, title, description, author_name, grid_key, fk_brand_id uuid — **no FK constraint**, fk_user_id → auth.users, bead_stats, thumb_url, timestamps). The `brands`/`colors` tables were removed in migration 0014; brand/color data lives exclusively in `packages/shared/src/palettes.json`. `patterns` rows use uuid `id` (default `gen_random_uuid()`) and `created_at`/`updated_at` (`timestamp with time zone`, default `now()`) — the DB generates them, so routes never set them. `patterns.fk_brand_id` holds a brand uuid from the catalog, resolved to a code in the app layer.
-- **Grid contract**: the wire format is a **code grid** — `string[][]`, `grid[row][col]` = `""` (empty) or a colour code (e.g. `"A1"`). `/api/patterns` stores/serves codes; the editor converts to its in-memory index-based sparse map via `CodeGrid#toGrid`, and `ImportDialog` feeds the client-side transform's code grid straight into `loadGrid`.
+- **Grid contract**: the wire format is a **code grid** — `string[][]`, `grid[row][col]` = `""` (empty) or a colour code (e.g. `"A1"`). `/api/patterns` stores/serves codes; the editor converts to its in-memory index-based sparse map via `Grid.fromCodeGrid`, and `ImportDialog` feeds the client-side transform's code grid straight into `loadGrid`.
 - **Edit flow**: `/patterns/[id]/edit` (under `[lang]/(site)/(workspace)/patterns/[id]/edit/page.tsx`) is a server page that loads the pattern + brand palette + session via `getPattern`/`PaletteService.brand`/`auth`, `notFound()`s missing data, gates non-owners with a notice, then renders an editable `client.tsx` that `PATCH`es the grid/title/desc through `/api/patterns/[id]` via `Http.send` (method `"PATCH"`). Only the owner (session `fkUserId` match) can edit — the API returns 403 otherwise.
 - `thumbnail.ts` imports sharp and must never be imported from a client component — only API routes use it. Routes reach the DB through `apps/web/src/lib/server/` helpers — never the pool directly — and palette data is never bundled into the client.
 - **Distributed rate limiting**: `RateLimiter.check(key, limit, windowMs)` (in `@pindou/core/server/rate-limit`) uses an Upstash Redis sliding window shared across Vercel + Netlify instances. Publish (`POST /api/patterns`) and edit (`PATCH /api/patterns/[id]`) are rate-limited **per user** (`user:<id>`, 20 req / 60 s), enforced right after the 401 auth check. `RateLimiter.check` **fails open**: a Redis outage or missing env vars resolves `true` (allows) instead of 500ing the route — deployments must set `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (Netlify: Production scope + a manual redeploy, since env changes don't auto-redeploy) for throttling to engage.

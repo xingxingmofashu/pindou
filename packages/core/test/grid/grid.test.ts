@@ -137,7 +137,7 @@ describe("CodeGrid", () => {
       ["", "B2"],
     ])!
 
-    const sparse = grid.toGrid(PALETTE)
+    const sparse = Grid.fromCodeGrid(grid, PALETTE)
 
     const seen: [string, number][] = []
     sparse.forEachPainted((colorIdx, c, r) => seen.push([`${c},${r}`, colorIdx]))
@@ -158,7 +158,7 @@ describe("GridHistory", () => {
   it("records a change and restores it", () => {
     const history = new GridHistory()
 
-    history.push(g0, g1)
+    expect(history.push(g0, g1)).toBe(true)
 
     expect(history.canUndo).toBe(true)
     expect(history.canRedo).toBe(false)
@@ -170,7 +170,7 @@ describe("GridHistory", () => {
   it("drops no-op pushes", () => {
     const history = new GridHistory()
 
-    history.push(g1.clone(), g1)
+    expect(history.push(g1.clone(), g1)).toBe(false)
 
     expect(history.canUndo).toBe(false)
   })

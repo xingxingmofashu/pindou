@@ -30,9 +30,8 @@ function parseCellKey(key: string): [number, number] {
  * {@link toCodeGrid} need the index → code mapping. Brand switches rebuild the
  * grid instead of remapping it, so a stale binding can never be observed.
  *
- * `Grid` and `CodeGrid` reference each other only from method bodies (the
- * conversion in each direction), so the module cycle is resolved before any
- * code runs.
+ * Dependencies stay one-way: `Grid` imports `CodeGrid`, never the reverse —
+ * the inverse conversion is {@link Grid.fromCodeGrid}.
  */
 export class Grid {
   private readonly cells: Map<string, number>
@@ -54,6 +53,21 @@ export class Grid {
   /** Number of painted cells. */
   get size(): number {
     return this.cells.size
+  }
+
+  /**
+   * Build a sparse grid from a dense code grid.
+   *
+   * Codes absent from `palette` are skipped, so a pattern published with a
+   * colour that has since been removed still loads everything else. This lives
+   * on `Grid` (not `CodeGrid`) so the two modules keep a one-way dependency.
+   *
+   * @param codeGrid - The dense code grid to read.
+   * @param palette  - Palette resolving colour code → 1‑based index.
+   * @returns A new sparse grid owning a fresh cell map.
+   */
+  static fromCodeGrid(codeGrid: CodeGrid, palette: Palette): Grid {
+    return new Grid(palette, codeGrid.toCells(palette))
   }
 
   /**
