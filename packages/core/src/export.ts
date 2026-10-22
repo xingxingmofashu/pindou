@@ -17,9 +17,6 @@ const MAX_EXPORT_DIM = 16384
 /** Square tile counts offered by the export split option (N = N×N sheets). */
 export const EXPORT_TILE_COUNTS = [1, 4, 9, 16] as const
 
-/** Square root of a tile count — the number of columns/rows of sheets. */
-const TILE_DIM = (count: number): number => Math.round(Math.sqrt(count))
-
 /** Grid-line colour between beads. */
 const GRID_LINE_COLOR = "#a1a1aa"
 
@@ -75,24 +72,6 @@ const TEXT_TILE_PAD = 128
  * on per-tile canvases that stay under this limit too.
  */
 const TEXT_SAFE_DIM = 4096
-
-/**
- * True when the axis-aligned box at `x`,`y` (centred, or left-anchored with
- * width `w`) overlaps the padded tile rect — the tile then rasterizes the
- * whole glyph so the composite reconstructs it across seams.
- */
-function overlapsBox(
-  box: { x: number; y: number; w: number; h: number; centered: boolean },
-  p: { left: number; top: number; right: number; bottom: number },
-): boolean {
-  const halfW = box.centered ? box.w / 2 : 0
-  const halfH = box.h / 2
-  const bx0 = box.x - halfW
-  const by0 = box.y - halfH
-  const bx1 = box.x - halfW + box.w
-  const by1 = box.y - halfH + box.h
-  return bx1 >= p.left && bx0 <= p.right && by1 >= p.top && by0 <= p.bottom
-}
 
 /** Scaled bead-usage section geometry, derived from the pattern's bead size. */
 interface StatsGeometry {
@@ -231,8 +210,43 @@ export interface ExportSize {
  * (labels, coordinates, bead-usage entries) is drawn on small per-tile canvases
  * and composited back, since Safari drops canvas text on canvases wider or
  * taller than ~4096px while fills/strokes still render.
+ *
+ * Stateless service: every member is static, so callers use `Export.size(...)`
+ * rather than instantiating it.
  */
 export class Export {
+  /**
+   * Square root of a tile count — the number of columns/rows of sheets.
+   *
+   * @param count - The square tile count (1, 4, 9, 16).
+   * @returns The number of sheets per side.
+   */
+  private static tileDim(count: number): number {
+    return Math.round(Math.sqrt(count))
+  }
+
+  /**
+   * True when the axis-aligned box at `x`,`y` (centred, or left-anchored with
+   * width `w`) overlaps the padded tile rect — the tile then rasterizes the
+   * whole glyph so the composite reconstructs it across seams.
+   *
+   * @param box - The glyph box.
+   * @param p   - The padded tile rect.
+   * @returns `true` when the box overlaps the rect.
+   */
+  private static overlapsBox(
+    box: { x: number; y: number; w: number; h: number; centered: boolean },
+    p: { left: number; top: number; right: number; bottom: number },
+  ): boolean {
+    const halfW = box.centered ? box.w / 2 : 0
+    const halfH = box.h / 2
+    const bx0 = box.x - halfW
+    const by0 = box.y - halfH
+    const bx1 = box.x - halfW + box.w
+    const by1 = box.y - halfH + box.h
+    return bx1 >= p.left && bx0 <= p.right && by1 >= p.top && by0 <= p.bottom
+  }
+
   /** The distinct number of painted colours — one bead-usage row per colour. */
   private static usedColorCount(grid: string[][]): number {
     // Only the distinct count is needed (each colour is one usage row), so a
@@ -438,7 +452,7 @@ export class Export {
         x: canvasW / 2 + x * cosA - y * sinA,
         y: canvasH / 2 + x * sinA + y * cosA,
       }
-      if (overlapsBox({ x: p.x, y: p.y, w: bw, h: bh, centered: true }, padded)) {
+      if (Export.overlapsBox({ x: p.x, y: p.y, w: bw, h: bh, centered: true }, padded)) {
         tctx.fillText(text, x, y)
       }
     }
@@ -452,7 +466,13 @@ export class Export {
    * section) fits the limit is binary-searched — clamping only the bead area
    * would overflow the canvas.
    */
-  private static computeLayout(cols: number, rows: number, scale: number, statsCount = 0): Layout {    const upper = Math.max(1, Math.min(scale, Math.floor(MAX_EXPORT_DIM / Math.max(cols, rows))))
+  private static computeLayout(
+    cols: number,
+    rows: number,
+    scale: number,
+    statsCount = 0,
+  ): Layout {
+    const upper = Math.max(1, Math.min(scale, Math.floor(MAX_EXPORT_DIM / Math.max(cols, rows))))
 
     const dims = (s: number) => {
       const numFont = Math.max(4, Math.round(s * 0.6))
@@ -493,7 +513,7 @@ export class Export {
     rows: number,
     count: number,
   ): Omit<ExportTile, "scale" | "width" | "height" | "hasStats">[] {
-    const dim = Math.max(1, TILE_DIM(count))
+    const dim = Math.max(1, Export.tileDim(count))
     const per = { cols: Math.ceil(cols / dim), rows: Math.ceil(rows / dim) }
     const tiles: Omit<ExportTile, "scale" | "width" | "height" | "hasStats">[] = []
     let index = 1
@@ -591,7 +611,7 @@ export class Export {
    * @returns The canvas width/height and the effective pixels-per-bead, or null
    *          for an empty grid.
    */
-  size(grid: string[][], scale: number, opts: ExportGridOptions = {}): ExportSize | null {
+  static size(grid: string[][], scale: number, opts: ExportGridOptions = {}): ExportSize | null {
     const size = CodeGrid.from(grid)?.size
     if (!size) return null
     const count = opts.showBeadStats ? Export.usedColorCount(grid) : 0
@@ -645,7 +665,7 @@ export class Export {
    *          triggered; `false` when the browser failed to encode a canvas
    *          (e.g. it is too large for the platform).
    */
-  async png(
+  static async png(
     grid: string[][],
     palette: Palette,
     scale = DEFAULT_EXPORT_SCALE,
@@ -654,11 +674,11 @@ export class Export {
     const size = CodeGrid.from(grid)?.size
     if (!size) return false
     const tileCount = opts.tileCount ?? 1
-    if (tileCount > 1) return this.renderTiles(grid, palette, scale, opts, tileCount)
+    if (tileCount > 1) return Export.renderTiles(grid, palette, scale, opts, tileCount)
 
-    const blob = await this.pngBlob(grid, palette, scale, opts)
+    const blob = await Export.pngBlob(grid, palette, scale, opts)
     if (!blob) return false
-    const layout = this.fullLayout(grid, scale)
+    const layout = Export.fullLayout(grid, scale)
     const cols = layout?.cols ?? size.cols
     const rows = layout?.rows ?? size.rows
     const s = layout?.s ?? scale
@@ -683,7 +703,7 @@ export class Export {
    * @returns The PNG blob, or `null` when the grid is empty or the browser
    *          failed to encode the canvas (e.g. it is too large).
    */
-  async pngBlob(
+  static async pngBlob(
     grid: string[][],
     palette: Palette,
     scale = DEFAULT_EXPORT_SCALE,
@@ -692,7 +712,7 @@ export class Export {
     const size = CodeGrid.from(grid)?.size
     if (!size) return null
 
-    const layout = this.fullLayout(grid, scale)
+    const layout = Export.fullLayout(grid, scale)
     if (!layout) return null
     // Single-image export: the usage list covers the whole grid, so the canvas
     // must fit the grid area plus the usage section below it.
@@ -710,7 +730,7 @@ export class Export {
     canvas.height = layout.height + (stats?.detail?.height ?? 0)
     const ctx = canvas.getContext("2d")
     if (!ctx) return null
-    this.renderWindow(ctx, grid, palette, opts, layout, {
+    Export.renderWindow(ctx, grid, palette, opts, layout, {
       colStart: 0,
       colEnd: layout.cols,
       rowStart: 0,
@@ -727,7 +747,7 @@ export class Export {
    * grid dimensions, so renderers never recompute the shared geometry.
    * Returns null for an empty grid.
    */
-  private fullLayout(
+  private static fullLayout(
     grid: string[][],
     scale: number,
   ): (Layout & { rows: number; cols: number }) | null {
@@ -799,7 +819,7 @@ export class Export {
    *                 from it, so the render matches the canvas size it was
    *                 laid out with.
    */
-  private renderWindow(
+  private static renderWindow(
     ctx: CanvasRenderingContext2D,
     grid: string[][],
     palette: Palette,
@@ -1009,7 +1029,7 @@ export class Export {
           const y = headerH + (r - win.rowStart + 0.5) * s
           const width = labelWidths.get(code)
           if (width === undefined || width > s) return
-          if (!overlapsBox({ x, y, w: width, h: labelFont, centered: true }, padded)) return
+          if (!Export.overlapsBox({ x, y, w: width, h: labelFont, centered: true }, padded)) return
           tctx.fillText(code, x, y)
         })
       }
@@ -1034,10 +1054,10 @@ export class Export {
         const x = headerW + (c - win.colStart + 0.5) * s
         const yTop = headerH / 2
         const yBottom = beadBottom + headerH / 2
-        if (overlapsBox({ x, y: yTop, w: colNumberW, h: numFont, centered: true }, padded)) {
+        if (Export.overlapsBox({ x, y: yTop, w: colNumberW, h: numFont, centered: true }, padded)) {
           tctx.fillText(String(c + 1), x, yTop)
         }
-        if (overlapsBox({ x, y: yBottom, w: colNumberW, h: numFont, centered: true }, padded)) {
+        if (Export.overlapsBox({ x, y: yBottom, w: colNumberW, h: numFont, centered: true }, padded)) {
           tctx.fillText(String(c + 1), x, yBottom)
         }
       }
@@ -1047,10 +1067,10 @@ export class Export {
         const y = headerH + (r - win.rowStart + 0.5) * s
         const xLeft = headerW / 2
         const xRight = beadRight + headerW / 2
-        if (overlapsBox({ x: xLeft, y, w: rowNumberW, h: numFont, centered: true }, padded)) {
+        if (Export.overlapsBox({ x: xLeft, y, w: rowNumberW, h: numFont, centered: true }, padded)) {
           tctx.fillText(String(r + 1), xLeft, y)
         }
-        if (overlapsBox({ x: xRight, y, w: rowNumberW, h: numFont, centered: true }, padded)) {
+        if (Export.overlapsBox({ x: xRight, y, w: rowNumberW, h: numFont, centered: true }, padded)) {
           tctx.fillText(String(r + 1), xRight, y)
         }
       }
@@ -1069,7 +1089,7 @@ export class Export {
         const titleX = headerW + geo.pad
         const titleCY = titleY + geo.titleFont / 2
         const title = opts.beadStatsTitle ?? "Beads used"
-        if (overlapsBox({ x: titleX, y: titleCY, w: tctx.measureText(title).width, h: geo.titleFont, centered: false }, padded)) {
+        if (Export.overlapsBox({ x: titleX, y: titleCY, w: tctx.measureText(title).width, h: geo.titleFont, centered: false }, padded)) {
           tctx.fillText(title, titleX, titleCY)
         }
         const bodyY = titleY + geo.titleFont + 4
@@ -1084,7 +1104,7 @@ export class Export {
           // The swatch precedes the text, so the label's left-anchored box must
           // start at the text x, not the cell x.
           const textX = x + geo.pad + geo.swatch + geo.gap
-          if (!overlapsBox({ x: textX, y, w: statsTextWidths.get(text) ?? 0, h: geo.font, centered: false }, padded)) return
+          if (!Export.overlapsBox({ x: textX, y, w: statsTextWidths.get(text) ?? 0, h: geo.font, centered: false }, padded)) return
           tctx.fillStyle = "#111"
           tctx.fillText(text, textX, y)
         })
@@ -1125,7 +1145,7 @@ export class Export {
    * responsive; each sheet carries its own bead-usage list (when enabled),
    * counting only the cells inside that sheet's window.
    */
-  private async renderTiles(
+  private static async renderTiles(
     grid: string[][],
     palette: Palette,
     scale: number,
@@ -1135,7 +1155,7 @@ export class Export {
     const size = CodeGrid.from(grid)?.size
     if (!size) return false
     const { rows, cols } = size
-    const full = this.fullLayout(grid, scale)
+    const full = Export.fullLayout(grid, scale)
     if (!full) return false
     const tiles = Export.tileGrid(cols, rows, tileCount)
     const statsCounts = tiles.map((t) =>
@@ -1183,7 +1203,7 @@ export class Export {
         tw,
         tileHeaderW,
       )
-      this.renderWindow(ctx, grid, palette, opts, full, win, stats, ts, shared)
+      Export.renderWindow(ctx, grid, palette, opts, full, win, stats, ts, shared)
       const blob = await new Promise<Blob | null>((resolve) => {
         canvas.toBlob(resolve, "image/png")
       })

@@ -251,7 +251,7 @@ packages/core/src/server/thumbnail.ts       Thumbnail class: generate(grid, pale
 packages/core/src/server/grid-storage.ts    GridStorage class: upload(id, grid) → R2 key, get(key) → grid, delete(key) — the DB stores only the object key
 packages/core/src/server/r2.ts              R2 class: upload/get/delete(key) — generic Cloudflare R2 client (S3 API)
 packages/core/src/server/rate-limit.ts      RateLimiter.check(key, limit, windowMs) — Upstash sliding window
-packages/core/src/export.ts                  exportGridPng — client-only canvas PNG chart (used by ExportDialog)
+packages/core/src/export.ts                  Export — stateless static service: client-only canvas PNG chart (size/png/pngBlob, used by ExportDialog)
 apps/web/src/lib/utils.ts                   re-exports `cn` from `@pindou/core` + web-only `escapeLike` (Postgres-specific)
 apps/web/src/db/                            Drizzle schema + Neon Postgres Pool (@neondatabase/serverless); Better Auth tables in `auth-schema.ts`; migrations in `apps/web/drizzle/`
 apps/web/src/lib/auth/                      Better Auth client (`client.ts`) + server (`server.ts`)
