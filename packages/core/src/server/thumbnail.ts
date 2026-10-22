@@ -4,7 +4,7 @@ import { PaletteIndex } from "../palette/palette-index"
 import { EDITOR_BG } from "@pindou/shared/constants"
 import { HexColor } from "../utils"
 import { R2 } from "./r2"
-import type { Palette } from "@pindou/shared/types"
+import type { Palette } from "@pindou/shared/palettes"
 
 /** Maximum cells per axis before downsampling kicks in. */
 const MAX_CELLS = 48

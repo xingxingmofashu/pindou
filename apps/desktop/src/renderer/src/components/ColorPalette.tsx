@@ -4,7 +4,7 @@ import { ColorSeries } from "@pindou/core/palette"
 import { cn } from "@pindou/ui/utils"
 import { useI18n } from "@pindou/core/i18n/client"
 import { ScrollArea } from "@pindou/ui/components/ui/scroll-area"
-import type { Palette } from "@pindou/shared/types"
+import type { Palette } from "@pindou/shared/palettes"
 
 interface ColorPaletteProps {
   /**

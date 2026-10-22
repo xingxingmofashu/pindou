@@ -26,7 +26,7 @@ import { ColorSeries, PaletteIndex } from "@pindou/core/palette"
 import { usePalette } from "@pindou/core/hooks/use-palette"
 import { useI18n } from "@pindou/core/i18n/client"
 import type { TransformMode, TransformRequest, TransformResponse, TransformResult } from "@pindou/core/transform"
-import type { Palette } from "@pindou/shared/types"
+import type { Palette } from "@pindou/shared/palettes"
 
 /** Preview canvas is drawn at most this many pixels per side. */
 const PREVIEW_MAX = 320

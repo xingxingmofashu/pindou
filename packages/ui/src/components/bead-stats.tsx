@@ -4,7 +4,7 @@ import { useMemo } from "react"
 import { useI18n } from "@pindou/core/i18n/client"
 import { usePalette } from "@pindou/core/hooks/use-palette"
 import type { BeadStats } from "@pindou/core/grid"
-import type { Palette } from "@pindou/shared/types"
+import type { Palette } from "@pindou/shared/palettes"
 
 /**
  * Live bead-usage panel for the editor's right sidebar: the painted grid size,

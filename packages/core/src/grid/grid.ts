@@ -1,12 +1,27 @@
 import { MAX_GRID_DIMENSION } from "@pindou/shared/constants"
-import type { Palette } from "@pindou/shared/types"
+import type { Palette } from "@pindou/shared/palettes"
 import { MostFrequent } from "../most-frequent"
 import { CodeGrid } from "./code-grid"
 import { Path } from "./path"
-import type { BeadStats, GridBounds } from "./types"
 
 /** Sentinel for an unpainted cell. */
 export const EMPTY = 0
+
+/** Bounding box of painted cells in data-cell coordinates. */
+export interface GridBounds {
+  minC: number
+  maxC: number
+  minR: number
+  maxR: number
+}
+
+/** Per-colour bead counts plus the painted bounding-box size and total. */
+export interface BeadStats {
+  width: number
+  height: number
+  total: number
+  rows: { code: string; count: number }[]
+}
 
 /**
  * Parse a sparse-grid key (`"c,r"`) into its cell coordinates.

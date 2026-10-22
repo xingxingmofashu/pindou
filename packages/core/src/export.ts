@@ -2,7 +2,7 @@ import { zipSync } from "fflate"
 import { CodeGrid } from "./grid/code-grid"
 import { PaletteIndex } from "./palette/palette-index"
 import { MAJOR_GRID_STEP } from "@pindou/shared/constants"
-import type { Palette } from "@pindou/shared/types"
+import type { Palette } from "@pindou/shared/palettes"
 
 /** Default pixels per bead when the caller doesn't specify a scale. */
 export const DEFAULT_EXPORT_SCALE = 32

@@ -10,9 +10,11 @@
  * - {@link Path}        — Bresenham rasterisation
  */
 export { EMPTY, Grid } from "./grid"
+export type { BeadStats, GridBounds } from "./grid"
 export { CodeGrid } from "./code-grid"
 export { GridHistory } from "./grid-history"
 export { Viewport } from "./viewport"
+export type { GridRect, ViewRect } from "./viewport"
 export { BeadRenderer } from "./bead-renderer"
+export type { BeadEntry } from "./bead-renderer"
 export { Path } from "./path"
-export type { BeadEntry, BeadStats, GridBounds, GridRect, ViewRect } from "./types"

@@ -5,7 +5,7 @@ import { useEditStore } from "@pindou/core/hooks/use-edit"
 import { toast } from "@pindou/ui/components/ui/toast"
 import { useI18n } from "@pindou/core/i18n/client"
 import { PALETTES } from "@pindou/shared/palettes"
-import type { Palette } from "@pindou/shared/types"
+import type { Palette } from "@pindou/shared/palettes"
 
 /**
  * Desktop pattern-edit page — thin wrapper around the shared

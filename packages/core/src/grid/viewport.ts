@@ -1,5 +1,21 @@
 import { CELL, MIN_PX } from "@pindou/shared/constants"
-import type { GridBounds, GridRect, ViewRect } from "./types"
+import type { GridBounds } from "./grid"
+
+/** Axis-aligned viewport rectangle in world space. */
+export interface ViewRect {
+  left: number
+  top: number
+  right: number
+  bottom: number
+}
+
+/** One axis-aligned rectangle describing a grid line, in world units. */
+export interface GridRect {
+  x: number
+  y: number
+  width: number
+  height: number
+}
 
 /**
  * Viewport geometry for a given zoom level: painted-bounds centring, the LOD

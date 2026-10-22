@@ -2,7 +2,7 @@ import { converter } from "culori"
 import { MAX_GRID_CELLS, MAX_GRID_DIMENSION } from "@pindou/shared/constants"
 import { CodeGrid } from "./grid/code-grid"
 import { MostFrequent } from "./most-frequent"
-import type { Palette } from "@pindou/shared/types"
+import type { Palette } from "@pindou/shared/palettes"
 
 /** Pixels with alpha below this are treated as empty cells. */
 const ALPHA_THRESHOLD = 128

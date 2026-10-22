@@ -1,4 +1,4 @@
-import type { Color, Palette } from "@pindou/shared/types"
+import type { Color, Palette } from "@pindou/shared/palettes"
 
 const BRAND_ID = "00000000-0000-4000-8000-000000000001"
 

@@ -148,8 +148,7 @@ Native Next.js i18n (no next-intl): every route lives under `app/[lang]/` and `a
 ```
 packages/core/src/i18n/config.ts        I18nConfig.locales (["en","zh"]), .defaultLocale, .isLocale(value), .localizedPath(locale, path), .detectLocale(header)
 packages/core/src/i18n/dictionaries/    en.json + zh.json (structurally identical; en is the Messages type source)
-packages/core/src/i18n/client.tsx       I18nProvider + useI18n() → { locale, t(path, vars) } for client components
-packages/core/src/i18n/types.ts         Messages type
+packages/core/src/i18n/client.tsx       Messages type + I18nProvider + useI18n() → { locale, t(path, vars) } for client components
 apps/web/src/i18n/server.ts             server-only; getDictionary()/getLocale() via lang()
 apps/web/src/app/[lang]/layout.tsx      root layout: html lang, generateStaticParams, localized metadata, I18nProvider
 apps/web/src/proxy.ts                   locale detection + redirect; matcher excludes _next|api|favicon.ico|.*\..*
@@ -222,8 +221,7 @@ All four tools are implemented in the pointer interaction effect:
 
 ```
 packages/shared/src/palettes.json     The catalog (Palette[] — brands with nested colors, ISO date strings)
-packages/shared/src/palettes.ts       PALETTES export — loads the JSON, converts ISO dates → Date
-packages/shared/src/types.ts          Brand/Color/Palette types (data source: the JSON, not a DB table)
+packages/shared/src/palettes.ts       PALETTES export + Brand/Color/Palette types — loads the JSON, converts ISO dates → Date (data source: the JSON, not a DB table)
 packages/shared/src/constants.ts      Limits, canvas bg, page size
 apps/web/src/lib/server/palettes.ts   PaletteService.byCode / .byId / .matching / .brand / .all — pure in-memory lookups over PALETTES
 apps/web/src/app/api/brands/route.ts  GET — all brands with colors nested (the client catalog)
@@ -310,7 +308,7 @@ Key architecture facts:
 ### TypeScript
 
 - `@/` alias maps to `apps/web/src` (web app only).
-- Cross-package imports use subpaths (`@pindou/core/grid`, `@pindou/shared/types`, `@pindou/ui/pages/patterns-page`). There is no build step for packages.
+- Cross-package imports use subpaths (`@pindou/core/grid`, `@pindou/shared/palettes`, `@pindou/ui/pages/patterns-page`). There is no build step for packages.
 
 ## Git workflow
 

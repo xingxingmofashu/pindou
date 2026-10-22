@@ -13,7 +13,7 @@ import { ExportDialog } from "../components/dialogs/export-dialog"
 import { Button } from "../components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "../components/ui/tooltip"
 import { cn } from "../utils"
-import type { Palette } from "@pindou/shared/types"
+import type { Palette } from "@pindou/shared/palettes"
 
 /**
  * Shared read-only pattern detail page (web `/patterns/[id]` + desktop
