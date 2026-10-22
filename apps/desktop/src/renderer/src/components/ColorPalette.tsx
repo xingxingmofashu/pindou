@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { ChevronDown } from "lucide-react"
-import { groupColorsBySeries } from "@pindou/core/editor"
+import { ColorSeries } from "@pindou/core/editor"
 import { cn } from "@pindou/ui/utils"
 import { useI18n } from "@pindou/core/i18n/client"
 import { ScrollArea } from "@pindou/ui/components/ui/scroll-area"
@@ -41,7 +41,7 @@ export function ColorPalette({
   /** Colours grouped by series letter, with 1‑based palette indices. */
   const seriesGroups = useMemo(() => {
     // Indices are palette-wide (1..N), so decorate colors before grouping.
-    return groupColorsBySeries(
+    return ColorSeries.group(
       palette.colors.map((color, i) => ({ ...color, index: i + 1 })),
       (c) => c.series ?? "?",
     )

@@ -4,7 +4,7 @@ import { useEffect, useMemo } from "react"
 import useSWR from "swr"
 import { ChevronDown } from "lucide-react"
 import { usePalette } from "@pindou/core/hooks/use-palette"
-import { groupColorsBySeries } from "@pindou/core/editor"
+import { ColorSeries } from "@pindou/core/editor"
 import { cn, fetcher } from "@/lib/utils"
 import { useI18n } from "@pindou/core/i18n/client"
 import { ScrollArea } from "@pindou/ui/components/ui/scroll-area"
@@ -73,7 +73,7 @@ export function ColorPalette({
   const seriesGroups = useMemo(() => {
     if (!palette) return []
     // Indices are palette-wide (1..N), so decorate colors before grouping.
-    return groupColorsBySeries(
+    return ColorSeries.group(
       palette.colors.map((color, i) => ({ ...color, index: i + 1 })),
       (c) => c.series ?? "?",
     )

@@ -3,7 +3,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import { randomUUID } from "node:crypto"
 import sharp from "sharp"
-import { buildHexByCode, gridSize } from "@pindou/core/editor"
+import { CodeGrid, PaletteIndex } from "@pindou/core/editor"
 import { EDITOR_BG } from "@pindou/shared/constants"
 import { hexToRgb } from "@pindou/core/utils"
 import type { Palette } from "@pindou/shared/types"
@@ -46,11 +46,11 @@ export class ThumbnailStorage {
    * @returns The encoded PNG bytes, or null for an empty grid.
    */
   async generate(grid: string[][], palette: Palette): Promise<Buffer | null> {
-    const size = gridSize(grid)
+    const size = CodeGrid.from(grid)?.size
     if (!size) return null
     const { rows: h, cols: w } = size
 
-    const hexByCode = buildHexByCode(palette)
+    const hexByCode = new PaletteIndex(palette).hexMap()
 
     const step = Math.ceil(Math.max(h, w) / MAX_CELLS)
     const cellsH = Math.ceil(h / step)
