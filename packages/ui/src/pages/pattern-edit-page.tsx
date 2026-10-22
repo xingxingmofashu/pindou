@@ -41,7 +41,7 @@ import { toast } from "../components/ui/toast"
 import { useShortcuts } from "@pindou/core/hooks/use-shortcuts"
 import { useEditStore } from "@pindou/core/hooks/use-edit"
 import { useI18n } from "@pindou/core/i18n/client"
-import type { ToolKind } from "@pindou/core/editor"
+import type { ToolKind } from "@pindou/core/hooks/use-pixi-canvas"
 import type { Palette } from "@pindou/shared/types"
 
 const TOOLS: { value: ToolKind; icon: typeof Pencil; shortcut: string }[] = [

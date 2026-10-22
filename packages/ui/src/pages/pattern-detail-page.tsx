@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ArrowLeft, Download, Info, List } from "lucide-react"
-import { CodeGrid } from "@pindou/core/editor"
+import { CodeGrid } from "@pindou/core/grid"
 import { BeadUsage } from "@pindou/core/utils"
 import { Dates } from "@pindou/core/date"
 import { usePatternStore } from "@pindou/core/hooks/use-pattern"

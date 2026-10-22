@@ -19,7 +19,8 @@ import { usePalette } from "@pindou/core/hooks/use-palette"
 import { useI18n } from "@pindou/core/i18n/client"
 import { EXPORT_WATERMARK_TEXT, MAJOR_GRID_STEP } from "@pindou/shared/constants"
 import { Export, EXPORT_TILE_COUNTS, DEFAULT_EXPORT_SCALE } from "@pindou/core/export"
-import { CodeGrid, type CellsData } from "@pindou/core/editor"
+import { CodeGrid } from "@pindou/core/grid"
+import type { CellsData } from "@pindou/core/hooks/use-pixi-canvas"
 import type { Palette } from "@pindou/shared/types"
 
 interface ExportDialogProps {

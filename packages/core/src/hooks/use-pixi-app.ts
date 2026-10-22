@@ -2,7 +2,14 @@
 
 import { useEffect, useRef, useState, type RefObject } from "react"
 import { Application, Container, Graphics } from "pixi.js"
-import type { PixiContext } from "../editor"
+
+/** PixiJS scene-graph objects built by {@link usePixiApp} and consumed by `usePixiCanvas`. */
+export interface PixiContext {
+  app: Application
+  world: Container
+  beadsGfx: Graphics
+  gridGfx: Graphics
+}
 
 /** Failure kinds the host app can surface (e.g. via a toast). */
 export type PixiAppError = "context-lost" | "webgl-unavailable"

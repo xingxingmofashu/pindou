@@ -2,7 +2,7 @@
 
 import { create } from "zustand"
 import { DEFAULT_ZOOM } from "@pindou/shared/constants"
-import type { PixiCanvasApi } from "../editor"
+import type { PixiCanvasApi } from "./use-pixi-canvas"
 
 interface PatternStore {
   /** Imperative canvas API, registered by the pattern page on mount. */

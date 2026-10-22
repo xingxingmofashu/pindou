@@ -9,7 +9,7 @@ import { useTheme } from "@pindou/core/use-theme"
 import { Tooltip, TooltipTrigger, TooltipContent } from "./ui/tooltip"
 import { toast } from "./ui/toast"
 import { useI18n } from "@pindou/core/i18n/client"
-import type { PixiCanvasApi, ToolKind } from "@pindou/core/editor"
+import type { PixiCanvasApi, ToolKind } from "@pindou/core/hooks/use-pixi-canvas"
 import type { Palette } from "@pindou/shared/types"
 
 
@@ -183,4 +183,4 @@ function EditablePaletteBridge({
   if (!palette) return null
   return <PixiCanvasInner canvasRef={canvasRef} palette={palette} {...props} />
 }
-export type { PixiCanvasApi } from "@pindou/core/editor"
+export type { PixiCanvasApi } from "@pindou/core/hooks/use-pixi-canvas"

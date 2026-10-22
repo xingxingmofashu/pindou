@@ -13,10 +13,10 @@ pnpm workspace (`pnpm-workspace.yaml`, `nodeLinker: hoisted`). Strict one-way de
 - `apps/web` — `@pindou/web`, the deployable Next.js 16 app (`src/`)
 - `apps/desktop` — `@pindou/desktop`, offline Electron editor (local SQLite)
 - `packages/shared` — `@pindou/shared`: zero-dependency constants, domain types, `palettes.json`
-- `packages/core` — `@pindou/core`: framework-agnostic logic (`editor`, `export`, `transform`, `date`, `utils`), shared React hooks (`hooks/*`), i18n, and Node-only infra (`server/*`)
+- `packages/core` — `@pindou/core`: framework-agnostic logic (`grid`, `palette`, `export`, `transform`, `date`, `utils`), editor/canvas types, shared React hooks (`hooks/*`), i18n, and Node-only infra (`server/*`)
 - `packages/ui` — `@pindou/ui`: Base UI + Tailwind primitives (`components/ui/*`), shared editor components/dialogs, and shared page components (`pages/*`)
 
-Packages publish **from source** (`"main": "./src/index.ts"` + subpath exports) — there is no package build step; Next transpiles them. Import via subpaths (`@pindou/core/editor`, `@pindou/core/hooks/use-editor`, `@pindou/shared/constants`, `@pindou/ui/pages/editor-page`, `@pindou/ui/components/dialogs/publish-dialog`). Keep `@pindou/ui` free of Next.js imports and keep web-only concerns (auth, Next router, theming, worker creation) injected into shared components as props/hooks — the dependency graph must stay acyclic.
+Packages publish **from source** (`"main": "./src/index.ts"` + subpath exports) — there is no package build step; Next transpiles them. Import via subpaths (`@pindou/core/grid`, `@pindou/core/palette`, `@pindou/core/hooks/use-pixi-canvas`, `@pindou/core/hooks/use-editor`, `@pindou/shared/constants`, `@pindou/ui/pages/editor-page`, `@pindou/ui/components/dialogs/publish-dialog`). Keep `@pindou/ui` free of Next.js imports and keep web-only concerns (auth, Next router, theming, worker creation) injected into shared components as props/hooks — the dependency graph must stay acyclic.
 
 ## Commands
 
@@ -104,7 +104,8 @@ The canvas exposes an imperative API (`PixiCanvasApi`: `setZoom`/`fitToCanvas`/`
 **`usePixiCanvas` hook** (`@pindou/core/hooks/use-pixi-canvas.ts`) is a thin coordinator for the PixiJS lifecycle; the logic lives in pure, React-free library modules:
 
 ```
-packages/core/src/editor.ts        public entry: grid types + class re-exports (no free functions)
+packages/core/src/grid/index.ts    grid barrel: Grid/CodeGrid/GridHistory/Viewport/BeadRenderer/Path + grid types
+packages/core/src/palette/index.ts palette barrel: PaletteIndex/ColorSeries
 packages/core/src/grid/grid.ts     Grid — sparse mutable 1-based-index map (static fromCodeGrid; at/bounds/stats/dominant/paintBlock/floodFill/paintLine/clear/clone/equals/toCodeGrid)
 packages/core/src/grid/code-grid.ts CodeGrid — dense code grid (from/size/at/forEachPainted(+InWindow)/counts/beadStatsJson/toCells)
 packages/core/src/grid/grid-history.ts GridHistory — undo/redo snapshots (push/undo/redo/clear, limit)
@@ -114,8 +115,8 @@ packages/core/src/grid/path.ts     Path.walk() — Bresenham interpolation
 packages/core/src/palette/palette-index.ts PaletteIndex — code ↔ 1-based index ↔ hex
 packages/core/src/palette/color-series.ts  ColorSeries.group()
 packages/core/src/most-frequent.ts MostFrequent.of()
-packages/core/src/hooks/use-pixi-app.ts    usePixiApp() — PixiJS Application lifecycle hook (owns app.destroy(true))
-packages/core/src/hooks/use-pixi-canvas.ts PixiJS lifecycle coordinator, wheel + pointer events, zoom/pan state. Takes a fully-resolved palette argument (never subscribes to the active-palette store itself).
+packages/core/src/hooks/use-pixi-app.ts    usePixiApp() — PixiJS Application lifecycle hook (owns app.destroy(true)); exports PixiContext
+packages/core/src/hooks/use-pixi-canvas.ts PixiJS lifecycle coordinator, wheel + pointer events, zoom/pan state; exports ToolKind / CellsData / PixiCanvasApi. Takes a fully-resolved palette argument (never subscribes to the active-palette store itself).
 packages/ui/src/components/pixi-canvas.tsx PixiCanvas resolves the palette: read-only views that pin `palette` render without a store subscription; the editor branch subscribes via `usePalette` (in `EditablePaletteBridge`).
 ```
 
@@ -200,7 +201,7 @@ All four tools are implemented in the pointer interaction effect:
 | **Fill** | Flood-fills a 4-connected region of the start cell's colour via `Grid#floodFill()`. Empty start regions are bounded by the painted bounds ±1, so filling background can't escape to infinity on the unbounded grid; an entirely empty canvas is a no-op. |
 | **Eyedropper** | Samples the **dominant** colour across the visual-cell block under the cursor via `Grid#dominant()` (the same block a pen press would paint) and sets it as the active colour via `onColorPick`, then switches back to the pen tool. Empty cells are ignored (no pick, tool stays). While active, hovering a painted cell fires `onHoverCell({ code, hex })` — `null` on empty/leave, throttled to colour changes — which `PixiCanvas` feeds into a cursor-following shadcn Tooltip (`trackCursorAxis="both"`) as a colour preview. |
 
-`ToolKind` is `"pen" | "eraser" | "fill" | "eyedropper"` and lives in `@pindou/core/editor`.
+`ToolKind` is `"pen" | "eraser" | "fill" | "eyedropper"` and lives in `@pindou/core/hooks/use-pixi-canvas`.
 
 ### Zoom / pan
 
@@ -309,7 +310,7 @@ Key architecture facts:
 ### TypeScript
 
 - `@/` alias maps to `apps/web/src` (web app only).
-- Cross-package imports use subpaths (`@pindou/core/editor`, `@pindou/shared/types`, `@pindou/ui/pages/patterns-page`). There is no build step for packages.
+- Cross-package imports use subpaths (`@pindou/core/grid`, `@pindou/shared/types`, `@pindou/ui/pages/patterns-page`). There is no build step for packages.
 
 ## Git workflow
 
