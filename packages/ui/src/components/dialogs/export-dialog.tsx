@@ -44,7 +44,6 @@ interface ExportDialogProps {
  */
 export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPalette, onSaveBlob }: ExportDialogProps) {
   const { t } = useI18n()
-  const exporter = useMemo(() => new Export(), [])
   const [scaleInput, setScaleInput] = useState(String(DEFAULT_EXPORT_SCALE))
   // Independent of the toolbar Labels toggle: this controls only the exported
   // image, and the toolbar toggle only controls the canvas. Defaults to on.
@@ -76,8 +75,8 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
   // memoize it on the inputs that actually change the output. Toggling labels
   // or the major grid re-renders the dialog but must not re-scan the grid.
   const size = useMemo(
-    () => (grid ? exporter.size(grid, scale, { showBeadStats: beadStatsOn, tileCount }) : null),
-    [grid, scale, beadStatsOn, tileCount, exporter],
+    () => (grid ? Export.size(grid, scale, { showBeadStats: beadStatsOn, tileCount }) : null),
+    [grid, scale, beadStatsOn, tileCount],
   )
 
   const handleExport = useCallback(async () => {
@@ -109,7 +108,7 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
     // Hosts with a blob saver (desktop save dialog) take the blob path for
     // single images; tile exports still use the built-in download.
     if (onSaveBlob && tileCount === 1) {
-      const blob = await exporter.pngBlob(data.grid, palette, scale, opts)
+      const blob = await Export.pngBlob(data.grid, palette, scale, opts)
       if (!blob) {
         toast.add({
           type: "error",
@@ -122,7 +121,7 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
       onClose()
       return
     }
-    const ok = await exporter.png(data.grid, palette, scale, opts)
+    const ok = await Export.png(data.grid, palette, scale, opts)
     if (!ok) {
       toast.add({
         type: "error",
@@ -132,7 +131,7 @@ export function ExportDialog({ open, onClose, onGetCellsData, palette: pinnedPal
       return
     }
     onClose()
-  }, [data, palette, scale, labelsOn, beadStatsOn, majorGridOn, majorStep, tileCount, exporter, onSaveBlob, cols, rows, onClose, t])
+  }, [data, palette, scale, labelsOn, beadStatsOn, majorGridOn, majorStep, tileCount, onSaveBlob, cols, rows, onClose, t])
 
   return (
     <Dialog
