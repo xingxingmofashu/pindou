@@ -35,12 +35,14 @@ export class GridHistory {
    *
    * @param before  - Snapshot taken before the operation.
    * @param current - The grid as it is now.
+   * @returns `true` when a snapshot was recorded, `false` for a no-op.
    */
-  push(before: Grid, current: Grid): void {
-    if (before.equals(current)) return
+  push(before: Grid, current: Grid): boolean {
+    if (before.equals(current)) return false
     this.undoStack.push(before)
     if (this.undoStack.length > this.limit) this.undoStack.shift()
     this.redoStack = []
+    return true
   }
 
   /**

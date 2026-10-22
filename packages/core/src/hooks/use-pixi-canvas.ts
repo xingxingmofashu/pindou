@@ -71,6 +71,21 @@ function paintGridLines(poly: Graphics, rects: GridRect[], color: number, alpha:
   poly.fill({ color, alpha })
 }
 
+/**
+ * Create a ref whose value is built once, on first access.
+ *
+ * `useRef(new X())` would construct a throwaway instance on every render; the
+ * grid and the history own maps, so they are worth deferring.
+ *
+ * @param create - Factory invoked once, before the first render reads the ref.
+ * @returns A stable ref holding the created value.
+ */
+function useLazyRef<T>(create: () => T): { current: T } {
+  const ref = useRef<T | null>(null)
+  if (ref.current === null) ref.current = create()
+  return ref as { current: T }
+}
+
 export function usePixiCanvas(
   pixiCtx: PixiContext | null,
   palette: Palette,
@@ -94,13 +109,19 @@ export function usePixiCanvas(
 
   const gridColor = isDark ? GRID_COLOR_DARK : GRID_COLOR_LIGHT
 
-  const gridRef = useRef<Grid>(new Grid(palette))
+  /**
+   * The live sparse grid. Its palette binding is part of the grid's identity:
+   * a palette change must recreate the grid, which `PixiCanvas` does through
+   * `clearCanvas(true)` on a brand switch. `usePalette` drops same-code
+   * replacements, so the binding can't go stale without that rebuild.
+   */
+  const gridRef = useLazyRef(() => new Grid(palette))
   const rectRef = useRef<DOMRect | null>(null)
   /** World position of the last padded rebuild; null when nothing covers a slack region. */
   const builtWorldRef = useRef<{ x: number; y: number } | null>(null)
 
   /** Undo/redo history: whole-grid snapshots taken before each destructive op. */
-  const historyRef = useRef(new GridHistory(UNDO_LIMIT))
+  const historyRef = useLazyRef(() => new GridHistory(UNDO_LIMIT))
 
   const pixiRef = useRef(pixiCtx)
   const runtimeRef = useRef<RuntimeOpts>({ activeTool, activeColorIndex, readonly, onColorPick: null, onHoverCell: null })
@@ -205,12 +226,11 @@ export function usePixiCanvas(
 
   const pushHistory = useCallback((before: Grid) => {
     if (runtimeRef.current.readonly) return
-    // No-op ops (same colour on an already-painted cell, empty clear, …) would
-    // push a snapshot identical to the current state — drop them so undo/redo
-    // stay meaningful.
-    if (before.equals(gridRef.current)) return
+    // `push` drops no-op snapshots (same colour on an already-painted cell,
+    // empty clear, …) so undo/redo stay meaningful; it reports whether this
+    // was a real change, which is exactly when the host must be notified.
     const history = historyRef.current
-    history.push(before, gridRef.current)
+    if (!history.push(before, gridRef.current)) return
     onHistoryChangeRef.current?.(history.canUndo, history.canRedo)
   }, [])
 
@@ -596,7 +616,8 @@ export function usePixiCanvas(
 
   const loadGrid = useCallback((grid: string[][], seed = false) => {
     const before = snapshot()
-    gridRef.current = CodeGrid.from(grid)?.toGrid(palette) ?? new Grid(palette)
+    const codeGrid = CodeGrid.from(grid)
+    gridRef.current = codeGrid ? Grid.fromCodeGrid(codeGrid, palette) : new Grid(palette)
     if (seed) {
       // Initial load (edit page): the loaded grid is the baseline, not an undo
       // step — otherwise `canUndo` would be true on a pristine page and the

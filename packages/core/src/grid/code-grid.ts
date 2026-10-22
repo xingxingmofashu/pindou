@@ -1,6 +1,5 @@
 import type { Palette } from "@pindou/shared/types"
 import { PaletteIndex } from "../palette/palette-index"
-import { Grid } from "./grid"
 
 /**
  * A dense, immutable code grid: `codes[row][col]` is `""` (empty) or a
@@ -145,15 +144,5 @@ export class CodeGrid {
       cells.set(`${c},${r}`, colorIdx)
     })
     return cells
-  }
-
-  /**
-   * Rebuild a sparse grid from these codes.
-   *
-   * @param palette - Palette resolving colour code → 1‑based index.
-   * @returns A new sparse grid owning a fresh cell map.
-   */
-  toGrid(palette: Palette): Grid {
-    return new Grid(palette, this.toCells(palette))
   }
 }
