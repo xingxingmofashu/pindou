@@ -6,10 +6,10 @@ import { Thumbnail } from "@pindou/core/server/thumbnail"
 import { GridStorage } from "@pindou/core/server/grid-storage"
 import { PatternInsertSchema, PaginationSchema } from "@/db/schema"
 import { getPatternsPage } from "@/lib/server/patterns"
-import { getPaletteByCode } from "@/lib/server/palettes"
+import { PaletteService } from "@/lib/server/palettes"
 import { MAX_BODY_BYTES, PATTERN_WRITE_LIMIT, PATTERN_WRITE_WINDOW_MS } from "@pindou/shared/constants"
 import { auth } from "@/lib/auth/server"
-import { rateLimit } from "@pindou/core/server/rate-limit"
+import { RateLimiter } from "@pindou/core/server/rate-limit"
 
 /** Thumbnail renderer + R2 uploader for this route. */
 const thumbnail = new Thumbnail()
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Sign in to publish" }, { status: 401 })
   }
 
-  if (!(await rateLimit(`user:${session.user.id}`, PATTERN_WRITE_LIMIT, PATTERN_WRITE_WINDOW_MS))) {
+  if (!(await RateLimiter.check(`user:${session.user.id}`, PATTERN_WRITE_LIMIT, PATTERN_WRITE_WINDOW_MS))) {
     return NextResponse.json({ error: "Too many requests, try again later" }, { status: 429 })
   }
 
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { title, description, gridData, brandCode, beadStats } = parsed.data
-  const palette = await getPaletteByCode(brandCode)
+  const palette = await PaletteService.byCode(brandCode)
   if (!palette) {
     return NextResponse.json({ error: "Unknown brand" }, { status: 400 })
   }

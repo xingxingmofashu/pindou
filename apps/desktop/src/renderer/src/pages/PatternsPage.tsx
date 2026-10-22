@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { PatternsPage, type PatternItem } from "@pindou/ui/pages/patterns-page"
-import { parseBeadStats, totalBeadCount } from "@pindou/core/utils"
+import { BeadUsage } from "@pindou/core/utils"
 import { useI18n } from "@pindou/core/i18n/client"
 import type { PatternMeta } from "../../../shared/types"
 
@@ -44,7 +44,7 @@ export default function PatternsPageWrapper() {
     id: p.id,
     title: p.title,
     date: p.updatedAt,
-    beads: totalBeadCount(parseBeadStats(p.beadStats)),
+    beads: BeadUsage.total(BeadUsage.parse(p.beadStats)),
   }))
 
   const getThumbnail = useCallback((id: string) => window.pindou.patterns.thumbnail(id), [])

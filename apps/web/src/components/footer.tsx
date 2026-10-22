@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { Logo } from "@pindou/ui/components/logo"
 import { GITHUB_URL } from "@pindou/shared/constants"
-import { localizedPath } from "@pindou/core/i18n/config"
+import { I18nConfig } from "@pindou/core/i18n/config"
 import { getDictionary, getLocale } from "@/i18n/server"
 
 export async function Footer() {
@@ -20,10 +20,10 @@ export async function Footer() {
         </div>
 
         <nav className="flex items-center gap-4 text-xs text-muted-foreground" aria-label="Footer">
-          <Link href={localizedPath(locale, "/patterns")} className="hover:text-foreground">
+          <Link href={I18nConfig.localizedPath(locale, "/patterns")} className="hover:text-foreground">
             {dict.header.patterns}
           </Link>
-          <Link href={localizedPath(locale, "/editor")} className="hover:text-foreground">
+          <Link href={I18nConfig.localizedPath(locale, "/editor")} className="hover:text-foreground">
             {dict.header.editor}
           </Link>
           <Link

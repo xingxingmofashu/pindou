@@ -18,7 +18,7 @@ export const patterns = pgTable("patterns", {
    * Brand uuid referencing an entry in the bundled palette catalog
    * (`packages/shared/src/palettes.json`). Plain uuid column — the FK to the
    * now-removed `brands` table was dropped in migration 0014; validity is
-   * enforced in the app layer via `getPaletteByCode`/`getPaletteById`.
+   * enforced in the app layer via `PaletteService.byCode` / `PaletteService.byId`.
    */
   fkBrandId: uuid("fk_brand_id").notNull(),
   /** Owning Better Auth user (set server-side on publish); NULL if the account is deleted. */

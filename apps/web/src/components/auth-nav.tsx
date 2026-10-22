@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@pindou/ui/components/ui/dropdown-menu"
 import { useSession, signOut } from "@/lib/auth/client"
-import { localizedPath } from "@pindou/core/i18n/config"
+import { I18nConfig } from "@pindou/core/i18n/config"
 import { useI18n } from "@pindou/core/i18n/client"
 
 /** Session-aware auth area: shows the sign-in link or the user menu. */
@@ -37,7 +37,7 @@ export function AuthNav() {
     <Button
       variant="link"
       nativeButton={false}
-      render={<Link href={localizedPath(locale, "/sign-in")} />}
+      render={<Link href={I18nConfig.localizedPath(locale, "/sign-in")} />}
     >
       {t("header.signIn")}
     </Button>

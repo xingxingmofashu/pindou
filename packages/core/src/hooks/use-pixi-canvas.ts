@@ -17,7 +17,7 @@ import { CodeGrid } from "../grid/code-grid"
 import { EMPTY, Grid } from "../grid/grid"
 import { GridHistory } from "../grid/grid-history"
 import { Viewport } from "../grid/viewport"
-import { hexToRgb, isTypingTarget } from "../utils"
+import { HexColor, Keyboard } from "../utils"
 import type { Palette } from "@pindou/shared/types"
 
 /** Fraction of the viewport kept as pan slack around a padded rebuild. */
@@ -172,7 +172,7 @@ export function usePixiCanvas(
       ctx.beadsGfx.clear()
       for (const e of entries) {
         ctx.beadsGfx.rect(e.worldX, e.worldY, e.size, e.size)
-        ctx.beadsGfx.fill({ color: hexToRgb(e.hex) })
+        ctx.beadsGfx.fill({ color: HexColor.toInt(e.hex) })
       }
     },
     [viewport, gridColor]
@@ -369,7 +369,7 @@ export function usePixiCanvas(
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey
-      if (!mod || isTypingTarget(e.target)) return
+      if (!mod || Keyboard.isTypingTarget(e.target)) return
       // Undoing mid-stroke would swap the grid under the active drag and then
       // push a stale pre-stroke snapshot on release — ignore shortcuts while a
       // stroke is in progress.

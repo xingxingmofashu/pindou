@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto"
 import sharp from "sharp"
 import { CodeGrid, PaletteIndex } from "@pindou/core/editor"
 import { EDITOR_BG } from "@pindou/shared/constants"
-import { hexToRgb } from "@pindou/core/utils"
+import { HexColor } from "@pindou/core/utils"
 import type { Palette } from "@pindou/shared/types"
 
 /** Maximum cells per axis before downsampling kicks in. */
@@ -64,7 +64,7 @@ export class ThumbnailStorage {
     const offsetY = Math.floor((SIZE - totalH) / 2)
 
     const rgba = Buffer.alloc(SIZE * SIZE * 4)
-    const bg = hexToRgb(EDITOR_BG)
+    const bg = HexColor.toInt(EDITOR_BG)
     for (let i = 0; i < rgba.length; i += 4) {
       rgba[i] = (bg >> 16) & 0xff
       rgba[i + 1] = (bg >> 8) & 0xff
@@ -80,7 +80,7 @@ export class ThumbnailStorage {
         if (code === "") continue
         const hex = hexByCode.get(code)
         if (!hex) continue
-        const rgb = hexToRgb(hex)
+        const rgb = HexColor.toInt(hex)
         const y0 = offsetY + r * cellPx
         const x0 = offsetX + c * cellPx
         for (let dr = 0; dr < cellPx; dr++) {

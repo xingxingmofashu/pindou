@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Search } from "lucide-react"
-import { formatRelativeDate } from "@pindou/core/date"
+import { Dates } from "@pindou/core/date"
 import { useI18n } from "@pindou/core/i18n/client"
 import { Button } from "../components/ui/button"
 import { Card, CardHeader, CardTitle } from "../components/ui/card"
@@ -261,7 +261,7 @@ function PatternCard({
     }
   }, [item.id, item.thumbUrl, getThumbnail, thumbSrc])
 
-  const relativeDate = formatRelativeDate(item.date, locale)
+  const relativeDate = Dates.relative(item.date, locale)
 
   return (
     <Card

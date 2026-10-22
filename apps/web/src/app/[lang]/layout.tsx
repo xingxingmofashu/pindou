@@ -4,7 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { notFound } from "next/navigation";
 import { I18nProvider } from "@pindou/core/i18n/client";
 import { getDictionary } from "@/i18n/server";
-import { isLocale, locales } from "@pindou/core/i18n/config";
+import { I18nConfig } from "@pindou/core/i18n/config";
 import { ThemeProvider } from "next-themes";
 import { SWRProvider } from "@/components/providers/swr-provider";
 import { WebVitals } from "@/components/providers/web-vitals";
@@ -24,7 +24,7 @@ const geistMono = Geist_Mono({
 });
 
 export function generateStaticParams() {
-  return locales.map((lang) => ({ lang }));
+  return I18nConfig.locales.map((lang) => ({ lang }));
 }
 
 /**
@@ -41,7 +41,7 @@ export async function generateMetadata({
   params: Promise<{ lang: string }>;
 }): Promise<Metadata> {
   const { lang } = await params;
-  if (!isLocale(lang)) return {};
+  if (!I18nConfig.isLocale(lang)) return {};
   const dict = await getDictionary(lang);
   return {
     title: dict.meta.title,
@@ -74,7 +74,7 @@ export default async function RootLayout({
   params,
 }: LayoutProps<"/[lang]">) {
   const { lang } = await params;
-  if (!isLocale(lang)) notFound();
+  if (!I18nConfig.isLocale(lang)) notFound();
   const messages = await getDictionary(lang);
 
   return (

@@ -5,7 +5,7 @@ import { db } from "@/db"
 import { patterns } from "@/db/schema"
 import { GridStorage } from "@pindou/core/server/grid-storage"
 import { escapeLike } from "@/lib/utils"
-import { getPaletteById, getPalettesMatching } from "@/lib/server/palettes"
+import { PaletteService } from "@/lib/server/palettes"
 
 /** Grid JSON storage (R2) shared by the data-access functions below. */
 const grids = new GridStorage()
@@ -21,7 +21,7 @@ function isoDate(value: Date | string): string {
 
 /** Resolve a pattern's brand code from its uuid via the bundled palette catalog. */
 function brandCodeOf(fkBrandId: string): string {
-  return getPaletteById(fkBrandId)?.code ?? ""
+  return PaletteService.byId(fkBrandId)?.code ?? ""
 }
 
 /**
@@ -44,7 +44,7 @@ export const getPatternsPage = unstable_cache(
     const like = q ? `%${escapeLike(q)}%` : undefined
     // Brand-code search resolves matching brand uuids from the palette catalog
     // and filters on the column directly (a JS filter would break pagination).
-    const brandIds = q ? getPalettesMatching(q) : []
+    const brandIds = q ? PaletteService.matching(q) : []
     const where = like
       ? or(
           ilike(patterns.title, like),

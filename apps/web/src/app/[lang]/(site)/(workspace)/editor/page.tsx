@@ -11,7 +11,7 @@ import { UnsavedChangesGuard } from "@pindou/ui/components/unsaved-changes-guard
 import { useEditorStore } from "@pindou/core/hooks/use-editor"
 import { useI18n } from "@pindou/core/i18n/client"
 import { PatternInsertSchema } from "@/db/schema"
-import { fetcher, postJson } from "@/lib/utils"
+import { Http } from "@pindou/core/utils"
 import { signIn, useSession } from "@/lib/auth/client"
 import type { Palette } from "@pindou/shared/types"
 
@@ -32,10 +32,10 @@ export default function EditorContent() {
   const { t } = useI18n()
   const { resolvedTheme } = useTheme()
   const router = useRouter()
-  const { data: brands = [] } = useSWR<Array<Palette>>("/api/brands", fetcher)
+  const { data: brands = [] } = useSWR<Array<Palette>>("/api/brands", Http.get)
   const { trigger: publishTrigger } = useSWRMutation(
     "/api/patterns",
-    (url, { arg }: { arg: string }) => postJson<{ id: string }>(url, arg),
+    (url, { arg }: { arg: string }) => Http.send<{ id: string }>(url, arg),
   )
 
   const handleSignIn = useCallback(

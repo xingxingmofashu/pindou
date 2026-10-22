@@ -5,10 +5,10 @@ import { db } from "@/db"
 import { patterns } from "@/db/schema"
 import { PatternUpdateSchema } from "@/db/schema"
 import { getPattern } from "@/lib/server/patterns"
-import { getPaletteById } from "@/lib/server/palettes"
+import { PaletteService } from "@/lib/server/palettes"
 import { MAX_BODY_BYTES, PATTERN_WRITE_LIMIT, PATTERN_WRITE_WINDOW_MS } from "@pindou/shared/constants"
 import { auth } from "@/lib/auth/server"
-import { rateLimit } from "@pindou/core/server/rate-limit"
+import { RateLimiter } from "@pindou/core/server/rate-limit"
 import { Thumbnail } from "@pindou/core/server/thumbnail"
 import { GridStorage } from "@pindou/core/server/grid-storage"
 
@@ -78,7 +78,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Sign in to edit" }, { status: 401 })
   }
 
-  if (!(await rateLimit(`user:${session.user.id}`, PATTERN_WRITE_LIMIT, PATTERN_WRITE_WINDOW_MS))) {
+  if (!(await RateLimiter.check(`user:${session.user.id}`, PATTERN_WRITE_LIMIT, PATTERN_WRITE_WINDOW_MS))) {
     return NextResponse.json({ error: "Too many requests, try again later" }, { status: 429 })
   }
 
@@ -129,7 +129,7 @@ export async function PATCH(
 
   const { title, description, gridData, beadStats } = parsed.data
 
-  const palette = await getPaletteById(row.fkBrandId)
+  const palette = await PaletteService.byId(row.fkBrandId)
   if (!palette) {
     return NextResponse.json({ error: "Unknown brand" }, { status: 400 })
   }

@@ -5,7 +5,8 @@ import useSWR from "swr"
 import { ChevronDown } from "lucide-react"
 import { usePalette } from "@pindou/core/hooks/use-palette"
 import { ColorSeries } from "@pindou/core/editor"
-import { cn, fetcher } from "@/lib/utils"
+import { cn } from "@/lib/utils"
+import { Http } from "@pindou/core/utils"
 import { useI18n } from "@pindou/core/i18n/client"
 import { ScrollArea } from "@pindou/ui/components/ui/scroll-area"
 import { Skeleton } from "@pindou/ui/components/ui/skeleton"
@@ -45,7 +46,7 @@ export function ColorPalette({
   const palette = pinned ?? storePalette
   const { data: brands, error, isValidating, mutate } = useSWR<Array<Palette>>(
     pinned ? null : "/api/brands",
-    fetcher,
+    Http.get,
   )
 
   useEffect(() => {

@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { localizedPath } from "@pindou/core/i18n/config"
+import { I18nConfig } from "@pindou/core/i18n/config"
 import { useI18n } from "@pindou/core/i18n/client"
 import { PatternDetailPage } from "@pindou/ui/pages/pattern-detail-page"
 import type { PatternDetailType } from "@/db/schema"
@@ -35,7 +35,7 @@ export function PatternDetailClient({
       authorName={pattern.authorName}
       createdAt={pattern.createdAt}
       updatedAt={pattern.updatedAt}
-      onEdit={() => router.push(localizedPath(locale, `/patterns/${id}/edit`))}
+      onEdit={() => router.push(I18nConfig.localizedPath(locale, `/patterns/${id}/edit`))}
     />
   )
 }
