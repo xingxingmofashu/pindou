@@ -6,5 +6,6 @@
       "*": false
     }
   },
-  "buildCommand": "if [ \"$VERCEL_ENV\" = \"production\" ]; then pnpm db:migrate && pnpm build; else pnpm build; fi"
+  "buildCommand": "if [ \"$VERCEL_ENV\" = \"production\" ]; then pnpm db:migrate && pnpm build; else pnpm build; fi",
+  "ignoreCommand": "if [ \"$VERCEL_ENV\" = \"preview\" ]; then exit 0; else exit 1; fi"
 }
