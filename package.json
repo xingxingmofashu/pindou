@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Pindou — Fuse bead pattern editor and community (monorepo)",
   "private": true,
-  "packageManager": "pnpm@12.3.4",
+  "packageManager": "pnpm@11.20.0",
   "scripts": {
     "dev": "pnpm --filter @pindou/web dev",
     "build": "pnpm --filter @pindou/web build",
