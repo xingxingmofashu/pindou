@@ -103,7 +103,7 @@
     "winChip": "Windows 10 及以上，64 位",
     "downloadButton": "下载 .dmg",
     "downloadWinButton": "下载 .exe",
-    "sizeNote": "版本 0.1.0——最新发布",
+    "sizeNote": "版本 0.1.3——最新发布",
     "installTitle": "安装说明",
     "macNoteTitle": "macOS",
     "macNote": "应用尚未代码签名（beta）。如果 macOS 提示应用已损坏，请在 Finder 中右键应用选择「打开」，再次点击「打开」；或运行：",

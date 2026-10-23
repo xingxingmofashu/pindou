@@ -3,6 +3,9 @@ name: Release Desktop
 on:
   push:
     tags: ["v*"]
+  # Allows re-running a release from the Actions UI or CLI if the tag push
+  # event is missed (e.g. when the tag is created through the GitHub API).
+  workflow_dispatch:
 
 permissions:
   contents: write
